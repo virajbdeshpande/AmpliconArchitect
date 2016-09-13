@@ -1,0 +1,65 @@
+# AmpliconArchitect
+## AmpliconArchitect (AA) is a tool to identify one or more connected genomic regions which have simultaneous copy number amplification and elucidates the architecture of the amplicon.
+## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
+
+
+==============================================================================================================================================================================================
+# Installation:
+
+# AA download (if you have not already cloned this source code):
+git clone .....
+
+
+# Dependencies:
+## 1) Python 2.7
+
+## 2) Ubuntu libraries and tools:
+sudo apt-get install build-essential python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools 
+
+## 3) Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam):
+sudo pip install pysam
+
+## 4) Mosek optimization tool (https://www.mosek.com/):
+wget http://download.mosek.com/stable/7.1.0.12/mosektoolslinux64x86.tar.bz2
+tar xf mosektoolslinux64x86.tar.bz2
+echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/7/licenses
+echo MOSEKPLATFORM=linux64x86 >> ~/.bashrc
+echo export PATH=$PATH:$PWD/mosek/7/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/7/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/7/licenses >> ~/.bashrc
+cd $PWD/mosek/7/tools/platform/linux64x86/python/2/
+sudo python setup.py install #(--user)
+cd -
+source ~/.bashrc
+
+
+# Data repositories:
+## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository. These may be downloaded as follows
+cd data_repo
+wget https://googledrive.com/host/0ByYcg0axX7uddU0yT1FDZ1dieUk/data_repo_large.tar.gz
+tar zxf data_repo_large.tar.gz
+cd ..
+
+
+==============================================================================================================================================================================================
+
+
+# AmpliconArchitect reconstruction:
+
+## Preprocessing:
+
+## Input 1: Coordinate sorted bam file:
+## Use bwa or any other software to align reads to the hg19full.fa in the data_repo human reference to output a bam file.
+## Sort the bam file by genomic coordinates and index the coordinate sorted bam file using "samtools index".
+
+## Input 2: Amplicon Interval(s):
+## Identify interval(s) of interest by using a CNV caller e.g. ReadDepth, but may use others or user defined intervals.
+## Recommended to use file AmpliconArchitect/src/read_depth_params for calling variants with ReadDepth.
+## Recommended only analyze CN gains > 5x copy count and > 100kbp in size.
+## Recommended to filter out intervals with significant overlap with conserved regions.
+## Input intervals in bed file format
+python src/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat > {outName}.bed
+
+## Amplicon reconstruction
+python src/plot_features.py --bam <input_bam> --bed <bed file> --out <prefix for output files>
+
