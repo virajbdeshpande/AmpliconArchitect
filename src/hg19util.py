@@ -50,9 +50,9 @@ from time import clock
 import pysam
 import heapq
 import copy
+import os
 
-
-DATA_REPO = "/pedigree/projects/extrachromosome/data_repo/"
+DATA_REPO = os.environ["AA_DATA_REPO"]
 
 chrs = Set(map(lambda x: 'chr' + str(x), range(1,23) + ['X', 'Y', 'M']))
 fa_file = pysam.Fastafile(DATA_REPO + "/hg19full.fa")
