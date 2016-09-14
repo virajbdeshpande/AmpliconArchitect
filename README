@@ -3,12 +3,12 @@
 ## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
 
 
-==============================================================================================================================================================================================
+#=============================================================================================================================================================================================
+
 # Installation:
 
 # AA download (if you have not already cloned this source code):
 git clone https://github.com/virajbdeshpande/AmpliconArchitect.git
-
 
 # Dependencies:
 ## 1) Python 2.7
@@ -35,21 +35,20 @@ source ~/.bashrc
 
 # Data repositories:
 ## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository. These may be downloaded as follows
-cd data_repo
-wget https://googledrive.com/host/0ByYcg0axX7uddU0yT1FDZ1dieUk/data_repo_large.tar.gz
-tar zxf data_repo_large.tar.gz
-cd ..
+wget https://googledrive.com/host/0ByYcg0axX7uddU0yT1FDZ1dieUk/data_repo.tar.gz
+tar zxf data_repo.tar.gz
+
+#==============================================================================================================================================================================================
 
 
-==============================================================================================================================================================================================
-
+#==============================================================================================================================================================================================
 
 # AmpliconArchitect reconstruction:
 
-## Preprocessing:
+# Preprocessing:
 
 ## Input 1: Coordinate sorted bam file:
-## Use bwa or any other software to align reads to the hg19full.fa in the data_repo human reference to output a bam file.
+## Use bwa mem or any other software to align reads to the hg19full.fa in the data_repo human reference to output a bam file.
 ## Sort the bam file by genomic coordinates and index the coordinate sorted bam file using "samtools index".
 
 ## Input 2: Amplicon Interval(s):
@@ -60,6 +59,27 @@ cd ..
 ## Input intervals in bed file format
 python src/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat > {outName}.bed
 
-## Amplicon reconstruction
-python src/plot_features.py --bam <input_bam> --bed <bed file> --out <prefix for output files>
+# Amplicon reconstruction
+python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix for output files>
+
+# Output description
+## The software generates 3 types of output files
+## 1) <outName>_summary.txt:
+## This file includes a summary for all amplicons detected
+## 
+## 2) <outName>_amplicon<id>_graph.txt:
+## For each amplicon, breakpoint graph describing sequence edges and breakpoint edges in the graph
+## Edge each consists of 2 vertices in the format <chromosome>:<position><orientation>
+## e.g. A sequence edge chr1:10001-->chr1:20000+ represents the 10000bp genomic sequence. A breakpoint edge chr1:10001-->chr1:20000+ implies that on chr1, the forward strand from position 20000 is continues onto the forward strand at position 10001 in the 5' to 3' direction to create a 10000bp loop. Breakpoint vertices with position -1 are reserved for source vertex at the end of linear contig.
+## 
+## 3) <outName>_amplicon<id>_cycle.txt:
+## For each amplicon, this file represents the list of structures contained in the amplicon.
+## Segments represent genomic intervals (with possible overlaps) and each segment is assigned a unique id.
+## Segment id 0 is reserved for source vertices. 
+## Cycles are represented as ordered lists of connected segments along with orientation of the segments.
+## The last segment connects back to the first segment of the cycle.
+## Linear contigs have 0+ and 0- as their first and last segments.
+
+#==============================================================================================================================================================================================
+
 

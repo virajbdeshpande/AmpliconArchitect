@@ -1,0 +1,10 @@
+readLength   100	
+fdr		0.05
+overDispersion	1
+gcWindowSize	100
+percCNGain	0.05
+percCNLoss	0.05
+chunkSize       1e7
+maxCores	16
+readCores	16
+verbose		TRUE
