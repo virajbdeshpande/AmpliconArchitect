@@ -96,9 +96,10 @@ for l in coverage_stats_file:
         cstats = tuple(map(float, ll[1:]))
 coverage_stats_file.close()
 coverage_windows=None
-#coverage_windows=hg.interval_list('coverage_estimation_seq_coords_hg19.txt', 'bed')
-#coverage_windows.sort()
+# coverage_windows=hg.interval_list('universal_coverage_estimation_rep1_seq_coords_hg19.tsv', 'bed')
+# coverage_windows.sort()
 bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats, coverage_windows=coverage_windows)
+# exit()
 ecolor = {'interchromosomal' : 'blue',
           'concordant' : 'black',
           'everted' : 'yellow',
@@ -113,24 +114,24 @@ irdgroupdict = {ird:Set([ird]) for ird in rdList}
 logging.info("#TIME " + str(clock()) + " initiated bamFileb2b")
 
 for ird in rdList:
-#    print bamFileb2b.gc_scaling()
-#    de = bamFileb2b.interval_discordant_edges(ird)
-#    logging.info("#TIME " + str(clock()) + " discordant edges done")
-#    bamFileb2b.meanshift_refined(ird)
-#    exit()
+    # print bamFileb2b.gc_scaling()
+    # de = bamFileb2b.interval_discordant_edges(ird)
+    # logging.info("#TIME " + str(clock()) + " discordant edges done")
+    # bamFileb2b.meanshift_refined(ird)
+    # exit()
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
-#    ilist = bamFileb2b.interval_hops(ird)
-    ilist = hg.interval_list([ird])
-#    ilist = hg.interval_list([bamFileb2b.interval_extend(ird)])
+    ilist = bamFileb2b.interval_hops(ird)
+    # ilist = hg.interval_list([ird])
+    # ilist = hg.interval_list([bamFileb2b.interval_extend(ird)])
     irdhops.append((ird,ilist))
     for i in ilist:
         irddict[i] = ird
-#    iout = open(outName + '.' + ird.chrom + ":" + str(ird.start) + '-' + str(ird.end) + '.out', 'w')
-#    iout.write(mystdout.getvalue())
-#    iout.close()
+    # iout = open(outName + '.' + ird.chrom + ":" + str(ird.start) + '-' + str(ird.end) + '.out', 'w')
+    # iout.write(mystdout.getvalue())
+    # iout.close()
     sys.stdout = old_stdout
-#exit()
+# exit()
 allhops = hg.interval_list(reduce(lambda x, y: x + y, [irdh[1] for irdh in irdhops], []))
 allhops.sort()
 allmerge = allhops.merge_clusters()
@@ -151,10 +152,6 @@ for nset in irdSets:
             ngroup.append(am[0])
     ngroup.sort()
     irdgroups.append(ngroup)
-
-
-
-
 
 
 
