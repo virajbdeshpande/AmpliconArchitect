@@ -35,8 +35,8 @@ source ~/.bashrc
 
 
 # Data repositories:
-## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository. These may be downloaded as follows
-wget https://googledrive.com/host/0ByYcg0axX7uddU0yT1FDZ1dieUk/data_repo.tar.gz
+## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository.
+## These may be downloaded from https://drive.google.com/open?id=0ByYcg0axX7udSjdZeUNqdlNVNHc
 tar zxf data_repo.tar.gz
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
