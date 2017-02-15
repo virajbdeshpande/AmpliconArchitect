@@ -2,7 +2,7 @@
 ## AmpliconArchitect (AA) is a tool to identify one or more connected genomic regions which have simultaneous copy number amplification and elucidates the architecture of the amplicon.
 ## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
 ## This is development version. Please "watch" this repository for announcement of production release and methods manuscript soon.
-## Note: see chromosome name format for bamfile: 'chr1' .. 'chr22', 'chrX', 'chrY' as in "data_repo/hg19full.fa"
+## Note: see chromosome name format for bamfile: 'chr1' .. 'chr22', 'chrX', 'chrY' as in "data_repo/hg19full.fa". (Thanks to Sitan Qiao, BGI for noticing this missing information).
 
 #=============================================================================================================================================================================================
 
@@ -37,7 +37,7 @@ source ~/.bashrc
 
 # Data repositories:
 ## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository.
-## These may be downloaded from https://drive.google.com/open?id=0ByYcg0axX7udSjdZeUNqdlNVNHc
+## These may be downloaded from https://drive.google.com/open?id=0ByYcg0axX7udSjdZeUNqdlNVNHc . Thanks to Peter Ulz for noticing incorrect link earlier.
 tar zxf data_repo.tar.gz
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
