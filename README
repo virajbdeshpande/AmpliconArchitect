@@ -41,6 +41,7 @@ source ~/.bashrc
 tar zxf data_repo.tar.gz
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
+touch $AA_DATA_REPO/coverage.stats
 
 #==============================================================================================================================================================================================
 
