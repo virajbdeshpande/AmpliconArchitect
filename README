@@ -1,8 +1,7 @@
 # AmpliconArchitect
 ## AmpliconArchitect (AA) is a tool to identify one or more connected genomic regions which have simultaneous copy number amplification and elucidates the architecture of the amplicon.
 ## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
-## This is development version. Please "watch" this repository for announcement of production release and methods manuscript soon.
-## Note: see chromosome name format for bamfile: 'chr1' .. 'chr22', 'chrX', 'chrY' as in "data_repo/hg19full.fa". (Thanks to Sitan Qiao, BGI for noticing this missing information).
+
 
 #=============================================================================================================================================================================================
 
@@ -17,19 +16,19 @@ git clone https://github.com/virajbdeshpande/AmpliconArchitect.git
 ## 2) Ubuntu libraries and tools:
 sudo apt-get install build-essential python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools 
 
-## 3) Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam):
+## 3) Pysam verion 0.9.0 or higher (https://github.com/pysam-developers/pysam):
 sudo pip install pysam
 
 ## 4) Mosek optimization tool (https://www.mosek.com/):
-wget http://download.mosek.com/stable/7.1.0.12/mosektoolslinux64x86.tar.bz2
+wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 tar xf mosektoolslinux64x86.tar.bz2
-echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/7/licenses
+echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/8/licenses
 echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
 export MOSEKPLATFORM=linux64x86
-echo export PATH=$PATH:$PWD/mosek/7/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/7/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/7/licenses >> ~/.bashrc
-cd $PWD/mosek/7/tools/platform/linux64x86/python/2/
+echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
+cd $PWD/mosek/8/tools/platform/linux64x86/python/2/
 sudo python setup.py install #(--user)
 cd -
 source ~/.bashrc
@@ -37,11 +36,11 @@ source ~/.bashrc
 
 # Data repositories:
 ## Download the data repositories. While we include some annotations, we are unable to host some large files in the git repository.
-## These may be downloaded from https://drive.google.com/open?id=0ByYcg0axX7udSjdZeUNqdlNVNHc . Thanks to Peter Ulz for noticing incorrect link earlier.
+## These may be downloaded from https://drive.google.com/open?id=0ByYcg0axX7udUDRxcTdZZkg0X1k. Thanks to Peter Ulz for noticing incorrect link earlier.
 tar zxf data_repo.tar.gz
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
-touch $AA_DATA_REPO/coverage.stats
+## If you are using only a specific reference, you may delete the folder for the other reference under data_repo to save space.
 
 #==============================================================================================================================================================================================
 
@@ -55,6 +54,7 @@ touch $AA_DATA_REPO/coverage.stats
 ## Input 1: Coordinate sorted bam file:
 ## Use bwa mem or any other software to align reads to the hg19full.fa in the data_repo human reference to output a bam file.
 ## Sort the bam file by genomic coordinates and index the coordinate sorted bam file using "samtools index".
+## May downsample bamfile using src/downsample.py or in real time when running AmpliconArchitect.py
 
 ## Input 2: Amplicon Interval(s):
 ## Identify interval(s) of interest by using a CNV caller e.g. ReadDepth, but may use others or user defined intervals.
@@ -65,10 +65,12 @@ touch $AA_DATA_REPO/coverage.stats
 python src/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat > {outName}.bed
 
 # Amplicon reconstruction
-python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix for output files>
+python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix for output files> --ref hg19/GRCh37
+# See python src/AmpliconArchitect.py --help for other options.
+
 
 # Output description
-## The software generates 3 types of output files
+## The software generates 4 types of output files
 ## 1) <outName>_summary.txt:
 ## This file includes a summary for all amplicons detected
 ## 
@@ -84,6 +86,60 @@ python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix
 ## Cycles are represented as ordered lists of connected segments along with orientation of the segments.
 ## The last segment connects back to the first segment of the cycle.
 ## Linear contigs have 0+ and 0- as their first and last segments.
+## May be uploaded to web interface for visualization and operations on cycles (See below).
+##
+## 4) <outName>_amplicon<id>.png:
+## A single image file displaying the set of intervals, underlying coverage, segmentation of coverage, discordant read pairs and oncogene annotations.
+## May be uploaded to web interface for visualization and operations on cycles (See below).
+
+# Web interface
+## URL: genomequery.ucsd.edu:8800
+## Choose and upload a cycles files generated by AA.
+## Optional but recommended: Upload corresponding png file generated by AA.
+## Operations:
+## a) Show-hide cyles by name, copy count threshold
+## b) Merge cycles with a common segment: Select cycle names and segments rank (NOT the ID displayed) in the order of segments displayed.
+##    For closed cycles, first segment rank is 0; for open walks, For open walks, first segment rank is 1 and so on.
+## c) Pivot cycle around inverted duplication: Pivot the portion of the cycle that connects two reversed occurences of a duplicated segment without changing any genomic connections.
+## d) Undo last edit: Go back to previous state.
+
+
+# Commandline options
+AmpliconArchitect.py --help
+##usage: AmpliconArchitect.py [-h] [--bed FILE] [--bam FILE] [--out FILE]
+##                            [--cbam FILE] [--cbed FILE] [--extendmode STR]
+##                            [--sensitivems STR] [--ref STR]
+##                            [--downsample FLOAT]
+##
+##Reconstruct Amplicons connected to listed intervals.
+##
+##optional arguments:
+##  -h, --help          show this help message and exit
+##  --bed FILE          Bed file with putative list of amplified intervals
+##  --bam FILE          Coordinate sorted BAM file with index mapped to hg19
+##                      reference sequence
+##  --out FILE          Prefix for output files
+##  --cbam FILE         Optional bamfile to use for coverage calculation
+##  --cbed FILE         Optional bedfile defining 1000 10kbp genomic windows for
+##                      coverage calcualtion
+##  --extendmode STR    EXPLORE : Search for all connected intervals /CLUSTERED
+##                      : Analyse input intervals as single amplicon only.
+##                      /UNCLUSTERED : Analyse input intervals as independent
+##                      amplicons only.
+##  --sensitivems STR   Set "True" only if expected copy counts to vary by
+##                      orders of magnitude, .e.g viral integration. Default:
+##                      False
+##  --ref STR           "hg19"(default) : chr1, .. chrM etc / "GRCh37" : '1',
+##                      '2', .. 'MT' etc/ "None" : Do not use any annotations.
+##                      AA can tolerate additional chromosomes not stated but
+##                      accuracy and annotations may be affected. Default: hg19
+##  --downsample FLOAT  Downsample the bam file during analysis (Alternatively
+##                      pre-process $AA_SRC/downsample.py). Values: -1 : Do not
+##                      downsample / 0 (default): Downsample to 10X coverage if
+##                      larger / C>0 : Downsample to stated float if larger
+
+
+
 
 #==============================================================================================================================================================================================
 

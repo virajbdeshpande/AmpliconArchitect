@@ -1,4 +1,4 @@
-# This software is Copyright 2014 The Regents of the University of
+# This software is Copyright 2017 The Regents of the University of
 # California. All Rights Reserved.
 #
 # Permission to copy, modify, and distribute this software and its
@@ -54,14 +54,26 @@ import heapq
 import random
 import os
 import logging
-
+import bisect
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse, Rectangle, Arc
+import matplotlib.ticker as ticker
+from matplotlib import gridspec
+from cStringIO import StringIO
+import random
+import JobNotifier
 
 from breakpoint_graph import *
 import hg19util as hg
 
+from mycolors import *
+
 
 summary_logger = logging.getLogger('summary')
 graph_logger = logging.getLogger('graph')
+cycle_logger = logging.getLogger('cycle')
 
 
 class breakpoint_cluster:
@@ -71,8 +83,9 @@ class breakpoint_cluster:
 
 class bam_to_breakpoint():
     def __init__(self, bamfile, read_length=100, max_insert=400, insert_size=300,
-                 window_size=10000, min_coverage=30, pair_support=5,
-                 secondary_index=None, coverage_stats=None, coverage_windows=None):
+        window_size=10000, min_coverage=30, pair_support=-1, downsample=-1,
+        secondary_index=None, coverage_stats=None, coverage_windows=None,
+        sensitivems=False):
         self.bamfile = bamfile
         self.window_size = window_size
         self.min_coverage = min_coverage
@@ -83,8 +96,9 @@ class bam_to_breakpoint():
         self.gc_scale = defaultdict(lambda: 1.0) #self.gc_scaling()
         self.gc_set = False
         self.ms_window_size = 10000
-        self.pair_support = pair_support
-        # self.pair_support = max(3 * (self.median_coverage()[0] * (self.max_insert - self.read_length) / 2 / self.read_length), 3)
+        self.downsample = downsample
+        self.downsample_ratio = 1
+        self.sensitivems = sensitivems
         for s in self.bamfile.header['SQ']:
             hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         if coverage_stats is None:
@@ -96,399 +110,40 @@ class bam_to_breakpoint():
             (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length, self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support, self.percent_proper) = coverage_stats
             self.basic_stats = coverage_stats
             self.basic_stats_set = True
+            r = coverage_stats
 
-    def concordant_edge(self, v, ms=None):
-        if v.strand == 1:
-            dlist = [a for a in self.bamfile.fetch(v.chrom,
-                                                   max(1, v.pos - self.max_insert),
-                                                   v.pos)
-                     if not a.is_unmapped and not a.is_reverse and
-                     a.is_proper_pair and a.mpos >= v.pos]
-            if len(dlist) > self.pair_support:
-                v2= breakpoint_vertex(v.chrom,
-                                         max(v.pos + 1, min([a.mpos for a in dlist])), -1)
-                return (breakpoint_edge(v, v2), dlist)
-        else:
-            dlist = [a for a in self.bamfile.fetch(v.chrom,
-                                                   max(1, v.pos - self.max_insert),
-                                                   v.pos)
-                     if not a.is_reverse and a.is_proper_pair and
-                     a.mpos >= v.pos]
-            if len(dlist) > self.pair_support:
-                v2 = breakpoint_vertex(v.chrom,
-                                         min(v.pos - 1, max([a.aend for a in dlist])), 1)
-                return (breakpoint_edge(v, v2), dlist)
-
-        return (None, dlist)
-
-    def pair_support_count(self, chrom, position, strand, meanshift, foldup=False):
-        #str(hg.interval(f[0][0][0].chrom, f[0][0][0].start, f[0][-1][0].end)), f[1], f[2]
-        for fi in range(len(meanshift)):
-            f = meanshift[fi]
-            if f[0][0][0].chrom == chrom and f[0][0][0].start <= position and position <= f[0][-1][0].end:
-                c = f[2]
-                cd = c / 4
-                if strand == -1:
-                    if f[0][0][0].start >= position - self.ms_window_size / 2:
-                        if fi > 0 and f[1] % 2 == 1:
-                            cm = meanshift[fi - 1][2]
-                            if c > cm:
-                                cd = c - cm
-                    if f[0][-1][0].end <= position + self.ms_window_size / 2:
-                        if fi < len(meanshift) - 1 and f[1] % 4 >= 2:
-                            cm = meanshift[fi - 1][2]
-                            if cm > c and cm - c < cd:
-                                cd = cm - c
-                else:                                                             
-                    if f[0][0][0].start >= position - self.ms_window_size / 2:
-                        if fi > 0 and f[1] % 2 == 1:
-                            cm = meanshift[fi - 1][2]
-                            if cm > c and cm - c < cd:
-                                cd = cm - c
-                    if f[0][-1][0].end <= position + self.ms_window_size / 2:
-                        if fi < len(meanshift) - 1 and f[1] % 4 >= 2:
-                            cm = meanshift[fi - 1][2]
-                            if cm < c and c - cm < cd:
-                                cd = c - cm
-                mc = self.median_coverage()
-                cd = max(1, cd)
-                pcount = max(((2/3.0) * (cd - 3 * math.sqrt(cd / mc[0]) * mc[2]) * (self.insert_size - self.read_length) / 2 / self.read_length), 2)
-                pmincount = (mc[0] + 3 * mc[2]) * (self.insert_size - self.read_length) / self.read_length / 2
-                if pcount < pmincount:
-                    pcount = pmincount
-                return pcount 
-            
-    def foldup_count(self, chrom, position, strand, cdiff=-1):
-        interval = hg.interval(chrom, max(1, position - self.ms_window_size), min(hg.chrLen[hg.chrNum(chrom)], position + self.ms_window_size))
-        if strand == 1:
-            dlist = [a for a in self.bamfile.fetch(interval.chrom,
-                                                   interval.start,
-                                                   interval.end)
-                     if not a.is_unmapped and not a.is_reverse and a.is_paired
-                     and not a.is_proper_pair and not a.mate_is_unmapped
-                     and not a.mate_is_reverse and a.mrnm==a.tid
-                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
-        else:
-            dlist = [a for a in self.bamfile.fetch(interval.chrom,
-                                                   interval.start,
-                                                   interval.end)
-                     if not a.is_unmapped and a.is_reverse and a.is_paired
-                     and not a.is_proper_pair and not a.mate_is_unmapped
-                     and a.mate_is_reverse and a.mrnm==a.tid
-                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
-        return len(dlist)
-
-    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, adaptive_counts=False, ms=None):
-        logging.info("#TIME " + str(clock()) + " discordant edges" + str(interval))
-        if pair_support == -1:
-            pair_support = self.pair_support
-        # if adaptive_counts == True:
-        #     raise "Warning: adaptive counts not supported"
-        #     adaptive_counts = False
-        if type(interval) != hg.interval_list:
-            ilist = hg.interval_list([interval])
-        else:
-            ilist = interval
-        mslist = []
-        if adaptive_counts:
-            if ms is None:
-                mslist = []
-                for i in ilist:
-                    mslist.append(self.meanshift_segmentation(i))
-                ms = mslist[0]
-            elif type(interval) != hg.interval_list:
-                mslist = [ms]
+            if self.downsample < 0 or self.downsample > self.basic_stats[0]:
+                self.downsample_ratio = 1
+            elif self.downsample == 0:
+                self.downsample_ratio = 10.0 / self.basic_stats[0] if self.basic_stats[0] > 10 else 1
             else:
-                mslist = ms
-                ms = mslist[0]
-        interval = ilist[0]
-        dflist = []
-        drlist = []
-        for i in ilist:
-            dflist += [a for a in self.bamfile.fetch(i.chrom,
-                                                max(1, i.start),
-                                                i.end)
-                  if not a.is_unmapped and not a.is_reverse and a.is_paired
-                  and not a.is_proper_pair and not a.mate_is_unmapped]
-            drlist += [a for a in self.bamfile.fetch(i.chrom,
-                                                max(1, i.start),
-                                                i.end)
-                  if not a.is_unmapped and a.is_reverse and a.is_paired
-                  and not a.is_proper_pair and not a.mate_is_unmapped]
-        logging.info("#TIME " + str(clock()) + " discordant edges: fetch discordant " + str(interval))
+                self.downsample_ratio = float(self.downsample) / self.basic_stats[0] if self.basic_stats[0] > float(self.downsample) else 1
 
-        hgddict = {hg.interval(a, bamfile=self.bamfile): a for a in drlist + dflist}
-        hgdflist = hg.interval_list([hga for hga in hgddict if hga.strand==1])
-        hgdrlist = hg.interval_list([hga for hga in hgddict if hga.strand==-1])
-        hgdflist.sort()
-        hgdrlist.sort()
-        mcdflist = hgdflist.merge_clusters(self.max_insert - 2 * self.read_length)
-        mcdrlist = hgdrlist.merge_clusters(self.max_insert - 2 * self.read_length)
-        mcdflist = hg.interval_list([l[0] for l in mcdflist if len(l[1]) >= pair_support])
-        mcdrlist = hg.interval_list([l[0] for l in mcdrlist if len(l[1]) >= pair_support])
-        dflist = [a for a in dflist if hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(mcdflist) > 0]
-        drlist = [a for a in drlist if hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(mcdflist) > 0]
-        if filter_repeats:
-            dflist = [a for a in dflist if hg.interval(a, bamfile=self.bamfile).rep_content() <= 3]
-            drlist = [a for a in drlist if hg.interval(a, bamfile=self.bamfile).rep_content() <= 3]
-        hgddict = {hg.interval(a, bamfile=self.bamfile): a for a in drlist + dflist}
-        hgdflist = hg.interval_list([hga for hga in hgddict if hga.strand==1])
-        hgdrlist = hg.interval_list([hga for hga in hgddict if hga.strand==-1])
-        hgdflist.sort()
-        hgdrlist.sort()
-        mcdflist = hgdflist.merge_clusters(self.max_insert - 2 * self.read_length)
-        mcdrlist = hgdrlist.merge_clusters(self.max_insert - 2 * self.read_length)
-        mcdflist = [l for l in mcdflist if len(l[1]) >= pair_support]
-        mcdrlist = [l for l in mcdrlist if len(l[1]) >= pair_support]
-        if adaptive_counts:
-            mcdfadaptive = []
-            mcdradaptive = []
-            for mc in mcdflist:
-                for (ms, i) in zip(mslist, ilist):
-                    if hg.interval(mc[0].chrom, mc[0].end, mc[0].end).intersects(i) and len(mc[1]) > self.pair_support_count(mc[0].chrom, mc[0].end, 1, ms):
-                        mcdfadaptive.append(mc)
-                        break
-            for mc in mcdrlist:
-                for (ms, i) in zip(mslist, ilist):
-                    if hg.interval(mc[0].chrom, mc[0].start, mc[0].start).intersects(i) and len(mc[1]) > self.pair_support_count(mc[0].chrom, mc[0].start, 1, ms):
-                        mcdradaptive.append(mc)
-                        break
-            mcdflist = mcdfadaptive
-            mcdrlist = mcdradaptive
-        else:
-            mcdflist = [mc for mc in mcdflist if len(mc[1]) >= pair_support]
-            mcdrlist = [mc for mc in mcdrlist if len(mc[1]) >= pair_support]
-        dnlist = []
-        clist = hg.interval_list([c[0] for c in mcdflist + mcdrlist])
-        clist.sort()
-        logging.info("#TIME " + str(clock()) + " discordant edges: merge and sort discordant " + str(interval))
-        for c1 in mcdflist + mcdrlist:
-            for c2 in mcdflist + mcdrlist:
-                vl = []
-                for a1 in c1[1]:
-                    for a2 in c2[1]:
-                        aq1 = hgddict[a1]
-                        aq2 = hgddict[a2]
-                        if aq1.qname == aq2.qname and aq1.is_read1 != aq2.is_read1:
-                            if abs(aq1.pos - aq2.pos) < self.read_length and abs(aq1.aend - aq2.aend) < self.read_length and aq1.is_reverse != aq2.is_reverse:
-                                continue
-                            if aq1.rname == aq2.rname and  aq1.is_reverse and not aq2.is_reverse and aq1.pos - aq2.aend > 0 and aq1.pos - aq2.aend < self.max_insert - 2 * self.read_length:
-                                continue
-                            if aq2.rname == aq1.rname and aq2.is_reverse and not aq1.is_reverse and aq2.pos - aq1.aend > 0 and aq2.pos - aq1.aend < self.max_insert - 2 * self.read_length:
-                                continue
-                            vl.append((aq1, aq2))
-                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
-                    continue
-                if not vl[0][0].is_reverse:
-                    bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].aend for v in vl if v[0].pos > 0]), 1)
-                else:
-                    bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
-                if not vl[0][1].is_reverse:
-                    bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].aend for v in vl if v[1].pos > 0]), 1)
-                else:
-                    bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
-                if not adaptive_counts:
-                    ps = pair_support
-                else:
-                    ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
-                if len(vl) < ps:
-                    continue
-                num_inverted = 0
-                bp1c = None
-                bp2c = None
-                if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
-                    if bp1.strand == 1:
-                        for v in vl:
-                            if v[0].pos == v[1].pos:
-                                num_inverted += 1
-                    else:
-                        for v in vl:
-                            if v[0].aend == v[1].aend:
-                                num_inverted += 1
-                    if len(vl) - num_inverted < ps:
-                        continue
-                    vl.sort(lambda x, y: x[0].pos - y[0].pos)
-                    if bp1.strand == 1:
-                        maxp = vl[0][0].aend
-                        maxn = 0
-                        for v in vl[::-1]:
-                            if len([v1 for v1 in vl if v1[0].aend <= v[0].aend and v1[0].pos > v[0].aend - self.max_insert + 2 * self.read_length]) > maxn:
-                                maxp = v[0].aend
-                                maxn = len([v1 for v1 in vl if v1[0].aend <= v[0].aend and v1[0].aend > v[0].aend - self.max_insert + 2 * self.read_length])
-                        vl = [v for v in vl if v[0].aend <= maxp and v[0].aend > maxp -  self.max_insert + 2 * self.read_length]
-                        if len(vl) < ps:
-                            continue
-                        bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].aend for v in vl if v[0].pos > 0]), 1)
-                        bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].aend for v in vl if v[1].pos > 0]), 1)
-                        if bp1.pos != bp2.pos:
-                            bp1c = bp2
-                            bp2c = bp1
-                    else:
-                        maxp = vl[-1][0].pos
-                        maxn = 0
-                        for v in vl:
-                            if len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length]) > maxn:
-                                maxp = v[0].pos
-                                maxn = len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length])
-                        vl = [v for v in vl if v[0].pos >= maxp and v[0].pos < maxp +  self.max_insert - 2 * self.read_length]
-                        if len(vl) < ps:
-                            continue
-                        bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
-                        bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
-                        if bp1.pos != bp2.pos:
-                            bp1c = bp2
-                            bp2c = bp1
-                    # print '###', str(bp1), str(bp2), len(vl), num_inverted
-                bre = breakpoint_edge(bp1, bp2)
-                if bre.type() != 'concordant':
-                    dnlist.append((bre, vl))
-                if bp1c is not None and bp2c is not None:
-                    brec = breakpoint_edge(bp1c, bp2c)
-                    if brec.type() != 'concordant':
-                        dnlist.append((brec, [(v[1], v[0]) for v in vl]))
-        logging.info("#TIME " + str(clock()) + " discordant edges: local edges done " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)))
-        self.get_mates_time = 0
-        self.get_mates_num_calls = 0
-        for c in mcdflist + mcdrlist:
-            nlist = []
-            if filter_repeats:
-                if len(hg.interval_list([c[0]]).intersection(hg.conserved_regions)) > 0:
-                    continue
-            logging.info("#TIME " + str(clock()) + " discordant edges: global edges -1" + str(c[0]))
-            rep_content_time = 0
-            intersection_time = 0
-            nr_calls = 0
-            for hga in c[1]:
-                nmatelist = self.get_mates(hgddict[hga])
-                if filter_repeats:
-                    rpc = clock()
-                    nmatelist = [a for a in nmatelist if hg.interval(a, bamfile=self.bamfile).rep_content() <= 3]
-                    nr_calls += len(nmatelist)
-                    rep_content_time += clock() - rpc
-                    ict = clock()
-                    nmatelist = [a for a in nmatelist if len(hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(ilist)) == 0]
-                    intersection_time += clock() - ict
-                nlist += nmatelist
-            logging.info("#TIME " + str(clock()) + " discordant edges: global edges 0" + str(c[0]) + " " + str(rep_content_time) + " " + str(nr_calls))
-            nflist = [n for n in nlist if not n.is_reverse]
-            nrlist = [n for n in nlist if n.is_reverse]
-            hgndict = {hg.interval(a, bamfile=self.bamfile):a for a in nflist + nrlist}
-            hgnflist = hg.interval_list([hga for hga in hgndict if hga.strand==1])
-            hgnrlist = hg.interval_list([hga for hga in hgndict if hga.strand==-1])
-            hgnflist.sort()
-            hgnrlist.sort()
-            mcnflist = hgnflist.merge_clusters(self.max_insert - 2 * self.read_length)
-            mcnrlist = hgnrlist.merge_clusters(self.max_insert - 2 * self.read_length)
-            mcnflist = [m for m in mcnflist if len(m[1]) >= self.pair_support] 
-            mcnrlist = [m for m in mcnrlist if len(m[1]) >= self.pair_support] 
-            mcnlist = mcnflist + mcnrlist
-            logging.info("#TIME " + str(clock()) + " discordant edges: global edges 1" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
-            for cn in mcnlist:
-                vl = []
-                if filter_repeats:
-                    if len(hg.interval_list([cn[0]]).intersection(hg.conserved_regions)) > 0:
-                        continue
-                hgmi = 0
-                for hgm in cn[1]:
-                    hgmi += 1
-                    if filter_repeats:
-                        if hgm.rep_content() > 3:
-                            continue
-                    for a in self.get_mates(hgndict[hgm]):
-                        if filter_repeats:
-                            if hg.interval(a, bamfile=self.bamfile).rep_content() > 3:
-                                continue
-                        if hg.interval(a, bamfile=self.bamfile).intersects(c[0]):
-                            vl.append((a, hgndict[hgm]))
-                            break
-                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
-                    continue
-                if not vl[0][0].is_reverse:
-                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
-                                            max([v[0].aend for v in vl]), 1)
-                else:
-                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
-                                            min([v[0].pos for v in vl if v[0].pos > 0]), -1)
-                if not vl[0][1].is_reverse:
-                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
-                                            max([v[1].aend for v in vl]), 1)
-                else:
-                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
-                                            min([v[1].pos for v in vl if v[1].pos > 0]), -1)
-                if not adaptive_counts:
-                    ps = pair_support
-                else:
-                    ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
-                if len(vl) < ps:
-                    continue
-                num_inverted = 0
-                if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
-                    if bp1.strand == 1:
-                        for v in vl:
-                            if v[0].pos == v[1].pos:
-                                num_inverted += 1
-                    else:
-                        for v in vl:
-                            if v[0].aend == v[1].aend:
-                                num_inverted += 1
-                    # print '###', str(bp1), str(bp2), len(vl), num_inverted
-                if len(vl) - num_inverted < ps:
-                    continue
-                bre = breakpoint_edge(bp1, bp2)
-                if bre.type() != 'concordant':
-                    dnlist.append((bre, vl))
-            logging.info("#TIME " + str(clock()) + " discordant edges: global edges 2" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
-        logging.info("#TIME " + str(clock()) + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
-        dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
-        print str(interval).strip(), len(dnlist)
-        for e in dnlist:
-            print '#', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
-            # if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content() > 3 or (e[0].type() == 'everted' and (e[0].v1.pos - e[0].v2.pos) <30):
-            #     for a in e[1]:
-            #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
-        return dnlist
+            if self.downsample_ratio != 1:
+                rr = self.downsample_ratio
+                rsq = math.sqrt(rr)
+                r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1], r)]
+                r[11] = max((r[4] / 10.0)  * ((r[7] - r[6]) / 2 / r[6])*r[12], 3)
+                self.pair_support = r[11]
+                self.downsample_stats = r
+            else:
+                self.downsample_stats = self.basic_stats
 
-    def construct_segment(self, v):
-        cpos = v.pos - v.strand * self.max_insert / 2
-        cprevious = v.pos
-        cflag = v.pos
-        while abs(cflag - cprevious) < self.window_size:
-            cprevious = cpos
-            cpos = cpos - v.strand * self.max_insert / 2
-            drange = [cpos, cpos + v.strand * self.max_insert]
-            drange.sort()
-            dlist = [a for a in self.bamfile.fetch(v.chrom,
-                                                   drange[0], drange[1])]
-            if (len(dlist) * self.read_length <
-                self.min_coverage * self.max_insert):
-                continue
-            cflag = cprevious
-            if abs(cprevious - v.pos) > self.max_insert:
-                v1 = breakpoint_vertex(v.chrom, cprevious, v.strand)
-                discordant_neighbors = self.get_discordant_neighbors(v1)
-                if len(discordant_neighbors) > 0:
-                    return v1
-            v2 = breakpoint_vertex(v.chrom, cpos, -1 * v.strand)
-            discordant_neighbors = self.get_discordant_neighbors(v2)
-            if len(discordant_neighbors) > 0:
-                return v2
-        return None
+        if pair_support != -1:
+            self.pair_support = pair_support
+        self.discordant_edge_calls = {}
 
-    def get_mates(self, a):
-        gmt = clock()
-        self.get_mates_num_calls += 1
-        try:
-            miter = self.secondary_index.find(a.qname)
-            retval = [m for m in miter if m.is_read1 != a.is_read1]
-            self.get_mates_time += clock() - gmt
-            return retval
-        except:
-            # print clock(), 'get_mates', str(a)
-            retval = [a2 for a2 in self.bamfile.fetch(a.next_reference_name, a.next_reference_start, a.next_reference_start + 1) if a2.qname == a.qname]
-            # retval = [self.bamfile.mate(a)]
-            # print clock(), 'got_mates'
-            self.get_mates_time += clock() - gmt
-            return retval
+    # Methods to find coverage and other statistics of bam file
+
+    def fetch(self, c, s, e):
+        if self.downsample_ratio == 1:
+            for a in self.bamfile.fetch(c, s, e):
+                    yield a
+        else:                    
+            for a in self.bamfile.fetch(c, s, e):
+                if hash(a.query_name) % 1000000 < 1000000 * self.downsample_ratio:
+                        yield a
+
 
     def interval_coverage(self, i, clip=False, gcc=False):
         if gcc:
@@ -496,7 +151,7 @@ class bam_to_breakpoint():
             wc_corrected = 0
             j = 0
             for w in wc_raw:
-                alist = [a for a in self.bamfile.fetch(w[0].chrom, w[0].start, w[0].end)]
+                alist = [a for a in self.fetch(w[0].chrom, w[0].start, w[0].end)]
                 wc_corrected += w[0].size() * w[1] / self.gc_scaling()[int(w[0].gc_content() * 10)  / 10.0]
                 if w[0].size() * w[1] / self.gc_scaling()[int(w[0].gc_content() * 10)  / 10.0]  > 10 * len(alist) * self.read_length:
                     print str(i).strip(), str(w[0]).strip(), wc_corrected, len(alist), w[1], self.gc_scaling()[int(w[0].gc_content() * 10)  / 10.0], w[0].gc_content(), w[0].sequence()
@@ -513,7 +168,7 @@ class bam_to_breakpoint():
             e2 = hg.chrLen[hg.chrNum(i.chrom)]
         if s2 >= e2:
             return 0
-        alist = [a for a in self.bamfile.fetch(i.chrom, s2, e2)
+        alist = [a for a in self.fetch(i.chrom, s2, e2)
                  if not a.is_unmapped]
         # if e2 - s2 >= window_size and clip == False and gcc == False:
         #     return len(alist) * self.read_length / float(e2 - s2)
@@ -523,7 +178,7 @@ class bam_to_breakpoint():
         if clip == True:
             return sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
         else:
-            return len([a for a in alist if a.aend <= e2]) * self.read_length / float(e2-s2)
+            return len([a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / float(e2-s2)
         for a in alist:
             ai = hg.interval(a, bamfile=self.bamfile).intersection(i)
             if ai is not None:
@@ -556,9 +211,9 @@ class bam_to_breakpoint():
 
     def median_coverage(self, window_size=-1, gcc=False, refi=-1, window_list=None):
         if (window_size == 10000 or window_size == -1) and self.basic_stats_set and refi == -1:
-            return self.basic_stats
+            return self.downsample_stats
         if window_size == 300 and self.basic_stats_set and refi == -1:
-            return self.basic_stats[3:6]
+            return self.downsample_stats[3:6]
 
         num_iter = 1000
         iteri = 0
@@ -580,8 +235,8 @@ class bam_to_breakpoint():
                 (c,p) = hg.chrPos(newpos)
                 if c not in self.bamfile.references or p < 10000 or hg.chrLen[hg.chrNum(c)] < p + 10000 or len(hg.interval_list([hg.interval(c, p, p+10000)]).intersection(hg.conserved_regions, extend=10000)) > 0:
                     continue
-                read_length += [a.infer_query_length(always=False) for a in self.bamfile.fetch(c, p, p+10000)]
-                insert_size += [a.template_length for a in self.bamfile.fetch(c, p, p+10000) if a.is_proper_pair and not a.is_reverse and a.template_length < 10000 and a.template_length > 0]
+                read_length += [a.infer_query_length(always=False) for a in self.fetch(c, p, p+10000)]
+                insert_size += [a.template_length for a in self.fetch(c, p, p+10000) if a.is_proper_pair and not a.is_reverse and a.template_length < 10000 and a.template_length > 0]
                 iteri += 1
             self.read_length = np.average(read_length)
             self.insert_size = np.average(insert_size)
@@ -627,11 +282,11 @@ class bam_to_breakpoint():
             wc_std.append(np.std(wc_ws_filter))
 
         if window_size not in [-1, 300, 10000]:
-            return (wc_median[0], wc_avg[0], wc_std[0])
+            return (wc_median[0] * self.downsample_ratio, wc_avg[0] * self.downsample_ratio, wc_std[0] * math.sqrt(self.downsample_ratio))
         
         (wc_10000_median, wc_10000_avg, wc_10000_std) = (wc_median[0], wc_avg[0], wc_std[0])
         (wc_300_median, wc_300_avg, wc_300_std) = (wc_median[1], wc_avg[1], wc_std[1])
-        self.pair_support = max((max(wc_300_avg - 3*wc_300_std, wc_300_avg/10.0)  * (self.insert_size - self.read_length) / 2 / self.read_length)*percent_proper, 3)
+        self.pair_support = max((wc_300_avg / 10.0)  * ((self.insert_size - self.read_length) / 2 / self.read_length)*percent_proper, 3)
         rstats = (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length, self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support, self.percent_proper)
         if refi == -1:
             self.basic_stats = rstats
@@ -642,6 +297,24 @@ class bam_to_breakpoint():
             coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats", 'a')
             coverage_stats_file.write(os.path.abspath(self.bamfile.filename) + '\t' + '\t'.join(map(str, rstats)) + '\n')
             coverage_stats_file.close()
+
+        r = rstats
+        if self.downsample < 0 or self.downsample > self.basic_stats[0]:
+            self.downsample_ratio = 1
+        elif self.downsample == 0:
+            self.downsample_ratio = 10.0 / self.basic_stats[0] if self.basic_stats[0] > 10 else 1
+        else:
+            self.downsample_ratio = float(self.downsample) / self.basic_stats[0] if self.basic_stats[0] > float(self.downsample) else 1
+        if self.downsample_ratio != 1:
+            rr = self.downsample_ratio
+            rsq = math.sqrt(rr)         
+            r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1], r)]
+            r[11] = max((r[4] / 10.0)  * ((r[7] - r[6]) / 2 / r[6])*r[12], 3)
+            self.pair_support = r[11]
+            self.downsample_stats = r
+        else:
+            self.downsample_stats = self.basic_stats
+
         return rstats
 
     def gc_scaling(self):
@@ -675,6 +348,8 @@ class bam_to_breakpoint():
         print "GC scale:", scale
         return scale
 
+
+    # Methods to find all coverage shifts in amplicon
     def meanshift(self, i, window_size=-1, hb=2, cov=None, rd_global=-1, h0=-1, gcc=False, n=-1):
         if window_size == -1:
            window_size = self.max_insert - self.read_length
@@ -705,7 +380,7 @@ class bam_to_breakpoint():
             else:
                 # return math.sqrt(cov[wi][1] * self.read_length / window_size)
                 return math.sqrt(cov[wi][1] / rd_global) * h0
-        dfi = [(cov[wi][0], sum([wj * math.exp(-0.5 * wj ** 2 / hb ** 2) * math.exp(-0.5 * (cov[wi + wj][1] - cov[wi][1])** 2 / hr(wi)**2) for wj in range(-1 * n, n + 1)])) for wi in range(n, len(j) - n)]
+        dfi = [(cov[wi][0], sum([wj * math.exp(-0.5 * wj ** 2 / hb ** 2) * math.exp(-0.5 * (cov[wi + wj][1] - cov[wi][1])** 2 / hr(wi)**2) for wj in range(-1 * n, n + 1)])) for wi in range(n, len(j) - n) if cov[wi][0] is not None]
         # print 'meanshift', str(i), len(cov), len(dfi), len([c for c in cov if c[0] is not None]), [(str(c[0][0]), c[0][1], c[1][1]) for c in zip([cc for cc in cov if cc[0] is not None], dfi) ]
         #[(interval,ms)]
         return dfi
@@ -728,8 +403,8 @@ class bam_to_breakpoint():
             startskip = n - (i.start - s2) / window_size
         if e2 > hg.chrLen[hg.chrNum(i.chrom)]:
             hgl = hg.chrLen[hg.chrNum(i.chrom)]
-            e2 = hgl - hgl % window_size + e2 % window_size
-            endskip = n - (e2 - i.end) / window_size
+            e2 = hgl - (hgl - i.end) % window_size
+            endskip = n - (hgl - i.end) / window_size
         i2 = hg.interval(i.chrom, s2, e2)
         cov = [c for c in self.window_coverage(i2, window_size, gcc)]
         cov = [(None, 0) for ni in range(startskip)] + cov + [(None, 0) for ni in range(endskip)]
@@ -739,6 +414,7 @@ class bam_to_breakpoint():
                 return h0 / 2.0
             else:
                 return math.sqrt(c / rd_global) * h0
+
         for hb in hb_profile:
             cov2 = copy.copy(cov)
             for ms_iterate in range(1):
@@ -754,14 +430,12 @@ class bam_to_breakpoint():
                 #     print "THIS", ff, frozen[ff][0][0][0].start
                 while msi < len(ms):
                     if fi >= 0 and fi < len(frozen) and ms[msi][0].start == frozen[fi][0][0][0].start:
-                        # print "frozen segment", fi
                         if len(new_seg) > 0 and (frozen[fi][1] % 2 == 1 or (ms[msi][1] > 0 and ms[msi -1] <= 0)):
                             segs.append(new_seg)
                             new_seg = ms[msi: msi + len(frozen[fi][0])]
                         else:
                             new_seg += ms[msi: msi + len(frozen[fi][0])]
                         # segs.append(ms[msi: msi + len(frozen[fi][0])])
-                        # len(segs[-1]), len(frozen[fi][0]), segs[-1][-1][0].end, frozen[fi][0][-1][0].end
                         msi += len(frozen[fi][0])
                         fi += 1
                         continue
@@ -892,7 +566,9 @@ class bam_to_breakpoint():
             # for a in shifts:
             #     print a[0], a[1], a[2], len(a[3]), len(a[4])
             # print '---------------------------------------------------------'
-        return shifts
+        if self.sensitivems:
+            return [s for s in shifts if abs(s[2] - s[1]) >= 1]
+        return [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
 
     def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False):
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
@@ -928,398 +604,658 @@ class bam_to_breakpoint():
 
     def interval_crossing_arcs(self, chrom, start, end, strand, ilist):
             if strand == -1:
-                return [a for a in self.bamfile.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
+                return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and a.is_reverse
                         and len(ilist.intersection([hg.interval(self.bamfile.getrname(a.mrnm), a.pnext, a.pnext)])) == 0]
             else:
-                return [a for a in self.bamfile.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
+                return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and not a.is_reverse 
                         and len(ilist.intersection([hg.interval(self.bamfile.getrname(a.mrnm), a.pnext, a.pnext)])) == 0]
 
 
-    def interval_filter_vertices(self, ilist0):
+    # Methods to find breakpoint edges in amplicon
+    def get_mates(self, a):
+        gmt = clock()
+        self.get_mates_num_calls += 1
+        try:
+            miter = self.secondary_index.find(a.qname)
+            retval = [m for m in miter if m.is_read1 != a.is_read1]
+            self.get_mates_time += clock() - gmt
+            return retval
+        except:
+            # print clock(), 'get_mates', str(a)
+            retval = [a2 for a2 in self.fetch(a.next_reference_name, a.next_reference_start, a.next_reference_start + 1) if a2.qname == a.qname and a2.is_read1 != a.is_read1]
+            # retval = [self.bamfile.mate(a)]
+            # print clock(), 'got_mates'
+            self.get_mates_time += clock() - gmt
+            return retval
+
+    def pair_support_count(self, chrom, position, strand, meanshift, foldup=False, sensitivems=True):
+        #str(hg.interval(f[0][0][0].chrom, f[0][0][0].start, f[0][-1][0].end)), f[1], f[2]
+        cd = 1
+        for fi in range(len(meanshift)):
+            f = meanshift[fi]
+            if not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
+                continue
+            cprev = 0
+            pi = bisect.bisect_left(f[1], (position,))
+            if pi > 0 and f[1][pi - 1][0] + self.ms_window_size >= pi and (f[1][pi - 1][2] - f[1][pi - 1][1]) / strand > 0:
+                cd = abs(f[1][pi - 1][2] - f[1][pi - 1][1])
+            elif pi < len(f[1]) and f[1][pi][0] - self.ms_window_size <= pi and (f[1][pi][2] - f[1][pi][1]) / strand > 0:
+                cd = abs(f[1][pi][2] - f[1][pi][1])
+            elif pi < len(f[1]):
+                cd = f[1][pi][1]
+            elif len(f[1]) > 0:
+                cd = f[1][-1][2]
+            else:
+                cd = f[2]
+            break
+        mc = self.median_coverage()
+        cd = max(1, cd)
+        if self.sensitivems and sensitivems:
+            cd = min(cd, 10)
+        pcount = max(mc[4] * cd /10.0  * ((self.insert_size - self.read_length) / 2 / self.read_length)*mc[12], 3)
+        pmincount = mc[11]
+        if pcount < mc[11]:
+            pcount = pmincount
+        return pcount 
+
+    def concordant_edge(self, v, ms=None, bp_margin=0):
+        if v.pos == 0:
+            return (None, [])
+        elif v.strand == 1:
+            dlist = [a for a in self.fetch(v.chrom,
+                                                   max(1, v.pos - self.max_insert),
+                                                   v.pos)
+                     if not a.is_unmapped and not a.is_reverse and a.is_proper_pair
+                     and a.next_reference_name == v.chrom and a.mpos >= v.pos and a.reference_start < v.pos - bp_margin
+                     and a.mpos < a.reference_start + self.max_insert - self.read_length]
+            if len(dlist) > self.pair_support:
+                v2= breakpoint_vertex(v.chrom,
+                                         max(v.pos + 1, min([a.mpos for a in dlist])), -1)
+                logging.debug("#TIME " + '%.3f\t'%clock() + " concordant edges " + str(v) + " " + str(len(dlist)))
+                return (breakpoint_edge(v, v2), dlist)
+        else:
+            dlist = [a for a in self.fetch(v.chrom,
+                                                   max(1, v.pos - self.max_insert),
+                                                   v.pos)
+                     if not a.is_reverse and a.is_proper_pair and not a.is_unmapped
+                     and a.next_reference_name == v.chrom and a.mpos >= v.pos and a.reference_start < v.pos - bp_margin
+                     and a.mpos < a.reference_start + self.max_insert - self.read_length]
+            if len(dlist) > self.pair_support:
+                v2 = breakpoint_vertex(v.chrom,
+                                         min(v.pos - 1, max([a.reference_end - 1 for a in dlist])), 1)
+                logging.debug("#TIME " + '%.3f\t'%clock() + " concordant edges " + str(v) + " " + str(len(dlist)))
+                return (breakpoint_edge(v, v2), dlist)
+        logging.debug("#TIME " + '%.3f\t'%clock() + " concordant edges " + str(v) + " not found")
+        return (None, dlist)
+            
+    def foldup_count(self, chrom, position, strand, cdiff=-1):
+        interval = hg.interval(chrom, max(1, position - self.ms_window_size), min(hg.chrLen[hg.chrNum(chrom)], position + self.ms_window_size))
+        if strand == 1:
+            dlist = [a for a in self.fetch(interval.chrom,
+                                                   interval.start,
+                                                   interval.end)
+                     if not a.is_unmapped and not a.is_reverse and a.is_paired
+                     and not a.is_proper_pair and not a.mate_is_unmapped
+                     and not a.mate_is_reverse and a.mrnm==a.tid
+                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
+        else:
+            dlist = [a for a in self.fetch(interval.chrom,
+                                                   interval.start,
+                                                   interval.end)
+                     if not a.is_unmapped and a.is_reverse and a.is_paired
+                     and not a.is_proper_pair and not a.mate_is_unmapped
+                     and a.mate_is_reverse and a.mrnm==a.tid
+                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
+        return len(dlist)
+
+    def refine_discordant_edge(self, e):
+        logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
+        v1min = max(0, (e.v1.pos - self.max_insert + self.read_length if e.v1.strand == 1 else e.v1.pos) - 1)
+        v2min = max(0, (e.v2.pos - self.max_insert + self.read_length if e.v2.strand == 1 else e.v2.pos) - 1)
+        v1max = min(e.v1.pos + self.max_insert - self.read_length if e.v1.strand == -1 else e.v1.pos, hg.chrLen[hg.chrNum(e.v1.chrom)]) - 1
+        v2max = min(e.v2.pos + self.max_insert - self.read_length if e.v2.strand == -1 else e.v2.pos, hg.chrLen[hg.chrNum(e.v2.chrom)]) - 1
+        d1list = [a for a in self.fetch(e.v1.chrom, v1min, v1max)]
+        d2list = [a for a in self.fetch(e.v2.chrom, v2min, v2max)]
+        d1Set = Set([(a.qname, a.is_read1, a.is_reverse, a.is_secondary) for a in d1list])
+        if e.v1.strand == e.v2.strand:
+            d2Set = Set([(a.qname, a.is_read1, not a.is_reverse, not a.is_secondary) for a in d2list])
+        else:
+            d2Set = Set([(a.qname, a.is_read1, a.is_reverse, not a.is_secondary) for a in d2list])
+        rSet = d1Set.intersection(d2Set)        
+        if len(rSet) == 0:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge rSet empty " + str(e))
+            return (e, 0, [], None)
+        multi_r = Set([])
+        d1reads = {}
+        d2reads = {}
+        for a in d1list:
+            if (a.qname, a.is_read1, a.is_reverse, a.is_secondary) in d1reads:
+                multi_r.add((a.qname, a.is_read1, a.is_reverse, a.is_secondary))
+            d1reads[(a.qname, a.is_read1, a.is_reverse, a.is_secondary)] = a
+        if e.v1.strand == e.v2.strand:
+            for a in d2list:
+                if (a.qname, a.is_read1, not a.is_reverse, not a.is_secondary) in d2reads:
+                    multi_r.add((a.qname, a.is_read1, not a.is_reverse, not a.is_secondary))
+                d2reads[(a.qname, a.is_read1, not a.is_reverse, not a.is_secondary)] = a
+        else:
+            for a in d2list:
+                if (a.qname, a.is_read1, a.is_reverse, not a.is_secondary) in d2reads:
+                    multi_r.add((a.qname, a.is_read1, a.is_reverse, not a.is_secondary))
+                d2reads[(a.qname, a.is_read1, a.is_reverse, not a.is_secondary)] = a
+
+        dpairs = defaultdict(lambda: [], {})
+        for aa in rSet:
+            if a.qname in multi_r:
+                continue
+            a1 = d1reads[aa]
+            a2 = d2reads[aa]
+            a1clip_prefix = 0
+            for a1c in a1.cigartuples:
+                if a1c[0] == 5:
+                    a1clip_prefix += a1c[1]
+                else:
+                    break
+            a2clip_prefix = 0
+            for a2c in a2.cigartuples:
+                if a2c[0] == 5:
+                    a2clip_prefix += a2c[1]
+                else:
+                    break
+            a1clip_suffix = 0
+            for a1c in a1.cigartuples[::-1]:
+                if a1c[0] == 5:
+                    a1clip_suffix += a1c[1]
+                else:
+                    break
+            a2clip_suffix = 0
+            for a2c in a2.cigartuples[::-1]:
+                if a2c[0] == 5:
+                    a2clip_suffix += a2c[1]
+                else:
+                    break
+
+            if a1.is_reverse:
+                r1 = (a1.infer_query_length() + a1clip_suffix - a1.query_alignment_end, a1.infer_query_length() + a1clip_suffix - a1.query_alignment_start - 1)
+            else:
+                r1 = (a1.query_alignment_start + a1clip_prefix, a1.query_alignment_end - 1 + a1clip_prefix)
+            if a2.is_reverse:
+                r2 = (a2.infer_query_length() + a2clip_suffix - a2.query_alignment_end, a2.infer_query_length() + a2clip_suffix - a2.query_alignment_start - 1)
+            else:
+                r2 = (a2.query_alignment_start + a2clip_prefix, a2.query_alignment_end - 1 + a2clip_prefix)
+
+            if r1[0] <= r2[0] and r1[1] <= r2[1]:
+                hom = r1[1] - r2[0] + 1
+                prefix = True
+            elif r1[0] >= r2[0] and r1[1] >= r2[1]:
+                hom = r2[1] - r1[0] + 1
+                prefix = False
+            else:
+                continue
+
+            if ((e.v1.strand == 1) == (not a1.is_reverse)) != prefix:
+                continue
+
+            if hom > 0:
+                p1 = a1.reference_end - hom - 1 if e.v1.strand == 1 else a1.reference_start + hom
+                p2 = a2.reference_end - hom - 1 if e.v2.strand == 1 else a2.reference_start + hom
+            else:
+                p1 = a1.reference_end - 1 if e.v1.strand == 1 else a1.reference_start
+                p2 = a2.reference_end - 1 if e.v2.strand == 1 else a2.reference_start
+            dpairs[(hom, p1, p2)].append((a1, a2, r1, r2))
+
+        if len(dpairs) == 0:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge dpairs empty " + str(e))
+            return (e, 0, [], None)
+        max_s = max([len(s) for s in dpairs.values()])
+        max_p = [p for p in dpairs.keys() if len(dpairs[p]) == max_s]
+
+
+        if len(max_p) != 1:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge max_p not 1 " + str(e) + " " + str(max_p))
+            return (e, 0, [], None)
+        hom = max_p[0][0]
+        hom_seq = ''
+        if dpairs[max_p[0]][0][0].is_secondary:
+            vstrand = e.v2.strand
+            a = dpairs[max_p[0]][0][1]
+        else:
+            vstrand = e.v1.strand
+            a = dpairs[max_p[0]][0][0]
+        if hom >= 0:
+            if vstrand == 1:
+                hom_seq = a.query_sequence[a.query_alignment_end - hom: a.query_alignment_end]
+            else:
+                hom_seq = a.query_sequence[a.query_alignment_start: a.query_alignment_start + hom]
+        else:
+            if vstrand == 1:
+                hom_seq = a.query_sequence[a.query_alignment_end: a.query_alignment_end + abs(hom)]
+            else:
+                hom_seq = a.query_sequence[a.query_alignment_start - abs(hom): a.query_alignment_start]
+        p1 = max_p[0][1]
+        p2 = max_p[0][2]
+        logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found "
+            + str(breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand)))
+            + " " + str(hom) + " " + str(len(dpairs[max_p[0]])) + " " + str(len(rSet)))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][0].query_alignment_end) + " " + str(dpairs[max_p[0]][0][0]))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][1]))
+        return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
+
+    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, adaptive_counts=False, ms=None):
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
+        if pair_support == -1:
+            pair_support = self.pair_support
+        # if adaptive_counts == True:
+        #     raise "Warning: adaptive counts not supported"
+        #     adaptive_counts = False
+        if type(interval) != hg.interval_list:
+            ilist = hg.interval_list([interval])
+        else:
+            ilist = interval
+        # if (tuple(ilist), filter_repeats, pair_support) in self.discordant_edge_calls:
+        #     return self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support)]
+        mslist = []
+
+        # for i in ilist:
+        #     print str(i)
+
+        if adaptive_counts:
+            if ms is None:
+                msrlist = [self.meanshift_refined(i) for i in ilist]
+                ms = zip(ilist, msrlist)
+        interval = ilist[0]
+        dflist = []
+        drlist = []
+        for i in ilist:
+            dflist += [a for a in self.fetch(i.chrom,
+                                                max(1, i.start),
+                                                i.end)
+                  if not a.is_unmapped and not a.is_reverse and a.is_paired
+                  and not a.is_proper_pair and not a.mate_is_unmapped
+                  and not a.is_secondary]
+            drlist += [a for a in self.fetch(i.chrom,
+                                                max(1, i.start),
+                                                i.end)
+                  if not a.is_unmapped and a.is_reverse and a.is_paired
+                  and not a.is_proper_pair and not a.mate_is_unmapped
+                  and not a.is_secondary]
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
+        drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+
+        # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
+        vlist = [(hg.absPos(a.reference_name, a.pos) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a) for a in dflist + drlist]
+        v0list = copy.copy(vlist)
+        v0list.sort(key=lambda x: x[0])
+        v1list = copy.copy(vlist)
+        v1list.sort(key=lambda x: x[1])
+        dlist = []
+        v0listp = [v[0] for v in v0list]
+        v1listp = [v[1] for v in v1list]
+        vli = 0
+        plist = defaultdict(lambda: None, {})
+        rlist = defaultdict(lambda: 0, {})
+        nlist = defaultdict(lambda: 1, {})
+        # identify edges with bisect and union-find algorithm
+        for v in vlist:
+            s0 = bisect.bisect_left(v0listp, v[0] - self.max_insert + self.read_length)
+            e0 = bisect.bisect_right(v0listp, v[0] + self.max_insert - self.read_length)
+            s1 = bisect.bisect_left(v1listp, v[1] - self.max_insert + self.read_length)
+            e1 = bisect.bisect_right(v1listp, v[1] + self.max_insert - self.read_length)
+            S0 = Set([vv[2] for vv in v0list[s0:e0+1]])
+            S1 = Set([vv[2] for vv in v1list[s1:e1+1]])
+            if len(S0.intersection(S1)) >= self.pair_support:
+                dlist.append(v[2])
+            v1 = v[2]
+            for v2 in S0.intersection(S1):
+                v1g = v1
+                v2g = v2
+                while plist[v1g] is not None :
+                    v1g = plist[v1g]
+                while plist[v2g] is not None:
+                    v2g = plist[v2g]
+                if v1g == v2g:
+                    continue
+                if rlist[v1g] > rlist[v2g]:
+                    plist[v2g] = v1g
+                    rlist[v1g] = max(rlist[v1g], rlist[v2g] + 1)
+                    nlist[v1g] += nlist[v2g]
+                else:
+                    plist[v1g] = v2g
+                    rlist[v2g] = max(rlist[v2g], rlist[v1g] + 1)
+                    nlist[v2g] += nlist[v1g]
+        clist = defaultdict(lambda: [], {})
+        for v in plist:
+            vg = v
+            while plist[vg] is not None:
+                vg = plist[vg]
+            clist[vg].append(v)
+
+        mcdflist = []
+        mcdrlist = []
+        hgddict = {}
+        for c in clist:
+            if len(clist[c]) < self.pair_support:
+                continue
+            ml = clist[c]
+            if filter_repeats:
+                ml = [v for v in clist[c] if hg.interval(v, bamfile=self.bamfile).rep_content() <= 3]
+                if len(ml) < self.pair_support:
+                    continue
+            hgl = hg.interval_list([])
+            for v in ml:
+                hgv = hg.interval(v, bamfile=self.bamfile)
+                hgddict[hgv] = v
+                hgl.append(hgv)
+            hgl.sort()
+            if c.is_reverse:
+                mcdrlist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
+            else:
+                mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
+
+
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant filter neighborhood " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+
+        dnlist0 = []
+        dnlist = []
+        clist = hg.interval_list([c[0] for c in mcdflist + mcdrlist])
+        clist.sort()
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: merge and sort discordant " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)))
+        ci = 0
+        for c1 in mcdflist + mcdrlist:
+            ci += 1
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local cluster " + str(interval) + " " + str(c1[0]) + " " + str(len(c1[1]))) 
+            neighbor_hglist = hg.interval_list([])
+            for a1 in c1[1]:
+                # if hgddict[a1].next_reference_name == hgddict[a1].reference_name:
+                neighbor_hglist.append(hg.interval(hgddict[a1].next_reference_name, hgddict[a1].next_reference_start, hgddict[a1].next_reference_start))
+            neighbor_hglist.sort()
+            # print str(c1[0]), len(neighbor_hglist)
+            neighbor_hglist = hg.interval_list([a2[0] for a2 in neighbor_hglist.merge_clusters(extend=self.max_insert - self.read_length) if len(a2[1]) >= pair_support])
+            # print [str(a2) for a2 in neighbor_hglist]
+            # mcdlist = hg.interval_list([a[0] for a in mcdflist + mcdrlist])
+            # mcdlist.sort()
+            # print str(c1[0]), [str(n) for n in neighbor_hglist]
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local cluster " + str(interval) + " " + str(c1[0]) + " " + str(len(mcdlist.intersection(neighbor_hglist, extend=self.max_insert))))
+            for c2 in mcdflist + mcdrlist:
+                if len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)) == 0:
+                    continue
+                # print str(c1[0]), str(c2[0])
+                # continue
+                # print ci, str(c1[0]), str(c2[0]), len(c1[1]), len(c2[1]), len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)), len(Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]])))
+                # if len(Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]]))) == 11:
+                #     qset = Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]]))
+                #     for a1 in c1[1]:
+                #         if hgddict[a1].qname in qset:
+                #             print str(hgddict[a1])
+                #     for a2 in c2[1]:
+                #         if hgddict[a2].qname in qset:
+                #             print str(hgddict[a2])
+                vl = []
+                for a1 in c1[1]:
+                    for a2 in c2[1]:
+                        aq1 = hgddict[a1]
+                        aq2 = hgddict[a2]
+                        if aq1.qname == aq2.qname and aq1.is_read1 != aq2.is_read1:
+                            if aq1.rname == aq2.rname and abs(aq1.pos - aq2.pos) < self.read_length and abs(aq1.reference_end - aq2.reference_end) < self.read_length and aq1.is_reverse != aq2.is_reverse:
+                                continue
+                            if aq1.rname == aq2.rname and  aq1.is_reverse and not aq2.is_reverse and aq1.pos - aq2.reference_end + 1> 0 and aq1.pos - aq2.reference_end + 1< self.max_insert - 2 * self.read_length:
+                                continue
+                            if aq2.rname == aq1.rname and aq2.is_reverse and not aq1.is_reverse and aq2.pos - aq1.reference_end + 1 > 0 and aq2.pos - aq1.reference_end + 1 < self.max_insert - 2 * self.read_length:
+                                continue
+                            vl.append((aq1, aq2))
+
+                # if len(vl) == 3 and c1[0].chrom == 'chr22' and vl[0][0].pos > 46308521 and vl[0][0].pos < 46309521:
+                #     for v in vl:
+                #         print v[0].is_reverse, str(v[0])
+                #         print v[1].is_reverse, str(v[1])
+
+
+                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
+                    continue
+                if not vl[0][0].is_reverse:
+                    bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].pos > 0]), 1)
+                else:
+                    bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
+                if not vl[0][1].is_reverse:
+                    bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].pos > 0]), 1)
+                else:
+                    bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                if not adaptive_counts:
+                    ps = pair_support
+                else:
+                    ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
+                if len(vl) < ps:
+                    continue
+                # else:
+                #     continue
+
+
+                num_inverted = 0
+                bp1c = None
+                bp2c = None
+                if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
+                    if bp1.strand == 1:
+                        for v in vl:
+                            if v[0].pos == v[1].pos:
+                                num_inverted += 1
+                    else:
+                        for v in vl:
+                            if v[0].reference_end == v[1].reference_end:
+                                num_inverted += 1
+                    if len(vl) - num_inverted < ps:
+                        continue
+                    vl.sort(lambda x, y: x[0].pos - y[0].pos)
+                    if bp1.strand == 1:
+                        maxp = vl[0][0].reference_end - 1
+                        maxn = 0
+                        for v in vl[::-1]:
+                            if len([v1 for v1 in vl if v1[0].reference_end <= v[0].reference_end and v1[0].pos > v[0].reference_end - 1 - self.max_insert + 2 * self.read_length]) > maxn:
+                                maxp = v[0].reference_end
+                                maxn = len([v1 for v1 in vl if v1[0].reference_end <= v[0].reference_end and v1[0].reference_end > v[0].reference_end - self.max_insert + 2 * self.read_length])
+                        vl = [v for v in vl if v[0].reference_end - 1 <= maxp and v[0].reference_end - 1 > maxp -  self.max_insert + 2 * self.read_length]
+                        if len(vl) < ps:
+                            continue
+                        bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].pos > 0]), 1)
+                        bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].pos > 0]), 1)
+                        if bp1.pos != bp2.pos:
+                            bp1c = bp2
+                            bp2c = bp1
+                    else:
+                        maxp = vl[-1][0].pos
+                        maxn = 0
+                        for v in vl:
+                            if len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length]) > maxn:
+                                maxp = v[0].pos
+                                maxn = len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length])
+                        vl = [v for v in vl if v[0].pos >= maxp and v[0].pos < maxp +  self.max_insert - 2 * self.read_length]
+                        if len(vl) < ps:
+                            continue
+                        bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
+                        bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                        if bp1.pos != bp2.pos:
+                            bp1c = bp2
+                            bp2c = bp1
+                    # print '###', str(bp1), str(bp2), len(vl), num_inverted
+                bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
+                bre = bre_refine[0]
+                if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
+                    continue
+                if bre.type() != 'concordant':
+                    dnlist0.append((bre, vl, bre_refine[1], bre_refine[2], bre_refine[3]))
+                if bp1c is not None and bp2c is not None:
+                    brec_refine = self.refine_discordant_edge(breakpoint_edge(bp1c, bp2c))
+                    brec = brec_refine[0]
+                    if brec.type() != 'concordant':
+                        dnlist0.append((brec, [(v[1], v[0]) for v in vl], brec_refine[1], brec_refine[2], bre_refine[3]))
+        # exit()
+
+        # remove local edges with no complementary edges and add warning if any found
+        for bb1 in dnlist0:
+            for bb2 in dnlist0:
+                bre1 = bb1[0]
+                bre2 = bb2[0]
+                if bre1 == bre2:
+                    continue
+                if ((bre2.v2.chrom, bre2.v2.pos, bre2.v2.strand) == (bre1.v1.chrom, bre1.v1.pos, bre1.v1.strand) and
+                    (bre2.v1.chrom, bre2.v1.pos, bre2.v1.strand) == (bre1.v2.chrom, bre1.v2.pos, bre1.v2.strand)):
+                    dnlist.append(bb1)
+                    continue
+        if len(dnlist) != len(dnlist0):
+            logging.warning("dnlists do not match")
+            for bb1 in dnlist0:
+                if bb1 not in dnlist:
+                    logging.warning(str(bb1[0]) + " " + str(len(bb1[1])))
+
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local edges done " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)) + " " + str(len(dnlist)))
+        self.get_mates_time = 0
+        self.get_mates_num_calls = 0
+        for c in mcdflist + mcdrlist:
+            nlist = []
+            if filter_repeats:
+                if len(hg.interval_list([c[0]]).intersection(hg.conserved_regions)) > 0:
+                    continue
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges -1 " + str(c[0]) + " " + str(len(c[1])))
+            rep_content_time = 0
+            intersection_time = 0
+            nr_calls = 0
+            for hga in c[1]:
+                nmatelist = self.get_mates(hgddict[hga])
+                if filter_repeats:
+                    rpc = clock()
+                    nmatelist = [a for a in nmatelist if hg.interval(a, bamfile=self.bamfile).rep_content() <= 3]
+                    nr_calls += len(nmatelist)
+                    rep_content_time += clock() - rpc
+                    ict = clock()
+                    nmatelist = [a for a in nmatelist if len(hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(ilist)) == 0]
+                    intersection_time += clock() - ict
+                nlist += nmatelist
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 0" + str(c[0]) + " " + str(rep_content_time) + " " + str(nr_calls))
+            nflist = [n for n in nlist if not n.is_reverse]
+            nrlist = [n for n in nlist if n.is_reverse]
+            hgndict = {hg.interval(a, bamfile=self.bamfile):a for a in nflist + nrlist}
+            hgnflist = hg.interval_list([hga for hga in hgndict if hga.strand==1])
+            hgnrlist = hg.interval_list([hga for hga in hgndict if hga.strand==-1])
+            hgnflist.sort()
+            hgnrlist.sort()
+            mcnflist = hgnflist.merge_clusters(self.max_insert - 2 * self.read_length)
+            mcnrlist = hgnrlist.merge_clusters(self.max_insert - 2 * self.read_length)
+            mcnflist = [m for m in mcnflist if len(m[1]) >= self.pair_support] 
+            mcnrlist = [m for m in mcnrlist if len(m[1]) >= self.pair_support] 
+            mcnlist = mcnflist + mcnrlist
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 1" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
+            for cn in mcnlist:
+                vl = []
+                if filter_repeats:
+                    if len(hg.interval_list([cn[0]]).intersection(hg.conserved_regions)) > 0:
+                        continue
+                hgmi = 0
+                for hgm in cn[1]:
+                    hgmi += 1
+                    if filter_repeats:
+                        if hgm.rep_content() > 3:
+                            continue
+                    for a in self.get_mates(hgndict[hgm]):
+                        if filter_repeats:
+                            if hg.interval(a, bamfile=self.bamfile).rep_content() > 3:
+                                continue
+                        if hg.interval(a, bamfile=self.bamfile).intersects(c[0]):
+                            vl.append((a, hgndict[hgm]))
+                            break
+                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
+                    continue
+                if not vl[0][0].is_reverse:
+                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
+                                            max([v[0].reference_end - 1 for v in vl]), 1)
+                else:
+                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
+                                            min([v[0].pos for v in vl if v[0].pos > 0]), -1)
+                if not vl[0][1].is_reverse:
+                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
+                                            max([v[1].reference_end - 1 for v in vl]), 1)
+                else:
+                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
+                                            min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                if not adaptive_counts:
+                    ps = pair_support
+                else:
+                    ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
+                if len(vl) < ps:
+                    continue
+                num_inverted = 0
+                if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
+                    if bp1.strand == 1:
+                        for v in vl:
+                            if v[0].pos == v[1].pos:
+                                num_inverted += 1
+                    else:
+                        for v in vl:
+                            if v[0].reference_end == v[1].reference_end:
+                                num_inverted += 1
+                    # print '###', str(bp1), str(bp2), len(vl), num_inverted
+                if len(vl) - num_inverted < ps:
+                    continue
+                bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
+                bre = bre_refine[0]
+                if bre.type() != 'concordant':
+                    dnlist.append((bre, vl, bre_refine[1], bre_refine[2], bre_refine[3]))
+            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 2" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
+        dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
+        print str(interval).strip(), len(dnlist)
+        for e in dnlist:
+            print '#', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
+            # if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content() > 3 or (e[0].type() == 'everted' and (e[0].v1.pos - e[0].v2.pos) <30):
+            #     for a in e[1]:
+            #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
+        self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support)] = dnlist
+        return dnlist
+
+    def construct_segment(self, v):
+        cpos = v.pos - v.strand * self.max_insert / 2
+        cprevious = v.pos
+        cflag = v.pos
+        while abs(cflag - cprevious) < self.window_size:
+            cprevious = cpos
+            cpos = cpos - v.strand * self.max_insert / 2
+            drange = [cpos, cpos + v.strand * self.max_insert]
+            drange.sort()
+            dlist = [a for a in self.fetch(v.chrom,
+                                                   drange[0], drange[1])]
+            if (len(dlist) * self.read_length <
+                self.min_coverage * self.max_insert):
+                continue
+            cflag = cprevious
+            if abs(cprevious - v.pos) > self.max_insert:
+                v1 = breakpoint_vertex(v.chrom, cprevious, v.strand)
+                discordant_neighbors = self.get_discordant_neighbors(v1)
+                if len(discordant_neighbors) > 0:
+                    return v1
+            v2 = breakpoint_vertex(v.chrom, cpos, -1 * v.strand)
+            discordant_neighbors = self.get_discordant_neighbors(v2)
+            if len(discordant_neighbors) > 0:
+                return v2
+        return None
+
+
+    # Methods to find all intervals in amplicon                 
+    def interval_neighbors(self, i, ilist=[], rdlist=[], t=0, gcc=False):
+        i2 = self.interval_extend(i)
+        # i2 = i2
+        # i2 = self.interval_extend(i, ilist, rdlist)
         ms_window_size0 = 10000
         ms_window_size1 = 300
-        ilist0.sort()
-        ilist = hg.interval_list([a[0] for a in ilist0.merge_clusters()])
-
-        # finesearch edges near refined meanshifts and add to eilist, create vertices corresponding to all  meanshifts and uncovered meanshifts
-        all_msv = []
-        msv_diff = {}
-        msrlist = [self.meanshift_refined(i) for i in ilist]
-        all_msv_nocover = []
-        eilist = self.interval_discordant_edges(ilist, adaptive_counts=False, ms=msrlist)
-        eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-
-        for i, msr in zip(ilist, msrlist):
-            elist = []
-            for e in eilist:
-                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
-                    elist.append(e)
-            ms_vlist = []
-            msv_index = {}
-            for msi in range(len((msr))):
-                if msr[msi][2] > msr[msi][1]:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0], 1)
-                else:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0], -1)
-                msv_diff[msv] = msr[msi][2] - msr[msi][1]
-                ms_vlist.append(msv)
-                msv_index[msv] = msi
-            all_msv.append(ms_vlist)
-            print "Meanshift", str(i), len(ms_vlist), ms_vlist
-            sys.stdout.flush()
-            msve_match = {}
-            for msv in ms_vlist:
-                ms = msr[msv_index[msv]]
-                if ms[3]:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
-                    if len(msve) == 0:
-                        print "finesearch discordant edges", i.chrom, ms
-                        efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
-                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
-                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
-                            else:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
-                            ebest = (ebest[1], ebest[0])
-                            msve = [ebest]
-                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), len(ebest[1])
-                            if len(ebest[1]) < self.pair_support:
-                                elist.append(ebest)
-                                eilist.append(ebest)
-                                if hg.interval(ebest[0].v2.chrom, e[0].v2.pos, e[0].v2.pos).intersects(i):
-                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(ilist)) > 0:
-                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-                                eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-                else:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
-                if len(msve) > 0:
-                    msve_match[msv] = msve
-            msv_nocover = [msv for msv in ms_vlist if msv not in msve_match]
-            all_msv_nocover.append(msv_nocover)
-
-
-        # setup graph for flow optimization
-        ngvlist_full = []
-        elist_full = []
-        ms_addlist = []
-        kce = defaultdict(lambda: 0) #number of concordant reads
-        koe = defaultdict(lambda: 0.0) #number of reads mapping outside the interval
-        kbpe = defaultdict(lambda: 0.0) #number of discordant reads across breakpoint edge
-        new_graph = breakpoint_graph()
-        s = new_graph.new_vertex(ilist[0].chrom, -1, -1)
-        for i, msr, ms_vlist, msv_nocover in zip(ilist, msrlist, all_msv, all_msv_nocover):
-            ngvlist = []
-            elist = []
-            for e in eilist:
-                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
-                    elist.append(e)
-            # add vertices to new_graph
-            ei = 0
-            nei = 0
-            msi = 0
-            if (len(elist) == 0 or elist[ei][0].v1.strand == 1 or elist[ei][0].v1.pos > i.start):
-                if len(msv_nocover) == 0 or msv_nocover[msi].strand ==1 or msv_nocover[msi].pos > i.start:
-                    nv = new_graph.new_vertex(i.chrom, i.start, -1)
-                    ne = new_graph.new_edge(s, nv)
-                    koe[ne] = len(self.interval_crossing_arcs(i.chrom, i.start, i.start + self.max_insert, -1, ilist))
-                else: #len(ms_vlist) > 0 and ms_vlist[0].strand == -1 and ms_vlist[0].pos > i.start + self.max_insert
-                    nv = new_graph.new_vertex(i.chrom, msv_nocover[msi].pos, msv_nocover[msi].strand)
-                    ne = new_graph.new_edge(s, nv)
-                    koe[ne] = len(self.interval_crossing_arcs(i.chrom, msv_nocover[msi].pos, msv_nocover[msi].strand + self.max_insert, -1, ilist))
-                    ms_addlist.append(msv_nocover[msi])
-                    msi += 1
-            else:
-                nv = new_graph.new_vertex(i.chrom, elist[0][0].v1.pos, -1)
-                ne = new_graph.new_edge(s, nv)
-                koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
-                ei += 1
-            ngvlist.append(nv)
-            vc = breakpoint_vertex(ngvlist[0].chrom, ngvlist[0].pos, ngvlist[0].strand)
-            while ei < len(elist) or msi < len(msv_nocover):
-                vp = vc
-                if msi >= len(msv_nocover):
-                    vc = elist[ei][0].v1
-                    ei += 1
-                elif ei >= len(elist):
-                    vc = msv_nocover[msi]
-                    ms_addlist.append(msv_nocover[msi])
-                    msi += 1 
-                elif elist[ei][0].v1.pos < msv_nocover[msi].pos:
-                    vc = elist[ei][0].v1
-                    ei += 1
-                elif elist[ei][0].v1.pos == msv_nocover[msi].pos and elist[ei][0].v1.strand < msv_nocover[msi].strand:
-                    vc = elist[ei][0].v1
-                    ei += 1
-                else:
-                    vc = msv_nocover[msi]
-                    ms_addlist.append(msv_nocover[msi])
-                    msi += 1
-                if (vc.pos == vp.pos and vc.strand <= vp.strand) or (vc.pos == vp.pos + 1 and vc.strand < vp.strand):
-                    continue
-                if vc.strand == 1:
-                    if ngvlist[nei].strand == 1:
-                        nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
-                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
-                        if oecount >= self.pair_support:
-                            ne = new_graph.new_edge(s, nvc_prime)
-                            koe[ne] = oecount
-                        ce = self.concordant_edge(vp)
-                        nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
-                        kce[nce] = len(ce[1])
-                        ngvlist.append(nvc_prime)
-                        nei += 1
-                    nv = new_graph.new_vertex(vc.chrom, vc.pos, 1)
-                    ne = new_graph.new_edge(s, nv)
-                    koe[ne] = len(self.interval_crossing_arcs(nv.chrom, max(0, nv.pos - self.max_insert), nv.pos, 1, ilist))
-                    ngvlist.append(nv)
-                    nei += 1
-                else:
-                    if ngvlist[nei].strand == 1:# and ngvlist[nei].pos > self.max_insert - self.window_size:
-                        nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
-                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
-                        if oecount >= self.pair_support:
-                            ne = new_graph.new_edge(s, nvc_prime)
-                            koe[ne] = oecount
-                        ce = self.concordant_edge(vp)
-                        nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
-                        kce[nce] = len(ce[1])
-                        ngvlist.append(nvc_prime)
-                        nei += 1
-                    if ngvlist[nei].strand == -1:
-                        nvc_prime = new_graph.new_vertex(vc.chrom, vc.pos-1, 1)
-                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, max(0, nvc_prime.pos - self.max_insert), nvc_prime.pos, 1, ilist))
-                        if oecount >= self.pair_support:
-                            ne = new_graph.new_edge(s, nvc_prime)
-                            koe[ne] = oecount
-                        ngvlist.append(nvc_prime)
-                        nei += 1
-                    nv = new_graph.new_vertex(vc.chrom, vc.pos, -1)
-                    ne = new_graph.new_edge(s, nv)
-                    koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
-                    ce = self.concordant_edge(vc)
-                    nce = new_graph.new_edge(ngvlist[nei], nv)
-                    kce[nce] = len(ce[1])
-                    ngvlist.append(nv)
-                    nei += 1
-                # ei += 1
-            if ngvlist[nei].strand == -1:
-                nv = new_graph.new_vertex(i.chrom, i.end, 1)
-                ne = new_graph.new_edge(s, nv)
-                koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos - self.max_insert, nv.pos, 1, ilist))
-                ngvlist.append(nv)
-                nei += 1
-            elif ngvlist[nei].strand == 1 and ngvlist[nei].pos < i.end:
-                nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
-                oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, min(hg.chrLen[hg.chrNum(nvc_prime.chrom)], nvc_prime.pos + self.max_insert), -1, ilist))
-                if oecount >= self.pair_support:
-                    ne = new_graph.new_edge(s, nvc_prime)
-                    koe[ne] = oecount
-                ce = self.concordant_edge(vp)
-                nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
-                kce[nce] = len(ce[1])
-                ngvlist.append(nvc_prime)
-                nei += 1
-                nv = new_graph.new_vertex(i.chrom, i.end, 1)
-                ne = new_graph.new_edge(s, nv)
-                koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos - self.max_insert, nv.pos, 1, ilist))
-                ngvlist.append(nv)
-                nei += 1
-            ngvlist_full = ngvlist_full + ngvlist
-            elist_full = elist_full + elist
-            print "MSstats", len(ms_vlist), len(ms_addlist)
-            for msa in ms_vlist:
-                print "MSadd", str(msa), msv_diff[msa], self.foldup_count(msa.chrom, msa.pos, msa.strand), msa in ms_addlist#, self.pair_support_count(msa.chrom, msa.pos, msa.strand, ms, True)
-
-        for e0 in elist_full:
-            e = e0[0]
-            if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and e.v1.pos >= e.v2.pos:
-                ne = new_graph.add_edge(e)
-                if ne is None:
-                    raise ValueError("ne is None:" + str(e) + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
-                    exit()
-                kbpe[ne] = len(e0[1])
-        for nei in range(1,len(ngvlist_full)):
-            if ngvlist_full[nei].strand == 1:
-                new_graph.new_edge(ngvlist_full[nei-1], ngvlist_full[nei], edge_type='sequence')
-            # else:
-            #     new_graph.new_edge(ngvlist[nei-1], ngvlist[nei])
-
-
-        # set up all constants
-        C = self.median_coverage()[0] / 2
-        print "C (haploid coverage) = ", C
-        G = new_graph
-        seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
-        n = len(seqlist)
-        l = [abs(e.v2.pos - e.v1.pos)+1 for e in seqlist]
-        k = [len([a for a in self.bamfile.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
-        # kgcc = [self.interval_coverage(hg.interval(i.chrom, e.v1.pos, e.v2.pos), gcc=True) * (e.v2.pos - e.v1.pos) / self.read_length for e in seqlist]
-        # k = kgcc
-        kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
-        ke = {}
-        ke.update(kbpe)
-        ke.update(kce)
-        ke.update(koe)
-        K = [len([a for a in self.bamfile.fetch(i.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
-        # edge read count kbpe defined above
-        bplist = [e for e in new_graph.es.values() if e.edge_type == 'breakpoint']
-        m = len(bplist)
-        bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
-        print "########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe) 
-
-        # set up problem size and variable types and constraint types
-        numvar = n + m #r0 + r1-rn + m breakpoint edges + 2 dummy variables g0, g1 for separable objective + te (m values)
-        numcon = 2 * n #flow for each sequence edge + flows for source and sink + ratio f0 to readdepth and one quadratic constraint + 2 constraints for dummy variables g0, g1 + te(1..m)
-        bkx = [mosek.boundkey.lo] * (n + m)
-        blx = [0.0] * (n + m)
-        bux = [float('Inf')] * (n + m)
-        bkc = [mosek.boundkey.fx] * (2 * n)
-        blc = [0.0] * (2 * n)
-        buc = [0.0] * (2 * n)
-        asub = []
-        aval = []
-        qsubi = {}
-        qsubj = {}
-        qval = {}
-
-        # setting up constraints
-        for i in range(n):
-            subarr = [i]
-            valarr = [1.0]
-            for e in seqlist[i].v1.elist:
-                if e.edge_type == 'sequence':
-                    continue
-                subarr.append(n + bpdict[e])
-                valarr.append(-1.0)
-            asub.append(np.array(subarr))
-            aval.append(np.array(valarr))
-            subarr = [i]
-            valarr = [1.0]
-            for e in seqlist[i].v2.elist:
-                if e.edge_type == 'sequence':
-                    continue
-                subarr.append(n + bpdict[e])
-                valarr.append(-1.0)
-            asub.append(np.array(subarr))
-            aval.append(np.array(valarr))
-
-        # setting up objective
-        opro = [mosek.scopr.log] * (n + m)
-        oprjo = range(n + m)
-        oprfo = [-1 * ki for ki in k] + [-1 * ke[e] for e in bplist]
-        oprgo = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
-        oprho = [0.0] * (n + m)
-        opcj = {cj:C * l[cj] / self.read_length for cj in range(len(l))}
-        for e in bpdict:
-            opcj[n + bpdict[e]] = self.max_insert * C / 2 / self.read_length
-        
-
-        def streamprinter(msg): 
-            sys.stdout.write (msg) 
-            sys.stdout.flush()
-        env = mosek.Env()
-        task = env.Task(0,0)
-        task.set_Stream (mosek.streamtype.log, streamprinter)
-        task.appendcons(numcon)
-        task.appendvars(numvar)
-        for j in range(numvar):
-            task.putbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
-        for i in range(numcon):
-            task.putbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
-        for i in range(numcon):
-            task.putarow(i, asub[i], aval[i])
-        # for i in qsubi:
-        #    task.putqconk(2 * n + 2, qsubi[i], qsubj[i], qval[i])
-        print "Problem set up done. Optimizing .."
-        for cj in opcj:
-            task.putcj(cj, opcj[cj])
-        task.putobjsense(mosek.objsense.minimize) 
-        task.putSCeval(opro, oprjo, oprfo, oprgo, oprho)
-        task.optimize()
-        res = [ 0.0 ] * numvar
-        print "Solution summary"
-        task.solutionsummary(mosek.streamtype.log)
-        task.getsolutionslice(mosek.soltype.itr, mosek.solitem.xx, 0, numvar, res)
-        print ( "Solution is: %s" % res )
-        wehc = {}
-
-
-        for msv_ilist in zip(all_msv, ilist):
-            slist = hg.interval_list([hg.interval('\t'.join(map(str, [sq[0].v1.chrom, sq[0].v1.pos, sq[0].v2.pos, sq[1]]))) for sq in zip(seqlist, res)])
-            slist.sort()
-            msl= [msv_ilist[1].start] + [v.pos for v in msv_ilist[0]] + [msv_ilist[1].end]
-            mslist = hg.interval_list([hg.interval(msv_ilist[1].chrom, msl[i], msl[i + 1]) for i in range(len(msl) - 1)])
-            for msi in mslist:
-                if len(hg.interval_list([msi]).intersection(slist)) == 0:
-                    print 'MSnointersection', str(msi), msl
-                    for s in slist:
-                        print str(s)
-                    print '============================='
-                    for s in seqlist:
-                        print str(s)
-                    exit()
-                elif sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) == 0:
-                    print 'MS0intersection', str(msi)
-                    exit()
-            mslc = [sum([ap[0].intersection(ap[1]).size() * float(ap[1].info[0]) for ap in hg.interval_list([msi]).intersection(slist)]) / sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) for msi in mslist]
-            for ap in zip(mslist, mslc):
-                print '\t'.join(map(str, ["MScount", str(ap[0]), ap[1]]))
-        
-        edge_code = defaultdict(lambda:'breakpoint', {'concordant':'concordant', 'source':'source'})
-
-        graph_logger.info("Sequence edge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size")
-        for si in range(n):
-            graph_logger.info('sequence\t' + '\t'.join(map(str, [seqlist[si].v1,  seqlist[si].v2, res[si], K[si], seqlist[si].v2.pos - seqlist[si].v1.pos])))
-            wehc[seqlist[si]] = float(res[si])
-        graph_logger.info("Breakpoint edge: StartPosition->EndPosition, PredictedCopyCount, NumberOfReadPairs")
-        for bpi in range(m):
-            # print  edge_code[bplist[bpi].type()], str(bplist[bpi]), res[n + bpi], ke[bplist[bpi]], bplist[bpi].kmer_homology()
-            graph_logger.info('\t'.join(map(str, [edge_code[bplist[bpi].type()], bplist[bpi], res[n + bpi], ke[bplist[bpi]]])))
-            wehc[bplist[bpi]] = float(res[n + bpi])
-        lenlist = len(ilist)
-        if len(ilist0) >= 10:
-            lenlist = len(ilist0)
-        all_msv_cat = reduce(lambda x, y: x+y, all_msv, [])
-        oncolist = ','.join(Set([a[1].info['Name'] for a in ilist.intersection(hg.oncogene_list)]))+','
-        istr = ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in ilist])
-        summary_logger.info("#Intervals = " +  str(lenlist))
-        summary_logger.info("TotalIntervalSize = " + str(sum([a.size() for a in ilist])))
-        summary_logger.info("AmplifiedIntervalSize = " + str(sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5])))
-        if len([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]) > 0:
-            summary_logger.info("AverageAmplifiedCopyCount = " + str(sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5])))
-        else:
-            summary_logger.info("AverageAmplifiedCopyCount = 2")
-        summary_logger.info("#Intervals = " + str(len(Set([i.chrom for i in ilist]))))
-        summary_logger.info("#SeqenceEdges = " + str(n))
-        summary_logger.info("#BreakpointEdges = " + str(len(kbpe)))
-        summary_logger.info("#CoverageShifts = " + str(len(all_msv_cat)))
-        summary_logger.info("#MeanshiftSegmentsCopyCount>5 = " + str(len([v for v in msv_diff.values() if v > 5])))
-        summary_logger.info("#Foldbacks = " + str(len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1])))
-        summary_logger.info("#CoverageShiftsWithBreakpointEdges = " + str(len([msa for msa in all_msv_cat if msa in ms_addlist])))
-        summary_logger.info("OncogenesAmplified = " + str(oncolist))
-        summary_logger.info("Intervals = " + str(istr))
-
-
-        # Summary, #intervals, t talsize, size>2.5, AvgCoverage>2.5, #chromosomes, #sequenceedges, #breakpointedges, #meanshiftbreaks, #meanshift>5, #msfoldbackedges, #msfoldbackedges, #mswithoutbreakpoint, oncogenes, representativestring, #bpedgeswithcommonkmers
-        if len([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]) > 0:
-            # print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr, len([e for e in kbpe if e.kmer_homology()])]))
-            print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr]))
-        else:
-            # print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr, len([e for e in kbpe if e.kmer_homology()])]))
-            print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr]))
-        new_graph.cycle_decomposition(wehc, s)
-
-
-    def interval_neighbors(self, i, ilist=[], rdlist=[], t=0):
-        i2 = self.interval_extend(i)
-        # i2 = self.interval_extend(i, ilist, rdlist)
-        ms_window_size = 10000
-        edges = self.interval_discordant_edges(i2)
-        edges.sort(cmp=lambda x, y: len(x[1]) > len(y[1]))
+        msrlist = [self.meanshift_refined(i2, ms_window_size0, ms_window_size1, gcc)]
+        cnlist = [np.average([c[1] for c in self.window_coverage(i2, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0]]
+        edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist), adaptive_counts=True)
+        edges = [(-1 * len(e[1]), e[0]) for e in edges]
+        edges.sort()
+        edges = [(e[1], -1 * e[0]) for e in edges]
+        # edges.sort(cmp=lambda x, y: len(x[1]) > len(y[1]))
+        for e in edges:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_neighbors: edges " + str(i2) + " " + str(i) + " " + str(e[0]) + " " + str(e[1]))
         ei = 0
         neighbors = hg.interval_list([])
         print 'interval_neighbors found_discordant edges', str(i), str(i2)
@@ -1337,11 +1273,11 @@ class bam_to_breakpoint():
             else:
                 n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(1, edges[ei][0].v2.pos - self.max_insert), edges[ei][0].v2.pos))
             if n.size() > self.max_insert + 1:
-                n.info = len(edges[ei][1])
+                n.info = edges[ei][1]
                 neighbors.append(n)
             ei += 1
         neighbors.sort()
-        mc = neighbors.merge_clusters(extend=ms_window_size)
+        mc = neighbors.merge_clusters(extend=ms_window_size0)
         for c in mc:
             c[0].info = sum([c1.info for c1 in c[1]])
         nn = hg.interval_list([c[0] for c in mc])
@@ -1353,17 +1289,21 @@ class bam_to_breakpoint():
         #         self.interval_neighbors(n, t=1)
         return nn
 
-    def interval_hops(self, i, ilist=[], rdlist=[]):
-        ms_window_size = 10000
+    def interval_hops(self, i, ilist=[], rdlist=[], gcc=False):
+        logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: init " + str(i))
+        ms_window_size0 = 10000
         ii = self.interval_extend(i)
+        logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: interval extend " + str(i) + " " + str(ii))
         ilist = hg.interval_list([ii])
         seen_list = hg.interval_list([])
         unseen_list = [(0,ii)]
         heapq.heapify(unseen_list)
-        while len(ilist) < 10 and len(unseen_list) > 0:
+        while len(ilist) < 5 and len(unseen_list) > 0:
             ic = heapq.heappop(unseen_list)[1]
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: search new " + str(i) + " " + str(ic))
             print "Interval hops", str(ic)
-            icn = self.interval_neighbors(ic, ilist)
+            icn = self.interval_neighbors(ic, ilist, gcc=gcc)
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: neighbors " + str(i) + " " + str(ic) + " " + str(len(icn)))
             for ic2 in icn:
                 contained = False
                 for i2 in ilist:
@@ -1371,7 +1311,7 @@ class bam_to_breakpoint():
                         contained = True
                 if contained:
                     continue
-                if ic2.size() < 2 * ms_window_size and len(self.interval_discordant_edges(i)) < 2:
+                if ic2.size() < 2 * ms_window_size0 and len(self.interval_discordant_edges(i)) < 2:
                     continue
                 heapq.heappush(unseen_list, (-ic2.info, ic2))
                 ilist.append(ic2)
@@ -1488,4 +1428,578 @@ class bam_to_breakpoint():
         print "Interval extend:", str(i), strand, str(ic)
         return ic
 
+
+    # Method to create breakpoint graph, find network flow and cycle decomposition
+    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True):
+        ms_window_size0 = 10000
+        ms_window_size1 = 300
+        ilist0.sort()
+        ilist = hg.interval_list([a[0] for a in ilist0.merge_clusters()])
+
+        # finesearch edges near refined meanshifts and add to eilist, create vertices corresponding to all  meanshifts and uncovered meanshifts
+        all_msv = []
+        msv_diff = {}
+        msrlist = [self.meanshift_refined(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
+        cnlist = [np.average([c[1] for c in self.window_coverage(i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
+        all_msv_nocover = []
+        eilist = self.interval_discordant_edges(ilist, adaptive_counts=adaptive_counts, ms=zip(ilist, msrlist, cnlist))
+        print "Found dicordant edges ilist"
+        eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+
+        for i, msr in zip(ilist, msrlist):
+            elist = []
+            for e in eilist:
+                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
+                    elist.append(e)
+            ms_vlist = []
+            msv_index = {}
+            for msi in range(len((msr))):
+                if msr[msi][2] < msr[msi][1]:
+                    msv = breakpoint_vertex(i.chrom, msr[msi][0], 1)
+                else:
+                    msv = breakpoint_vertex(i.chrom, msr[msi][0] + 1, -1)
+                msv_diff[msv] = msr[msi][2] - msr[msi][1]
+                ms_vlist.append(msv)
+                msv_index[msv] = msi
+            all_msv.append(ms_vlist)
+            print "Meanshift", str(i), len(ms_vlist), ms_vlist
+            sys.stdout.flush()
+            msve_match = {}
+            for msv in ms_vlist:
+                ms = msr[msv_index[msv]]
+                if ms[3]:
+                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
+                    if len(msve) == 0:
+                        print "finesearch discordant edges", i.chrom, ms
+                        efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
+                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
+                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
+                            else:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
+                            ebest = (ebest[1], ebest[0])
+                            msve = [ebest]
+                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), len(ebest[1])
+                            if len(ebest[1]) < self.pair_support:
+                                elist.append(ebest)
+                                eilist.append(ebest)
+                                if hg.interval(ebest[0].v2.chrom, e[0].v2.pos, e[0].v2.pos).intersects(i):
+                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
+                                if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(ilist)) > 0:
+                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
+                                elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+                                eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+                else:
+                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
+                if len(msve) > 0:
+                    msve_match[msv] = msve
+            msv_nocover = [msv for msv in ms_vlist if msv not in msve_match]
+            all_msv_nocover.append(msv_nocover)
+            print "Meanshift no cover", str(i), msv_nocover
+
+        # setup graph for flow optimization
+        ngvlist_full = []
+        elist_full = []
+        ms_addlist = []
+        kce = defaultdict(lambda: 0) # number of concordant reads
+        koe = defaultdict(lambda: 0.0) # number of reads mapping outside the interval
+        kbpe = defaultdict(lambda: 0.0) # number of discordant reads across breakpoint edge
+        new_graph = breakpoint_graph()
+        s = new_graph.new_vertex(ilist[0].chrom, -1, -1)
+        for i, msr, ms_vlist, msv_nocover in zip(ilist, msrlist, all_msv, all_msv_nocover):
+            ngvlist = []
+            elist = []
+            for e in eilist:
+                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
+                    elist.append(e)
+
+            # add vertices to new_graph
+            ei = 0
+            nei = 0
+            msi = 0
+            if (len(elist) == 0 or elist[ei][0].v1.strand == 1 or elist[ei][0].v1.pos > i.start):
+                if len(msv_nocover) == 0 or msv_nocover[msi].strand == 1 or msv_nocover[msi].pos > i.start:
+                    nv = new_graph.new_vertex(i.chrom, i.start, -1)
+                    ne = new_graph.new_edge(s, nv)
+                    koe[ne] = len(self.interval_crossing_arcs(i.chrom, i.start, i.start + self.max_insert, -1, ilist))
+                else: #len(ms_vlist) > 0 and ms_vlist[0].strand == -1 and ms_vlist[0].pos > i.start + self.max_insert
+                    nv = new_graph.new_vertex(i.chrom, msv_nocover[msi].pos, msv_nocover[msi].strand)
+                    ne = new_graph.new_edge(s, nv)
+                    koe[ne] = len(self.interval_crossing_arcs(i.chrom, msv_nocover[msi].pos, msv_nocover[msi].strand + self.max_insert, -1, ilist))
+                    ms_addlist.append(msv_nocover[msi])
+                    msi += 1
+            else:
+                nv = new_graph.new_vertex(i.chrom, elist[0][0].v1.pos, -1)
+                oecount = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
+                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nv.chrom, nv.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                    ne = new_graph.new_edge(s, nv)
+                    koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
+                ei += 1
+            ngvlist.append(nv)
+            vc = breakpoint_vertex(ngvlist[0].chrom, ngvlist[0].pos, ngvlist[0].strand)
+            while ei < len(elist) or msi < len(msv_nocover):
+                vp = vc
+                vc_type = 'edge'
+                if msi >= len(msv_nocover):
+                    vc = elist[ei][0].v1
+                    ei += 1
+                elif ei >= len(elist):
+                    vc = msv_nocover[msi]
+                    vc_type = 'meanshift'
+                    ms_addlist.append(msv_nocover[msi])
+                    msi += 1 
+                elif elist[ei][0].v1.pos < msv_nocover[msi].pos:
+                    vc = elist[ei][0].v1
+                    ei += 1
+                elif elist[ei][0].v1.pos == msv_nocover[msi].pos and elist[ei][0].v1.strand < msv_nocover[msi].strand:
+                    vc = elist[ei][0].v1
+                    ei += 1
+                else:
+                    vc = msv_nocover[msi]
+                    vc_type = 'meanshift'
+                    ms_addlist.append(msv_nocover[msi])
+                    msi += 1
+                if (vc.pos == vp.pos and vc.strand <= vp.strand) or (vc.pos == vp.pos + 1 and vc.strand < vp.strand):
+                    continue
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices new: " + str(vc) + " " + vc_type)
+                if vc.strand == 1:
+                    if ngvlist[nei].strand == 1:
+                        nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
+                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
+                        if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                            ne = new_graph.new_edge(s, nvc_prime)
+                            koe[ne] = oecount
+                        ce = self.concordant_edge(vp)
+                        nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
+                        kce[nce] = len(ce[1])
+                        ngvlist.append(nvc_prime)
+                        nei += 1
+                    nv = new_graph.new_vertex(vc.chrom, vc.pos, 1)
+                    oecount = len(self.interval_crossing_arcs(nv.chrom, max(0, nv.pos - self.max_insert), nv.pos, 1, ilist))
+                    if vc_type == 'meanshift' or oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nv.chrom, nv.pos, 1, meanshift=zip(ilist, msrlist, cnlist))):
+                        ne = new_graph.new_edge(s, nv)
+                        koe[ne] = oecount
+                    ngvlist.append(nv)
+                    nei += 1
+                else:
+                    logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: adding reverse edge = " + str(vc))
+                    if ngvlist[nei].strand == 1:# and ngvlist[nei].pos > self.max_insert - self.window_size:
+                        nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
+                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
+                        if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                            ne = new_graph.new_edge(s, nvc_prime)
+                            koe[ne] = oecount
+                        ce = self.concordant_edge(vp)
+                        nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
+                        kce[nce] = len(ce[1])
+                        ngvlist.append(nvc_prime)
+                        nei += 1
+                    if ngvlist[nei].strand == -1:
+                        nvc_prime = new_graph.new_vertex(vc.chrom, vc.pos-1, 1)
+                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, max(0, nvc_prime.pos - self.max_insert), nvc_prime.pos, 1, ilist))
+                        if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, 1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                            ne = new_graph.new_edge(s, nvc_prime)
+                            koe[ne] = oecount
+                        ngvlist.append(nvc_prime)
+                        nei += 1
+                    nv = new_graph.new_vertex(vc.chrom, vc.pos, -1)
+                    oecount = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
+                    if vc_type == 'meanshift' or oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nv.chrom, nv.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                        ne = new_graph.new_edge(s, nv)
+                        koe[ne] = oecount
+                    ce = self.concordant_edge(vc)
+                    nce = new_graph.new_edge(ngvlist[nei], nv)
+                    kce[nce] = len(ce[1])
+                    ngvlist.append(nv)
+                    nei += 1
+                # ei += 1
+            if ngvlist[nei].strand == -1:
+                nv = new_graph.new_vertex(i.chrom, i.end, 1)
+                ne = new_graph.new_edge(s, nv)
+                koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos - self.max_insert, nv.pos, 1, ilist))
+                ngvlist.append(nv)
+                nei += 1
+            elif ngvlist[nei].strand == 1 and ngvlist[nei].pos < i.end:
+                nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
+                oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, min(hg.chrLen[hg.chrNum(nvc_prime.chrom)], nvc_prime.pos + self.max_insert), -1, ilist))
+                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                    ne = new_graph.new_edge(s, nvc_prime)
+                    koe[ne] = oecount
+                ce = self.concordant_edge(vp)
+                nce = new_graph.new_edge(ngvlist[nei], nvc_prime)
+                kce[nce] = len(ce[1])
+                ngvlist.append(nvc_prime)
+                nei += 1
+                nv = new_graph.new_vertex(i.chrom, i.end, 1)
+                ne = new_graph.new_edge(s, nv)
+                koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos - self.max_insert, nv.pos, 1, ilist))
+                ngvlist.append(nv)
+                nei += 1
+            ngvlist_full = ngvlist_full + ngvlist
+            elist_full = elist_full + elist
+            print "MSstats", len(ms_vlist), len(ms_addlist)
+            for msa in ms_vlist:
+                print "MSadd", str(msa), msv_diff[msa], self.foldup_count(msa.chrom, msa.pos, msa.strand), msa in ms_addlist#, self.pair_support_count(msa.chrom, msa.pos, msa.strand, ms, True)
+        for e in koe:
+            koe[e] = max(0.0001, koe[e])
+        for e0 in elist_full:
+            e = e0[0]
+            if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and e.v1.pos >= e.v2.pos:
+                ne = new_graph.add_edge(e)
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge e = " + str(e) + " " + str(ne) + " " + ne.edge_type)
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne, v1.elist = " + str(ne.v1) + " " + ','.join(map(str, ne.v1.elist)))
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
+                if ne is None:
+                    raise ValueError("ne is None:" + str(e) + " " + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
+                    exit()
+                kbpe[ne] = len(e0[1])
+        for nei in range(1,len(ngvlist_full)):
+            if ngvlist_full[nei].strand == 1:
+                new_graph.new_edge(ngvlist_full[nei-1], ngvlist_full[nei], edge_type='sequence')
+            # else:
+            #     new_graph.new_edge(ngvlist[nei-1], ngvlist[nei])
+
+        # set up all constants
+        C = self.median_coverage()[0] / 2
+        print "C (haploid coverage) = ", C
+        G = new_graph
+        seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
+        n = len(seqlist)
+        l = [abs(e.v2.pos - e.v1.pos)+1 for e in seqlist]
+        k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
+        # kgcc = [self.interval_coverage(hg.interval(i.chrom, e.v1.pos, e.v2.pos), gcc=True) * (e.v2.pos - e.v1.pos) / self.read_length for e in seqlist]
+        # k = kgcc
+        kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
+        ke = {}
+        ke.update(kbpe)
+        ke.update(kce)
+        ke.update(koe)
+        K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
+        # edge read count kbpe defined above
+        bplist = [e for e in new_graph.es.values() if (e.edge_type == 'discordant' or e.edge_type == 'breakpoint')]
+        m = len(bplist)
+        bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
+        print "########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe) 
+
+        # set up problem size and variable types and constraint types
+        numvar = n + m #r0 + r1-rn + m breakpoint edges + 2 dummy variables g0, g1 for separable objective + te (m values)
+        numcon = 2 * n #flow for each sequence edge + flows for source and sink + ratio f0 to readdepth and one quadratic constraint + 2 constraints for dummy variables g0, g1 + te(1..m)
+        bkx = [mosek.boundkey.lo] * (n + m)
+        blx = [0.0] * (n + m)
+        bux = [float('Inf')] * (n + m)
+        bkc = [mosek.boundkey.fx] * (2 * n)
+        blc = [0.0] * (2 * n)
+        buc = [0.0] * (2 * n)
+        asub = []
+        aval = []
+        qsubi = {}
+        qsubj = {}
+        qval = {}
+
+        # setting up constraints
+        for i in range(n):
+            subarr = [i]
+            valarr = [1.0]
+            for e in seqlist[i].v1.elist:
+                if e.edge_type == 'sequence':
+                    continue
+                print "SSSS", seqlist[i], e, bpdict[e]
+                subarr.append(n + bpdict[e])
+                valarr.append(-1.0)
+            asub.append(np.array(subarr))
+            aval.append(np.array(valarr))
+            subarr = [i]
+            valarr = [1.0]
+            for e in seqlist[i].v2.elist:
+                if e.edge_type == 'sequence':
+                    continue
+                print "RRRRRR", seqlist[i], e, bpdict[e]
+                subarr.append(n + bpdict[e])
+                valarr.append(-1.0)
+            asub.append(np.array(subarr))
+            aval.append(np.array(valarr))
+        # setting up objective
+        opro = [mosek.scopr.log] * (n + m)
+        oprjo = range(n + m)
+        oprfo = [-1 * ki for ki in k] + [-1 * ke[e] for e in bplist]
+        oprgo = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
+        oprho = [0.0001] * (n + m)
+        opcj = {cj:C * l[cj] / self.read_length for cj in range(len(l))}
+        for e in bpdict:
+            opcj[n + bpdict[e]] = self.max_insert * C / 2 / self.read_length
         
+        def streamprinter(msg): 
+            sys.stdout.write (msg) 
+            sys.stdout.flush()
+        env = mosek.Env()
+        task = env.Task(0,0)
+        task.set_Stream (mosek.streamtype.log, streamprinter)
+        task.appendcons(numcon)
+        task.appendvars(numvar)
+        for j in range(numvar):
+            task.putbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
+        for i in range(numcon):
+            task.putbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
+        for i in range(numcon):
+            task.putarow(i, asub[i], aval[i])
+        # for i in qsubi:
+        #    task.putqconk(2 * n + 2, qsubi[i], qsubj[i], qval[i])
+        print "Problem set up done. Optimizing .."
+        for cj in opcj:
+            task.putcj(cj, opcj[cj])
+        task.putobjsense(mosek.objsense.minimize)
+        task.putSCeval(opro, oprjo, oprfo, oprgo, oprho)
+        task.optimize()
+        res = [ 0.0 ] * numvar
+        print "Solution summary"
+        task.solutionsummary(mosek.streamtype.log)
+        task.getsolutionslice(mosek.soltype.itr, mosek.solitem.xx, 0, numvar, res)
+        print ( "Solution is: %s" % res )
+        wehc = {}
+
+
+        for msv_ilist in zip(all_msv, ilist):
+            slist = hg.interval_list([hg.interval('\t'.join(map(str, [sq[0].v1.chrom, sq[0].v1.pos, sq[0].v2.pos, sq[1]]))) for sq in zip(seqlist, res)])
+            slist.sort()
+            msl= [msv_ilist[1].start] + [v.pos for v in msv_ilist[0]] + [msv_ilist[1].end]
+            mslist = hg.interval_list([hg.interval(msv_ilist[1].chrom, msl[i], msl[i + 1]) for i in range(len(msl) - 1)])
+            for msi in mslist:
+                if len(hg.interval_list([msi]).intersection(slist)) == 0:
+                    print 'MSnointersection', str(msi), msl
+                    for s in slist:
+                        print str(s)
+                    print '============================='
+                    for s in seqlist:
+                        print str(s)
+                    exit()
+                elif sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) == 0:
+                    print 'MS0intersection', str(msi)
+                    exit()
+            mslc = [sum([ap[0].intersection(ap[1]).size() * float(ap[1].info[0]) for ap in hg.interval_list([msi]).intersection(slist)]) / sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) for msi in mslist]
+            for ap in zip(mslist, mslc):
+                print '\t'.join(map(str, ["MScount", str(ap[0]), ap[1]]))
+        
+        edge_code = defaultdict(lambda:'discordant', {'concordant':'concordant', 'source':'source'})
+
+        graph_logger.info("Sequence edge: StartPosition, EndPosition, PredictedCopyCount, AverageCoverage, Size")
+        for si in range(n):
+            graph_logger.info('sequence\t' + '\t'.join(map(str, [seqlist[si].v1,  seqlist[si].v2, res[si], K[si], seqlist[si].v2.pos - seqlist[si].v1.pos, k[si]])))
+            wehc[seqlist[si]] = float(res[si])
+        graph_logger.info("Breakpoint edge: StartPosition->EndPosition, PredictedCopyCount, NumberOfReadPairs")
+        for bpi in range(m):
+            # print  edge_code[bplist[bpi].type()], str(bplist[bpi]), res[n + bpi], ke[bplist[bpi]], bplist[bpi].kmer_homology()
+            graph_logger.info('\t'.join(map(str, [edge_code[bplist[bpi].type()], bplist[bpi], res[n + bpi], ke[bplist[bpi]], bplist[bpi].hom, bplist[bpi].hom_seq])))
+            wehc[bplist[bpi]] = float(res[n + bpi])
+        lenlist = len(ilist)
+        if len(ilist0) >= 10:
+            lenlist = len(ilist0)
+        all_msv_cat = reduce(lambda x, y: x+y, all_msv, [])
+        oncolist = ','.join(Set([a[1].info['Name'] for a in ilist.intersection(hg.oncogene_list)]))+','
+        istr = ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in ilist])
+        summary_logger.info("#Intervals = " +  str(lenlist))
+        summary_logger.info("TotalIntervalSize = " + str(sum([a.size() for a in ilist])))
+        summary_logger.info("AmplifiedIntervalSize = " + str(sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5])))
+        if len([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]) > 0:
+            summary_logger.info("AverageAmplifiedCopyCount = " + str(sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n) if res[si] >= 2.5])))
+        else:
+            summary_logger.info("AverageAmplifiedCopyCount = 2")
+        summary_logger.info("#Chromosomes = " + str(len(Set([i.chrom for i in ilist]))))
+        summary_logger.info("#SeqenceEdges = " + str(n))
+        summary_logger.info("#BreakpointEdges = " + str(len(kbpe)))
+        summary_logger.info("#CoverageShifts = " + str(len(all_msv_cat)))
+        summary_logger.info("#MeanshiftSegmentsCopyCount>5 = " + str(len([v for v in msv_diff.values() if v > 5])))
+        summary_logger.info("#Foldbacks = " + str(len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1])))
+        summary_logger.info("#CoverageShiftsWithBreakpointEdges = " + str(len([msa for msa in all_msv_cat if msa in ms_addlist])))
+        summary_logger.info("OncogenesAmplified = " + str(oncolist))
+        summary_logger.info("Intervals = " + str(istr))
+
+
+        # Summary, #intervals, t talsize, size>2.5, AvgCoverage>2.5, #chromosomes, #sequenceedges, #breakpointedges, #meanshiftbreaks, #meanshift>5, #msfoldbackedges, #msfoldbackedges, #mswithoutbreakpoint, oncogenes, representativestring, #bpedgeswithcommonkmers
+        if len([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]) > 0:
+            # print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr, len([e for e in kbpe if e.kmer_homology()])]))
+            print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos + 1) for si in range(n) if res[si] >= 2.5]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n) if res[si] >= 2.5]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr]))
+        else:
+            # print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr, len([e for e in kbpe if e.kmer_homology()])]))
+            print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos + 1) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr]))
+
+        interval_index = 1
+        for i in ilist:
+            cycle_logger.info("Interval\t" + '\t'.join([str(interval_index), i.chrom, str(i.start), str(i.end)]))
+            interval_index += 1
+
+        new_graph.cycle_decomposition(wehc, s)
+
+
+    # Plot coverage, meanshift copy count estimates and discordant edges in interval
+    def plot_segmentation(self, ilist, outName, segments=[]):
+        # il = i
+        # i = hg.interval(il.chrom, max(il.start - (il.end - il.start) / 10, 1), min(il.end  + (il.end - il.start) / 10, hg.chrLen[hg.chrNum(il.chrom)]))
+
+        fighsize = 12
+        figvsize = 5 #fighsize / 2.0
+        # fig = plt.figure()
+        fig = plt.figure(figsize=(fighsize,figvsize))
+        plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
+        # dpi = 300
+        dpi = 1000.0/fighsize
+        gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
+        ax = fig.add_subplot(gs[0,0])
+        plt.title(outName)
+        ax2 = ax.twinx()
+        ax2.set_ylabel("Copy number")
+        ax3 = fig.add_subplot(gs[1,0], sharex=ax)
+        ax.set_xlim(0, 1)
+        ax.set_ylabel("Coverage")
+        for b in ilist.offset_breaks():
+            ax.axvline(b[0], linestyle=b[1], color='k')
+            ax3.axvline(b[0], linestyle=b[1], color='k')
+
+        cx = []
+        wc = []
+        for i in ilist:
+            if i.size() > 1000000:
+                wc_i = [w for w in self.window_coverage(i, 10000)]
+            else:
+                wc_i = [w for w in self.window_coverage(i, 100)]
+            cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
+            wc += wc_i
+
+        # ax.set_xlabel(i.chrom)
+        # if i.chrom == 'gi|310698439|ref|NC_001526.2|':
+        #     ax.set_xlabel('HPV type16')
+        cx0 = [c for c in cx if ilist.xpos(c[0][0], c[0][1]) is not None]
+        ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=0001)
+        cmax = max([c[1] for c in wc])
+        
+        # ax.set_ylim(0, 1000)
+
+        elist_dict = {}
+        max_edge = 4
+        max_cov = 0
+        max_ms = 0
+        msrlist = [self.meanshift_refined(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        cnlist = [np.average([c[1] for c in self.window_coverage(i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
+        eilist = self.interval_discordant_edges(ilist, adaptive_counts=True, ms=zip(ilist, msrlist, cnlist))
+        for i, msr in zip(ilist, msrlist):
+            de = [e for e in eilist if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
+            elist_dict[i] = de 
+            # if i.size() > 50000:
+            #     msr = self.meanshift_refined(i)
+            # else:
+            #     msr = self.meanshift_segmentation(i, window_size=300)
+            for ms in msr:
+                if ms[3]:
+                    msve = [e for e in elist_dict[i] if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 1000]
+                    if len(msve) == 0:
+                        efine = self.interval_discordant_edges(hg.interval(i.chrom, ms[0] - 1000, ms[0] + 1000), pair_support=2)
+                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
+                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 300]) > 0:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 300])
+                            else:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
+                            ebest = (ebest[1], ebest[0])
+                            msve = [ebest]
+                            if len(ebest[1]) < self.pair_support:
+                                elist_dict[i].append(ebest)
+            elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+            max_edge = max(max_edge, max([1] + [len(e[1]) for e in de]))
+            pprev = i.start
+            for shift in msr:
+                avg_cov = np.average([c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= pprev and c[0][1] <= shift[0]])
+                max_cov = max(max_cov, avg_cov)
+                max_ms = max(max_ms, shift[1])
+                ax2.plot((ilist.xpos(i.chrom, pprev), ilist.xpos(i.chrom, shift[0])), (shift[1], shift[1]), linewidth=4, color='k')
+                pprev = shift[0]
+            if len(msr) > 0:
+                ax2.plot((ilist.xpos(i.chrom, pprev), ilist.xpos(i.chrom, i.end)), (msr[-1][2], msr[-1][2]), linewidth=4, color='k')
+            else:
+                avg_cov = np.average([c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= i.start and c[0][1] <= i.end])
+                avg_cn = 2 * avg_cov / self.median_coverage()[0]
+                max_ms = max(max_ms, avg_cn)
+                max_cov = max(max_cov, avg_cov)
+                ax2.plot((ilist.xpos(i.chrom, i.start), ilist.xpos(i.chrom, i.end)), (avg_cn, avg_cn), linewidth=4, color='k')
+        
+        if max_cov > 0:
+            ax.set_ylim(0, 3.0 * max_cov)
+        else:
+            (ymin, ymax) = ax.get_ylim()
+            ax.set_ylim(ymin, 3.0 * ymax)
+        if max_ms > 0:
+            (ymin, ymax) = (0, max_ms)
+            ax2.set_ylim(0, 3.0 * ymax)
+        else:
+            (ymin, ymax) = ax2.get_ylim()
+            ax2.set_ylim(0, 3.0 * ymax)
+
+        for i in ilist:
+            for el in elist_dict[i]:
+                e = el[0]
+                # if e.type() == 'interchromosomal' or e.v2.pos > i.end + 3 * (i.end -i.start) or e.v2.pos < i.start - 3 * (i.end - i.start):
+                if ilist.xpos(e.v2.chrom, e.v2.pos) is None:
+                    ax2.axvline(ilist.xpos(e.v1.chrom, e.v1.pos), color=ecolor[e.type()], linewidth=4.0*len(el[1])/max_edge, alpha=0.5, zorder=10)
+                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*len(el[1])/max_edge, color=ecolor[e.type()])
+                else:
+                    xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2
+                    xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
+                    ydia = (1.0 + xdia) * 3 * ymax
+                    pseudo_edge = breakpoint_edge(breakpoint_vertex(e.v1.chrom, hg.absPos(e.v1.chrom, e.v1.pos), e.v1.strand), breakpoint_vertex(e.v1.chrom, hg.absPos(e.v2.chrom, e.v2.pos), e.v2.strand))
+                    ee = Arc((xmid, 0), xdia, ydia, fill=False, linewidth=4.0*len(el[1])/max_edge, color=ecolor[pseudo_edge.type()], zorder=4, theta1=0.1, theta2=180)
+                    ax2.add_patch(ee)
+                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*len(el[1])/max_edge, color=ecolor[pseudo_edge.type()])
+                    ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*len(el[1])/max_edge, color=ecolor[pseudo_edge.type()])
+            # ax2.set_yticks([])
+        ax2.axhline(2.0, alpha=0.8, linewidth=0.5, color='r')
+
+        for i in ilist:
+            glist = hg.interval_list([i]).intersection(hg.oncogene_list)
+            for g in glist:
+                ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [0.60, 0.60], 'r-', linewidth=4)
+                ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, 0.65, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
+            
+            for s in segments:
+                if not i.intersects(s[1]):
+                    continue
+                ss = i.intersection(s)
+                ax3.add_patch(Rectangle([ilist.xpos(i.chrom, max(ss.start, i.start)), 0.4], ilist.xpos(i.chrom, min(ss.end, i.end)) - ilist.xpos(i.chrom, max(ss.start, i.start)), 0.15, fc=chrcolor[s[2]], ec='k'))
+                ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
+                # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
+        
+
+        ax.xaxis.set_visible(False)
+        ax2.xaxis.set_visible(False)
+        ax3.yaxis.set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        ax2.spines['left'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
+        ax2.spines['top'].set_visible(False)
+        ax3.spines['left'].set_visible(False)
+        ax3.spines['right'].set_visible(False)
+        chrmin = {}
+        chrmax = {}
+        for i in ilist:
+            if i.chrom not in chrmin:
+                chrmin[i.chrom] = ilist.xpos(i.chrom, i.start)
+                chrmax[i.chrom] = ilist.xpos(i.chrom, i.end)
+            else:
+                chrmin[i.chrom] = min(ilist.xpos(i.chrom, i.start), chrmin[i.chrom])
+                chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
+        chrposlist = []
+        for c in chrmin:
+            chrposlist.append((c if chrmax[c] - chrmin[c] > 0.05 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
+        ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
+        ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
+        xposlist = []
+        for i in ilist:
+            xposlist.append((str(i.start), ilist.xpos(i.chrom, i.start)))
+            xposlist.append((str(i.end), ilist.xpos(i.chrom, i.end)))
+        ax3.xaxis.set_minor_locator(ticker.FixedLocator([c[1] for c in xposlist]))
+        ax3.xaxis.set_minor_formatter(ticker.FixedFormatter([c[0] for c in xposlist]))
+        plt.setp(ax3.xaxis.get_minorticklabels(), rotation=90)
+        ax3.tick_params(axis='x', which='minor', pad=15)
+        ax3.yaxis.set_major_formatter(ticker.NullFormatter())
+        ax3.set_ylim(0,1)
+        fig.subplots_adjust(hspace=0)
+        # fig.savefig(outName + '.' + i.chrom + ":" + str(i.start) + '-' + str(i.end) + '.png')
+        fig.savefig(outName + '.png', dpi=dpi)

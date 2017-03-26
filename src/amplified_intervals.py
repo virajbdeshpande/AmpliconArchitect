@@ -63,7 +63,7 @@ parser.add_argument('--bed', dest='bed',
                     action='store', type=str, nargs=1)
 args = parser.parse_args()
 rdAlts = args.bed[0]
-rdList0 = hg.interval_list(rdAlts + '/output/alts.dat', 'bed')
+rdList0 = hg.interval_list(rdAlts, 'bed')
 rdList = hg.interval_list([r for r in rdList0 if float(r.info[1]) > GAIN ])
 
 genome_features = hg.oncogene_list
