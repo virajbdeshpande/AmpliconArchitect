@@ -63,7 +63,7 @@ import matplotlib.ticker as ticker
 from matplotlib import gridspec
 from cStringIO import StringIO
 import random
-import JobNotifier
+# import JobNotifier
 
 from breakpoint_graph import *
 import hg19util as hg

@@ -57,7 +57,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import logging
-import JobNotifier
+# import JobNotifier
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
@@ -90,7 +90,7 @@ parser.add_argument('--ref', dest='ref',
                     help="\"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
 parser.add_argument('--downsample', dest='downsample',
-                    help="Downsample the bam file during analysis (Alternatively pre-process $AA_SRC/downsample.py). Values: -1 : Do not downsample / 0 (default): Downsample to 10X coverage if larger / >0 : Downsample to stated float if larger", metavar='FLOAT',
+                    help="Downsample the bam file during analysis (Alternatively pre-process $AA_SRC/downsample.py). Values: -1 : Do not downsample / 0 (default): Downsample to 10X coverage if larger / C>0 : Downsample to stated float if larger", metavar='FLOAT',
                     action='store', type=float, default=0)
 args = parser.parse_args()
 
