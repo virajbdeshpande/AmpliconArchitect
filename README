@@ -1,4 +1,4 @@
-# AmpliconArchitect
+ AmpliconArchitect
 ## AmpliconArchitect (AA) is a tool to identify one or more connected genomic regions which have simultaneous copy number amplification and elucidates the architecture of the amplicon.
 ## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
 
@@ -66,7 +66,7 @@ python src/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat > {o
 
 # Amplicon reconstruction
 python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix for output files> --ref hg19/GRCh37
-# See python src/AmpliconArchitect.py --help for other options.
+# See below python src/AmpliconArchitect.py --help for other options.
 
 
 # Output description
@@ -106,38 +106,47 @@ python src/AmpliconArchitect.py --bam <input_bam> --bed <bed file> --out <prefix
 
 # Commandline options
 AmpliconArchitect.py --help
-##usage: AmpliconArchitect.py [-h] [--bed FILE] [--bam FILE] [--out FILE]
-##                            [--cbam FILE] [--cbed FILE] [--extendmode STR]
-##                            [--sensitivems STR] [--ref STR]
-##                            [--downsample FLOAT]
-##
-##Reconstruct Amplicons connected to listed intervals.
-##
-##optional arguments:
-##  -h, --help          show this help message and exit
-##  --bed FILE          Bed file with putative list of amplified intervals
-##  --bam FILE          Coordinate sorted BAM file with index mapped to hg19
-##                      reference sequence
-##  --out FILE          Prefix for output files
-##  --cbam FILE         Optional bamfile to use for coverage calculation
-##  --cbed FILE         Optional bedfile defining 1000 10kbp genomic windows for
-##                      coverage calcualtion
-##  --extendmode STR    EXPLORE : Search for all connected intervals /CLUSTERED
-##                      : Analyse input intervals as single amplicon only.
-##                      /UNCLUSTERED : Analyse input intervals as independent
-##                      amplicons only.
-##  --sensitivems STR   Set "True" only if expected copy counts to vary by
-##                      orders of magnitude, .e.g viral integration. Default:
-##                      False
-##  --ref STR           "hg19"(default) : chr1, .. chrM etc / "GRCh37" : '1',
-##                      '2', .. 'MT' etc/ "None" : Do not use any annotations.
-##                      AA can tolerate additional chromosomes not stated but
-##                      accuracy and annotations may be affected. Default: hg19
-##  --downsample FLOAT  Downsample the bam file during analysis (Alternatively
-##                      pre-process $AA_SRC/downsample.py). Values: -1 : Do not
-##                      downsample / 0 (default): Downsample to 10X coverage if
-##                      larger / C>0 : Downsample to stated float if larger
-
+## usage: AmpliconArchitect.py [-h] [--bed FILE] [--bam FILE] [--out FILE]
+##                             [--cbam FILE] [--cbed FILE] [--extendmode STR]
+##                             [--sensitivems STR] [--ref STR]
+##                             [--downsample FLOAT]
+## 
+## Reconstruct Amplicons connected to listed intervals.
+## 
+## optional arguments:
+##   -h, --help          show this help message and exit
+##   --bed FILE          Bed file with putative list of amplified intervals
+##   --bam FILE          Coordinate sorted BAM file with index mapped to hg19
+##                       reference sequence
+##   --out FILE          Prefix for output files
+##   --cbam FILE         Optional bamfile to use for coverage calculation
+##   --cbed FILE         Optional bedfile defining 1000 10kbp genomic windows for
+##                       coverage calcualtion
+##   --extendmode STR    Values: [EXPLORE/CLUSTERED/UNCLUSTERED]. This determines
+##                       how the input intervals in bed file are treated. EXPLORE
+##                       : Search for all connected intervals in genome that may
+##                       be connected to input intervals. CLUSTERED : Input
+##                       intervals are treated as part of a single connected
+##                       amplicon and no new connected intervals are added.
+##                       UNCLUSTERED : Input intervals are treated as part of a
+##                       single connected amplicon and no new connected intervals
+##                       are added.
+##   --sensitivems STR   Values: [True, False]. Set "True" only if expected copy
+##                       counts to vary by orders of magnitude, .e.g viral
+##                       integration. Default: False
+##   --ref STR           Values: [hg19, GRCh37, None]. "hg19"(default) : chr1, ..
+##                       chrM etc / "GRCh37" : '1', '2', .. 'MT' etc/ "None" : Do
+##                       not use any annotations. AA can tolerate additional
+##                       chromosomes not stated but accuracy and annotations may
+##                       be affected. Default: hg19
+##   --downsample FLOAT  Values: [-1, 0, C(>0)]. Decide how to downsample the
+##                       bamfile during reconstruction. Reads are automatically
+##                       downsampled in real time for speedup. Alternatively pre-
+##                       process bam file using $AA_SRC/downsample.py. -1 : Do
+##                       not downsample bam file, use full coverage. 0 (default):
+##                       Downsample bamfile to 10X coverage if original coverage
+##                       larger then 10. C (>0) : Downsample bam file to coverage
+##                       C if original coverage larger than C
 
 
 
