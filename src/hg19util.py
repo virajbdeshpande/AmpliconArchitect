@@ -224,9 +224,9 @@ class interval(object):
     def load_pysamread(self, line, bamfile):
         if bamfile is None:
             raise "Interval of pysam AlignedRead without bamfile"
-        self.chrom = bamfile.getrname(line.tid)
-        self.start = line.pos
-        self.end = line.aend
+        self.chrom = line.reference_name
+        self.start = line.reference_start
+        self.end = line.reference_end
         if line.is_reverse:
             self.strand = -1
         else:

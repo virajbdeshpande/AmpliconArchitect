@@ -606,11 +606,11 @@ class bam_to_breakpoint():
             if strand == -1:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and a.is_reverse
-                        and len(ilist.intersection([hg.interval(self.bamfile.getrname(a.mrnm), a.pnext, a.pnext)])) == 0]
+                        and len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0]
             else:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and not a.is_reverse 
-                        and len(ilist.intersection([hg.interval(self.bamfile.getrname(a.mrnm), a.pnext, a.pnext)])) == 0]
+                        and len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0]
 
 
     # Methods to find breakpoint edges in amplicon
@@ -618,13 +618,13 @@ class bam_to_breakpoint():
         gmt = clock()
         self.get_mates_num_calls += 1
         try:
-            miter = self.secondary_index.find(a.qname)
+            miter = self.secondary_index.find(a.query_name)
             retval = [m for m in miter if m.is_read1 != a.is_read1]
             self.get_mates_time += clock() - gmt
             return retval
         except:
             # print clock(), 'get_mates', str(a)
-            retval = [a2 for a2 in self.fetch(a.next_reference_name, a.next_reference_start, a.next_reference_start + 1) if a2.qname == a.qname and a2.is_read1 != a.is_read1]
+            retval = [a2 for a2 in self.fetch(a.next_reference_name, a.next_reference_start, a.next_reference_start + 1) if a2.query_name == a.query_name and a2.is_read1 != a.is_read1]
             # retval = [self.bamfile.mate(a)]
             # print clock(), 'got_mates'
             self.get_mates_time += clock() - gmt
@@ -668,11 +668,11 @@ class bam_to_breakpoint():
                                                    max(1, v.pos - self.max_insert),
                                                    v.pos)
                      if not a.is_unmapped and not a.is_reverse and a.is_proper_pair
-                     and a.next_reference_name == v.chrom and a.mpos >= v.pos and a.reference_start < v.pos - bp_margin
-                     and a.mpos < a.reference_start + self.max_insert - self.read_length]
+                     and a.next_reference_name == v.chrom and a.next_reference_start >= v.pos and a.reference_start < v.pos - bp_margin
+                     and a.next_reference_start < a.reference_start + self.max_insert - self.read_length]
             if len(dlist) > self.pair_support:
                 v2= breakpoint_vertex(v.chrom,
-                                         max(v.pos + 1, min([a.mpos for a in dlist])), -1)
+                                         max(v.pos + 1, min([a.next_reference_start for a in dlist])), -1)
                 logging.debug("#TIME " + '%.3f\t'%clock() + " concordant edges " + str(v) + " " + str(len(dlist)))
                 return (breakpoint_edge(v, v2), dlist)
         else:
@@ -680,8 +680,8 @@ class bam_to_breakpoint():
                                                    max(1, v.pos - self.max_insert),
                                                    v.pos)
                      if not a.is_reverse and a.is_proper_pair and not a.is_unmapped
-                     and a.next_reference_name == v.chrom and a.mpos >= v.pos and a.reference_start < v.pos - bp_margin
-                     and a.mpos < a.reference_start + self.max_insert - self.read_length]
+                     and a.next_reference_name == v.chrom and a.next_reference_start >= v.pos and a.reference_start < v.pos - bp_margin
+                     and a.next_reference_start < a.reference_start + self.max_insert - self.read_length]
             if len(dlist) > self.pair_support:
                 v2 = breakpoint_vertex(v.chrom,
                                          min(v.pos - 1, max([a.reference_end - 1 for a in dlist])), 1)
@@ -698,16 +698,16 @@ class bam_to_breakpoint():
                                                    interval.end)
                      if not a.is_unmapped and not a.is_reverse and a.is_paired
                      and not a.is_proper_pair and not a.mate_is_unmapped
-                     and not a.mate_is_reverse and a.mrnm==a.tid
-                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
+                     and not a.mate_is_reverse and a.reference_name == a.next_reference_name
+                     and abs(a.next_reference_start - a.reference_start) < 100000]#self.ms_window_size]
         else:
             dlist = [a for a in self.fetch(interval.chrom,
                                                    interval.start,
                                                    interval.end)
                      if not a.is_unmapped and a.is_reverse and a.is_paired
                      and not a.is_proper_pair and not a.mate_is_unmapped
-                     and a.mate_is_reverse and a.mrnm==a.tid
-                     and abs(a.mpos - a.pos) < 100000]#self.ms_window_size]
+                     and a.mate_is_reverse and a.reference_name == a.next_reference_name
+                     and abs(a.next_reference_start - a.reference_start) < 100000]#self.ms_window_size]
         return len(dlist)
 
     def refine_discordant_edge(self, e):
@@ -718,11 +718,11 @@ class bam_to_breakpoint():
         v2max = min(e.v2.pos + self.max_insert - self.read_length if e.v2.strand == -1 else e.v2.pos, hg.chrLen[hg.chrNum(e.v2.chrom)]) - 1
         d1list = [a for a in self.fetch(e.v1.chrom, v1min, v1max)]
         d2list = [a for a in self.fetch(e.v2.chrom, v2min, v2max)]
-        d1Set = Set([(a.qname, a.is_read1, a.is_reverse, a.is_secondary) for a in d1list])
+        d1Set = Set([(a.query_name, a.is_read1, a.is_reverse, a.is_secondary) for a in d1list])
         if e.v1.strand == e.v2.strand:
-            d2Set = Set([(a.qname, a.is_read1, not a.is_reverse, not a.is_secondary) for a in d2list])
+            d2Set = Set([(a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary) for a in d2list])
         else:
-            d2Set = Set([(a.qname, a.is_read1, a.is_reverse, not a.is_secondary) for a in d2list])
+            d2Set = Set([(a.query_name, a.is_read1, a.is_reverse, not a.is_secondary) for a in d2list])
         rSet = d1Set.intersection(d2Set)        
         if len(rSet) == 0:
             logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge rSet empty " + str(e))
@@ -731,23 +731,23 @@ class bam_to_breakpoint():
         d1reads = {}
         d2reads = {}
         for a in d1list:
-            if (a.qname, a.is_read1, a.is_reverse, a.is_secondary) in d1reads:
-                multi_r.add((a.qname, a.is_read1, a.is_reverse, a.is_secondary))
-            d1reads[(a.qname, a.is_read1, a.is_reverse, a.is_secondary)] = a
+            if (a.query_name, a.is_read1, a.is_reverse, a.is_secondary) in d1reads:
+                multi_r.add((a.query_name, a.is_read1, a.is_reverse, a.is_secondary))
+            d1reads[(a.query_name, a.is_read1, a.is_reverse, a.is_secondary)] = a
         if e.v1.strand == e.v2.strand:
             for a in d2list:
-                if (a.qname, a.is_read1, not a.is_reverse, not a.is_secondary) in d2reads:
-                    multi_r.add((a.qname, a.is_read1, not a.is_reverse, not a.is_secondary))
-                d2reads[(a.qname, a.is_read1, not a.is_reverse, not a.is_secondary)] = a
+                if (a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary) in d2reads:
+                    multi_r.add((a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary))
+                d2reads[(a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary)] = a
         else:
             for a in d2list:
-                if (a.qname, a.is_read1, a.is_reverse, not a.is_secondary) in d2reads:
-                    multi_r.add((a.qname, a.is_read1, a.is_reverse, not a.is_secondary))
-                d2reads[(a.qname, a.is_read1, a.is_reverse, not a.is_secondary)] = a
+                if (a.query_name, a.is_read1, a.is_reverse, not a.is_secondary) in d2reads:
+                    multi_r.add((a.query_name, a.is_read1, a.is_reverse, not a.is_secondary))
+                d2reads[(a.query_name, a.is_read1, a.is_reverse, not a.is_secondary)] = a
 
         dpairs = defaultdict(lambda: [], {})
         for aa in rSet:
-            if a.qname in multi_r:
+            if a.query_name in multi_r:
                 continue
             a1 = d1reads[aa]
             a2 = d2reads[aa]
@@ -886,7 +886,7 @@ class bam_to_breakpoint():
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
 
         # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
-        vlist = [(hg.absPos(a.reference_name, a.pos) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a) for a in dflist + drlist]
+        vlist = [(hg.absPos(a.reference_name, a.reference_start) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a) for a in dflist + drlist]
         v0list = copy.copy(vlist)
         v0list.sort(key=lambda x: x[0])
         v1list = copy.copy(vlist)
@@ -984,26 +984,26 @@ class bam_to_breakpoint():
                     continue
                 # print str(c1[0]), str(c2[0])
                 # continue
-                # print ci, str(c1[0]), str(c2[0]), len(c1[1]), len(c2[1]), len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)), len(Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]])))
-                # if len(Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]]))) == 11:
-                #     qset = Set([hgddict[a1].qname for a1 in c1[1]]).intersection(Set([hgddict[a2].qname for a2 in c2[1]]))
+                # print ci, str(c1[0]), str(c2[0]), len(c1[1]), len(c2[1]), len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)), len(Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]])))
+                # if len(Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]]))) == 11:
+                #     qset = Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]]))
                 #     for a1 in c1[1]:
-                #         if hgddict[a1].qname in qset:
+                #         if hgddict[a1].query_name in qset:
                 #             print str(hgddict[a1])
                 #     for a2 in c2[1]:
-                #         if hgddict[a2].qname in qset:
+                #         if hgddict[a2].query_name in qset:
                 #             print str(hgddict[a2])
                 vl = []
                 for a1 in c1[1]:
                     for a2 in c2[1]:
                         aq1 = hgddict[a1]
                         aq2 = hgddict[a2]
-                        if aq1.qname == aq2.qname and aq1.is_read1 != aq2.is_read1:
-                            if aq1.rname == aq2.rname and abs(aq1.pos - aq2.pos) < self.read_length and abs(aq1.reference_end - aq2.reference_end) < self.read_length and aq1.is_reverse != aq2.is_reverse:
+                        if aq1.query_name == aq2.query_name and aq1.is_read1 != aq2.is_read1:
+                            if aq1.reference_name == aq2.reference_name and abs(aq1.reference_start - aq2.reference_start) < self.read_length and abs(aq1.reference_end - aq2.reference_end) < self.read_length and aq1.is_reverse != aq2.is_reverse:
                                 continue
-                            if aq1.rname == aq2.rname and  aq1.is_reverse and not aq2.is_reverse and aq1.pos - aq2.reference_end + 1> 0 and aq1.pos - aq2.reference_end + 1< self.max_insert - 2 * self.read_length:
+                            if aq1.reference_name == aq2.reference_name and  aq1.is_reverse and not aq2.is_reverse and aq1.reference_start - aq2.reference_end + 1> 0 and aq1.reference_start - aq2.reference_end + 1< self.max_insert - 2 * self.read_length:
                                 continue
-                            if aq2.rname == aq1.rname and aq2.is_reverse and not aq1.is_reverse and aq2.pos - aq1.reference_end + 1 > 0 and aq2.pos - aq1.reference_end + 1 < self.max_insert - 2 * self.read_length:
+                            if aq2.reference_name == aq1.reference_name and aq2.is_reverse and not aq1.is_reverse and aq2.reference_start - aq1.reference_end + 1 > 0 and aq2.reference_start - aq1.reference_end + 1 < self.max_insert - 2 * self.read_length:
                                 continue
                             vl.append((aq1, aq2))
 
@@ -1013,16 +1013,16 @@ class bam_to_breakpoint():
                 #         print v[1].is_reverse, str(v[1])
 
 
-                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
+                if len(vl) == 0 or len([v for v in vl if v[1].reference_start*v[0].reference_start > 0]) == 0:
                     continue
                 if not vl[0][0].is_reverse:
-                    bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].pos > 0]), 1)
+                    bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].reference_start > 0]), 1)
                 else:
-                    bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
+                    bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].reference_start for v in vl if v[0].reference_start > 0]), -1)
                 if not vl[0][1].is_reverse:
-                    bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].pos > 0]), 1)
+                    bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].reference_start > 0]), 1)
                 else:
-                    bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                    bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
                 if not adaptive_counts:
                     ps = pair_support
                 else:
@@ -1039,7 +1039,7 @@ class bam_to_breakpoint():
                 if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
                     if bp1.strand == 1:
                         for v in vl:
-                            if v[0].pos == v[1].pos:
+                            if v[0].reference_start == v[1].reference_start:
                                 num_inverted += 1
                     else:
                         for v in vl:
@@ -1047,19 +1047,19 @@ class bam_to_breakpoint():
                                 num_inverted += 1
                     if len(vl) - num_inverted < ps:
                         continue
-                    vl.sort(lambda x, y: x[0].pos - y[0].pos)
+                    vl.sort(lambda x, y: x[0].reference_start - y[0].reference_start)
                     if bp1.strand == 1:
                         maxp = vl[0][0].reference_end - 1
                         maxn = 0
                         for v in vl[::-1]:
-                            if len([v1 for v1 in vl if v1[0].reference_end <= v[0].reference_end and v1[0].pos > v[0].reference_end - 1 - self.max_insert + 2 * self.read_length]) > maxn:
+                            if len([v1 for v1 in vl if v1[0].reference_end <= v[0].reference_end and v1[0].reference_start > v[0].reference_end - 1 - self.max_insert + 2 * self.read_length]) > maxn:
                                 maxp = v[0].reference_end
                                 maxn = len([v1 for v1 in vl if v1[0].reference_end <= v[0].reference_end and v1[0].reference_end > v[0].reference_end - self.max_insert + 2 * self.read_length])
                         vl = [v for v in vl if v[0].reference_end - 1 <= maxp and v[0].reference_end - 1 > maxp -  self.max_insert + 2 * self.read_length]
                         if len(vl) < ps:
                             continue
-                        bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].pos > 0]), 1)
-                        bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].pos > 0]), 1)
+                        bp1 = breakpoint_vertex(c1[0].chrom, max([v[0].reference_end - 1 for v in vl if v[0].reference_start > 0]), 1)
+                        bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].reference_start > 0]), 1)
                         if bp1.pos != bp2.pos:
                             bp1c = bp2
                             bp2c = bp1
@@ -1067,14 +1067,14 @@ class bam_to_breakpoint():
                         maxp = vl[-1][0].pos
                         maxn = 0
                         for v in vl:
-                            if len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length]) > maxn:
-                                maxp = v[0].pos
-                                maxn = len([v1 for v1 in vl if v1[0].pos >= v[0].pos and v1[0].pos < v[0].pos + self.max_insert - 2 * self.read_length])
-                        vl = [v for v in vl if v[0].pos >= maxp and v[0].pos < maxp +  self.max_insert - 2 * self.read_length]
+                            if len([v1 for v1 in vl if v1[0].reference_start >= v[0].reference_start and v1[0].reference_start < v[0].reference_start + self.max_insert - 2 * self.read_length]) > maxn:
+                                maxp = v[0].reference_start
+                                maxn = len([v1 for v1 in vl if v1[0].reference_start >= v[0].reference_start and v1[0].reference_start < v[0].reference_start + self.max_insert - 2 * self.read_length])
+                        vl = [v for v in vl if v[0].reference_start >= maxp and v[0].reference_start < maxp +  self.max_insert - 2 * self.read_length]
                         if len(vl) < ps:
                             continue
-                        bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].pos for v in vl if v[0].pos > 0]), -1)
-                        bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                        bp1 = breakpoint_vertex(c1[0].chrom, min([v[0].reference_start for v in vl if v[0].reference_start > 0]), -1)
+                        bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
                         if bp1.pos != bp2.pos:
                             bp1c = bp2
                             bp2c = bp1
@@ -1164,20 +1164,20 @@ class bam_to_breakpoint():
                         if hg.interval(a, bamfile=self.bamfile).intersects(c[0]):
                             vl.append((a, hgndict[hgm]))
                             break
-                if len(vl) == 0 or len([v for v in vl if v[1].pos*v[0].pos > 0]) == 0:
+                if len(vl) == 0 or len([v for v in vl if v[1].reference_start*v[0].reference_start > 0]) == 0:
                     continue
                 if not vl[0][0].is_reverse:
-                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
+                    bp1 = breakpoint_vertex(vl[0][0].reference_name,
                                             max([v[0].reference_end - 1 for v in vl]), 1)
                 else:
-                    bp1 = breakpoint_vertex(self.bamfile.getrname(vl[0][0].tid),
-                                            min([v[0].pos for v in vl if v[0].pos > 0]), -1)
+                    bp1 = breakpoint_vertex(vl[0][0].reference_name,
+                                            min([v[0].reference_start for v in vl if v[0].reference_start > 0]), -1)
                 if not vl[0][1].is_reverse:
-                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
+                    bp2 = breakpoint_vertex(vl[0][1].reference_name,
                                             max([v[1].reference_end - 1 for v in vl]), 1)
                 else:
-                    bp2 = breakpoint_vertex(self.bamfile.getrname(vl[0][1].tid),
-                                            min([v[1].pos for v in vl if v[1].pos > 0]), -1)
+                    bp2 = breakpoint_vertex(vl[0][1].reference_name,
+                                            min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
                 if not adaptive_counts:
                     ps = pair_support
                 else:
@@ -1188,7 +1188,7 @@ class bam_to_breakpoint():
                 if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
                     if bp1.strand == 1:
                         for v in vl:
-                            if v[0].pos == v[1].pos:
+                            if v[0].reference_start == v[1].reference_start:
                                 num_inverted += 1
                     else:
                         for v in vl:
