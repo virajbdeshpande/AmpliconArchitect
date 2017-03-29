@@ -99,8 +99,7 @@ class bam_to_breakpoint():
         self.downsample = downsample
         self.downsample_ratio = 1
         self.sensitivems = sensitivems
-        for s in self.bamfile.header['SQ']:
-            hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
+        hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         if coverage_stats is None:
             self.basic_stats_set = False
             print clock()
@@ -143,7 +142,6 @@ class bam_to_breakpoint():
             for a in self.bamfile.fetch(c, s, e):
                 if hash(a.query_name) % 1000000 < 1000000 * self.downsample_ratio:
                         yield a
-
 
     def interval_coverage(self, i, clip=False, gcc=False):
         if gcc:
@@ -225,13 +223,15 @@ class bam_to_breakpoint():
             window_list_index = 0
             while (window_list is not None and window_list_index < len(window_list)) or (window_list is None and iteri <= num_iter):
                 if window_list is None:
-                    newpos = random.random() * sumchrLen
+                    newpos = int(random.random() * sumchrLen)
                 else:
                     cwindow = window_list[window_list_index]
                     window_list_index += 1
                     if cwindow.end - cwindow.start < 10000:
                         continue
                     newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
+                if hg.chrPos(newpos) is None:
+                    logging.warning(str(newpos) + " " + str(sumchrLen))
                 (c,p) = hg.chrPos(newpos)
                 if c not in self.bamfile.references or p < 10000 or hg.chrLen[hg.chrNum(c)] < p + 10000 or len(hg.interval_list([hg.interval(c, p, p+10000)]).intersection(hg.conserved_regions, extend=10000)) > 0:
                     continue

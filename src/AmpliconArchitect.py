@@ -81,16 +81,16 @@ parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
 parser.add_argument('--extendmode', dest='extendmode',
-                    help="EXPLORE : Search for all connected intervals /CLUSTERED : Analyse input intervals as single amplicon only. /UNCLUSTERED : Analyse input intervals as independent amplicons only.", metavar='STR',
+                    help="Values: [EXPLORE/CLUSTERED/UNCLUSTERED]. This determines how the input intervals in bed file are treated. EXPLORE : Search for all connected intervals in genome that may be connected to input intervals. CLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added. UNCLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added.", metavar='STR',
                     action='store', type=str, default='EXPLORE')
 parser.add_argument('--sensitivems', dest='sensitivems',
-                    help="Set \"True\" only if expected copy counts to vary by orders of magnitude, .e.g viral integration. Default: False", metavar='STR',
+                    help="Values: [True, False]. Set \"True\" only if expected copy counts to vary by orders of magnitude, .e.g viral integration. Default: False", metavar='STR',
                     action='store', type=str, default='False')
 parser.add_argument('--ref', dest='ref',
-                    help="\"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    help="Values: [hg19, GRCh37, None]. \"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
 parser.add_argument('--downsample', dest='downsample',
-                    help="Downsample the bam file during analysis (Alternatively pre-process $AA_SRC/downsample.py). Values: -1 : Do not downsample / 0 (default): Downsample to 10X coverage if larger / C>0 : Downsample to stated float if larger", metavar='FLOAT',
+                    help="Values: [-1, 0, C(>0)]. Decide how to downsample the bamfile during reconstruction. Reads are automatically downsampled in real time for speedup. Alternatively pre-process bam file using $AA_SRC/downsample.py. -1 : Do not downsample bam file, use full coverage. 0 (default): Downsample bamfile to 10X coverage if original coverage larger then 10. C (>0) : Downsample bam file to coverage C if original coverage larger than C", metavar='FLOAT',
                     action='store', type=float, default=0)
 args = parser.parse_args()
 

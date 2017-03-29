@@ -642,7 +642,7 @@ class graph_decomposition(object):
     """Class represents decomposition of a breakpoint_graph with balanced edge counts into cycles/walks
     Provides methods to merge and modify cycles into larger walks to represent architecture of complex rearrangements.
     """
-    def __init__(self, segment_list=None, cycle_list=None, file=None, file_content=None):
+    def __init__(self, segment_list=None, cycle_list=None, ilist=None, file=None, file_content=None):
         if file is not None or file_content is not None:
             self.segment_list = hg.interval_list([])
             self.segment_dict = {}
@@ -672,6 +672,35 @@ class graph_decomposition(object):
                     self.cycle_dict[ci] = (ci, cn, cl)
                 elif 'Interval' == l[0]:
                     self.ilist.append(hg.interval(l[2], int(l[3]), int(l[4]), info=[l[1]]))
+        elif cycle_list is None:
+            segment_set = hg.interval_list([hg.interval(ss[0], ss[1], ss[2]) for ss in {(s.chrom, s.start, s.end) for s in segment_list}])
+            segment_set.sort()
+            self.segment_list = segment_set
+            self.segment_dict = {}
+            seg_id = {}
+            cl = []
+            for s in enumerate(segment_set):
+                self.segment_dict[str(s[0] + 1)] = s[1]
+                seg_id[(s[1].chrom, s[1].start, s[1].end)] = str(s[0] + 1)
+            for s in segment_list:
+                cl.append((seg_id[(s.chrom, s.start, s.end)], s.strand))
+            for ii in range(len(self.segment_list)):
+                s = self.segment_list[ii]
+                s.info = [seg_id[(s.chrom, s.start, s.end)]]
+            self.cycle_dict = {'1':('1', 1, cl)}
+            self.ilist = hg.interval_list([s[0] for s in segment_set.merge_clusters(extend=1)])
+            for ii in range(len(self.ilist)):
+                self.ilist[ii].info = [str(ii)]
+        else:
+            self.segment_list = segment_list
+            self.segment_dict = {s.info[0]: s for s in segment_list}
+            self.cycle_dict = {c[0]:c for c in cycle_list}
+            if ilist is not None:
+                self.ilist = ilist
+            else:
+                self.ilist = hg.interval_list([s[0] for s in segment_list.merge_clusters(extend=1)])
+                for ii in range(len(self.ilist)):
+                    self.ilist[ii].info = [str(ii)]
 
     def next_seg_id(self):
         mi = 0

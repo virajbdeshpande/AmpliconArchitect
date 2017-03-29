@@ -127,14 +127,13 @@ def absPos(chrname, pos=0):
     if chrNum(chrname) not in chrOffset:
         chrkeys = chrName.keys()
         chrkeys.sort()
-        sumlen = 0
-        len(chrkeys)
+        sumlen = sum([chrLen[c] for c in chrLen if c in chrOffset])
         for i in range(len(chrkeys)):
             if chrkeys[i] not in chrOffset:
                 chrOffset[chrkeys[i]] = sumlen
+                sumlen += chrLen[chrkeys[i]]
             if cnum < chrkeys[i]:
                 break
-            sumlen += chrLen[chrkeys[i]]
     return chrOffset[chrNum(chrname)] + pos 
 
 for c in chrLen:
@@ -149,6 +148,7 @@ def chrPos(abspos):
 def update_chrLen(len_list):
     for l in len_list:
         chrLen[chrNum(l[0])] = int(l[1])
+    for l in len_list:
         cpos = absPos(l[0], 1)
 
 def reverse_complement(seq):
