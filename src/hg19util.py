@@ -1,41 +1,18 @@
-# This software is Copyright 2014 The Regents of the University of
-# California. All Rights Reserved.
+# This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
-# Permission to copy, modify, and distribute this software and its
-# documentation for educational, research and non-profit purposes, without fee,
-# and without a written agreement is hereby granted, provided that the above
-# copyright notice, this paragraph and the following three paragraphs appear
-# in all copies.
+# Office of Innovation and Commercialization
 #
-# Permission to make commercial use of this software may be obtained by
-# contacting:
-# Technology Transfer Office
-# 9500 Gilman Drive, Mail Code 0910
 # University of California
+#
 # La Jolla, CA 92093-0910
+#
 # (858) 534-5815
+#
 # invent@ucsd.edu
 #
-# This software program and documentation are copyrighted by The Regents of the
-# University of California. The software program and documentation are supplied
-# "as is", without any accompanying services from The Regents. The Regents does
-# not warrant that the operation of the program will be uninterrupted or
-# error-free. The end-user understands that the program was developed for
-# research purposes and is advised not to rely exclusively on the program for
-# any reason.
+# This software program and documentation are copyrighted by The Regents of the University of California. The software program and documentation are supplied "as is", without any accompanying services from The Regents. The Regents does not warrant that the operation of the program will be uninterrupted or error-free. The end-user understands that the program was developed for research purposes and is advised not to rely exclusively on the program for any reason.
 #
-# IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO
-# ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-# CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING
-# OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
-# EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF
-# THE POSSIBILITY OF SUCH DAMAGE. THE UNIVERSITY OF
-# CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
-# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESSFOR A PARTICULAR PURPOSE.
-# THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
-# CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES,
-# ENHANCEMENTS, OR MODIFICATIONS.
+# IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
@@ -53,6 +30,8 @@ import copy
 import os
 import logging
 
+import global_names
+
 try:
     DATA_REPO = os.environ["AA_DATA_REPO"]
 except:
@@ -62,11 +41,7 @@ if DATA_REPO == '.' or DATA_REPO == '':
     logging.warning("#TIME " + '%.3f\t'%clock() + " AA_DATA_REPO not set or empy. Setting to working directory")
     DATA_REPO = '.'
 
-try:
-    REF = [l.strip().split()[0] for l in open(DATA_REPO + "/reference.txt")][0]
-except:
-    logging.warning("#TIME " + '%.3f\t'%clock() + " Unable to find reference in $AA_DATA_REPO/reference.txt. Setting to working directory.")
-    REF = ''
+REF = global_names.REF
 
 REF_files = defaultdict(lambda: '', {})
 try:
@@ -87,6 +62,7 @@ except:
 
 chrLen_filename = DATA_REPO + '/' + REF + '/' + REF_files['chrLen_file']
 duke35_filename = DATA_REPO + '/' + REF + '/' + REF_files['duke35_filename']
+wgexclude_filename = DATA_REPO + '/' + REF + '/' + REF_files['mapability_exclude_filename']
 gene_filename = DATA_REPO + '/' + REF + '/' + REF_files['gene_filename']
 exon_filename = DATA_REPO + '/' + REF + '/' + REF_files['exon_file']
 oncogene_filename = DATA_REPO + '/' + REF + '/' + REF_files['oncogene_filename']
@@ -151,11 +127,10 @@ def update_chrLen(len_list):
     for l in len_list:
         cpos = absPos(l[0], 1)
 
+
+
 def reverse_complement(seq):
     return ''.join([complementary_nucleotide[a] for a in seq][::-1])
-
-
-
 
 
 
@@ -180,7 +155,10 @@ class interval(object):
             if len(line.strip().split()) == 1:
                 self.chrom = line.split(':')[0]
                 self.start = int(line.split(':')[1].split('-')[0])
-                self.end = int(line.split(':')[1].split('-')[1])
+                if '-' not in line:
+                    self.end = int(line.split(':')[1].split('-')[0])
+                else:
+                    self.end = int(line.split(':')[1].split('-')[1])
                 if self.start < self.end:
                     self.strand = 1
                 else:
@@ -264,9 +242,9 @@ class interval(object):
 
     def sequence(self, new_fa_file=None):
         if new_fa_file is not None:
-            seq = new_fa_file.fetch(self.chrom, self.start, self.end)
+            seq = new_fa_file.fetch(self.chrom, self.start, self.end + 1)
         else:
-            seq = fa_file.fetch(self.chrom, self.start, self.end)
+            seq = fa_file.fetch(self.chrom, self.start, self.end + 1)
         if self.strand == 1:
             return seq
         else:
@@ -335,6 +313,15 @@ class interval(object):
                 z = y
             if self.intersects(interval(x, y, z)) and self.intersection(interval(x, y, z)).size() == interval(x, y, z).size():
                 return True
+        return False
+
+    def filter_repeat(self):
+        if len(interval_list([self]).intersection(wgexclude)) > 0:
+            return True
+        if len(interval_list([self]).intersection(conserved_regions)) > 0:
+            return True
+        if self.rep_content() > 4.5:
+            return True
         return False
 
     def rep_content(self):
@@ -443,18 +430,24 @@ class interval_list(list, object):
         ci = None
         cl = []
         ai = 0
+        cend = len(self)
         for a in self[::-1]:
             ai += 1
             if ci is None or not a.intersects(ci, extend, margin):
+                cstart = len(self) - ai + 1
+                cl = self[cstart:cend]
                 if ci is not None:
                     ml.append((ci, cl))
                 ci = a
                 cl = []
-                if ai != sum([len(m[1]) for m in ml]) + 1:
-                    print "divergent", ai, str(a)
-                    exit()
+                cend = len(self) - ai + 1
+                # if ai != sum([len(m[1]) for m in ml]) + 1:
+                #     print "divergent", ai, str(a)
+                #     exit()
             ci = ci.merge(a, extend)
-            cl.append(a)
+            # cl.append(a)
+        cstart = 0
+        cl = self[cstart:cend]
         if ci is not None:
             ml.append((ci,cl))
         return ml[::-1]
@@ -721,8 +714,13 @@ def load_exons():
 conserved_regions = interval_list(conserved_regions_filename, 'bed')
 conserved_regions.sort()
 
+wgexclude = interval_list(wgexclude_filename, 'bed')
+wgexclude.sort()
+
 centromere_list = interval_list(centromere_filename, 'bed')
 centromere_list.sort()
+centromere_list = interval_list([i[0] for i in centromere_list.merge_clusters(extend=1)])
+
 
 segdup_list = interval_list(segdup_filename, 'bed')
 segdup_list.sort()

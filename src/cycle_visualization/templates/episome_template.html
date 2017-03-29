@@ -1,0 +1,362 @@
+<!doctype html>
+<link rel="stylesheet"
+      type="text/css"
+      href="/static/style.css"/>
+
+<title>Episome Drawer</title>
+
+<head>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+<script type="text/javascript">
+function dotted_line_click(t){
+	var x = document.getElementsByClassName("vertical_dotted_line");
+	var i;
+	for (i = 0; i < x.length; i++) {
+		if (t.checked) {
+			x[i].style.display = 'block';
+		} else {
+			x[i].style.display = 'none';
+		}
+	}
+}
+
+function file_names_click(t){
+	var x = document.getElementsByClassName("file_name");
+	var i;
+	for (i = 0; i < x.length; i++) {
+		if (t.checked) {
+			x[i].style.display = 'block';
+		} else {
+			x[i].style.display = 'none';
+		}
+	}
+}
+function show_rectangle(cname){
+	var hide_button = document.getElementById("hide_"+cname);
+	if (hide_button.style.display != 'none') {
+		return;
+	}
+	hide_button.style.display = 'inline-block';
+	var show_button = document.getElementById("show_"+cname);
+	show_button.style.display = 'none';
+
+	var change_amount = 0;
+	var x = document.getElementsByClassName(cname);
+	var i;
+	for (i = 0; i < x.length; i++) {
+		x[i].style.display = 'block';
+		if (x[i].classList.contains("cycle_section")) {
+			change_amount = parseInt(x[i].style.height);
+		}
+	}
+	cycle_index = parseInt(cname.split("_")[2]);
+	var k;
+	for (k = cycle_index+1; k < 50; k++) {
+		shift_class = cname.split("_")[0] + '_' + cname.split("_")[1] + '_' + k.toString();
+		y = document.getElementsByClassName(shift_class);
+		for (i = 0; i < y.length; i++) {
+			y[i].style.top = parseInt(y[i].style.top) + change_amount + "px";
+			y[i].style.opacity = 1 - parseInt(y[i].style.opacity);
+		}
+	}
+}
+
+function hide_rectangle(cname){
+	var hide_button = document.getElementById("hide_"+cname);
+	if (hide_button.style.display == 'none') {
+		return;
+	}
+	hide_button.style.display = 'none';
+	var show_button = document.getElementById("show_"+cname);
+	show_button.style.display = 'inline-block';
+
+	var change_amount = 0;
+	var x = document.getElementsByClassName(cname);
+	var i;
+	for (i = 0; i < x.length; i++) {
+		x[i].style.display = 'none';
+		if (x[i].classList.contains("cycle_section")) {
+			change_amount = parseInt(x[i].style.height);
+		}
+	}
+	cycle_index = parseInt(cname.split("_")[2]);
+	var k;
+	for (k = cycle_index+1; k < 50; k++) {
+		shift_class = cname.split("_")[0] + '_' + cname.split("_")[1] + '_' + k.toString();
+		y = document.getElementsByClassName(shift_class);
+		for (i = 0; i < y.length; i++) {
+			y[i].style.top = parseInt(y[i].style.top) - change_amount + "px";
+			y[i].style.opacity = 1 - parseInt(y[i].style.opacity);
+		}
+	}
+}
+
+function show_all(group_index){
+	prefix = 'show_' + group_index + '_cycle_';
+	classes = $("*[class^='show']");
+	for (var a= 0; a < classes.length; a++){
+		if (classes[a].id.split("_")[0] == 'show'){
+			if (classes[a].id.split("_")[1] == group_index) {
+				show_rectangle(group_index+'_cycle_'+classes[a].id.split("_")[3]);
+			}
+		}
+	}
+}
+
+function hide_all(group_index){
+	prefix = 'hide_' + group_index + '_cycle_';
+	classes = $("*[class^='show']");
+	for (var a= 0; a < classes.length; a++){
+		if (classes[a].id.split("_")[0] == 'hide'){
+			if (classes[a].id.split("_")[1] == group_index) {
+				hide_rectangle(group_index+'_cycle_'+classes[a].id.split("_")[3]);
+			}
+		}
+	}
+}
+
+function goBack() {
+    window.history.back();
+}
+</script>
+</head>
+
+<body>
+<div class="menu">
+	<div class="form_item">
+	    <form action="/" method=post enctype=multipart/form-data>
+	    	<div class="form_item_title">
+		    	--------- Upload ---------
+	    	</div>
+        	Select Reconstructed Structure: <br/><input type=file name=reconstructed_structure> 
+	    	<br/><br/>
+    		Select True Structure: <br/><input type=file name=true_structure>
+        	<br/><br/>
+    		Image: <br/><input type=file name=coverage_image>
+        	<br/><br/><input type=submit value=Upload>
+        	<br/>
+        	{% if upload_error %}
+	        	<div class="upload_error upload_form">
+	        		Please select at least one file.
+	        	</div>
+        	{% endif %}
+	    </form>
+    </div>
+
+    <div class="form_item">
+    	<div class="form_item_title">
+	    	------ Edit Cycles ------
+    	</div>
+		<form id="merge_form" action="merge" method=post enctype=multipart/form-data>
+			Merge:
+			<table class="edit_input_table">
+			<tbody>
+				<tr>
+					<td>
+						Select Cycles:
+					</td>
+					<td style="position:absolute;">
+						<select name="first_cycle">
+							{% for cycle in reconstructed_cycles %}
+								<option value="{{cycle}}">{{cycle}}</option>
+							{% endfor %}
+						</select>
+						<select name="second_cycle">
+							{% for cycle in reconstructed_cycles %}
+								<option value="{{cycle}}">{{cycle}}</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						Select Segments:
+					</td>
+					<td style="position:absolute;">
+						<select name="first_segment">
+							{% for segment in reconstructed_segments %}
+								<option value="{{segment}}">{{segment}}</option>
+							{% endfor %}
+						</select>
+						<select name="second_segment">
+							{% for segment in reconstructed_segments %}
+								<option value="{{segment}}">{{segment}}</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+			</tbody>
+			</table>
+			<input type=submit value=Merge form="merge_form">
+		</form>
+		<br/>
+		<form id="pivot_form" action="pivot" method=post enctype=multipart/form-data>
+			Pivot:
+			<table class="edit_input_table">
+			<tbody>
+				<tr>
+					<td>
+						Select Cycle:
+					</td>
+					<td style="position:absolute;">
+						<select name="first_cycle">
+							{% for cycle in reconstructed_cycles %}
+								<option value="{{cycle}}">{{cycle}}</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						Select Segments:
+					</td>
+					<td style="position:absolute;">
+						<select name="first_segment">
+							{% for segment in reconstructed_segments %}
+								<option value="{{segment}}">{{segment}}</option>
+							{% endfor %}
+						</select>
+						<select name="second_segment">
+							{% for segment in reconstructed_segments %}
+								<option value="{{segment}}">{{segment}}</option>
+							{% endfor %}
+						</select>
+					</td>
+				</tr>
+			</tbody>
+			</table>
+			<input type=submit value=Pivot form="pivot_form">
+		</form>
+		<br>
+
+		<form id="undo_edit_form" action="undo_edit" method=get enctype=multipart/form-data>
+		</form>
+
+    	<input type=submit value="Undo Last Edit" form="undo_edit_form" {% if not edited %}disabled{% endif %}>
+		{% if merge_error %}
+	    	<div class="edit_structure_error">
+	    		Merge Error: {{merge_error}}
+	    	</div>
+    	{% endif %}
+		{% if pivot_error %}
+	    	<div class="edit_structure_error">
+	    		Pivot Error: {{pivot_error}}
+	    	</div>
+    	{% endif %}
+    </div>
+
+    <div class="form_item">
+    	<div class="form_item_title">
+	    	---------- View ----------
+    	</div>
+	    <form class="remove_low_cn_cycles_form" action="update" method=post enctype=multipart/form-data>
+	    	{% if not upload_error %}
+				Minimum Copy Number Threshold : <br/><input type=text name=min_copy_number value={% if min_copy_number %}{{min_copy_number}}{% else %}"0"{% endif %}>
+		    	<input type=submit value=Go style="margin-top:5px;">
+		    	<br/>
+		    {% endif %}
+	    </form>
+    	{% if not upload_error %}
+	    	<table style="margin-bottom:13px;">
+	    		<tr>
+	    			<td>
+	    				Show dotted lines:
+	    			</td>
+	    			<td>
+	    				<input type="checkbox" style="position:initial;" id="dotted_line_checkbox" checked=checked onclick="dotted_line_click(this);">
+	    			</td>
+	    		</tr>
+	    		<tr>
+	    			<td>
+	    				Show file names:
+	    			</td>
+	    			<td>
+	    				<input type="checkbox" style="position:initial;" id="file_names_checkbox" checked=checked onclick="file_names_click(this);">
+	    			</td>
+	    		</tr>
+	    	</table>
+	    {% endif %}
+
+    	{% for struct_cycles in cycle_show %}
+    		<div style="position:initial; padding-bottom:10px;">Structure: {{loop.index}}</div>
+			<p id='show_all' class="showhide" onclick="show_all('{{loop.index0}}');" style="margin-bottom:10px;">Show All</p>
+			<p id='hide_all' class="showhide" onclick="hide_all('{{loop.index0}}');" style="margin-bottom:10px;">Hide All</p>
+			<table>
+				<tbody>
+	    		{% for title, cycle in struct_cycles %}
+	    			<tr>
+	    				<td>{{title}}</td>
+	    				<td>
+	    					<p id='show_{{cycle}}' class="showhide" onclick="show_rectangle('{{cycle}}');" style="display: none;">show</p>
+	    					<p id='hide_{{cycle}}' class="showhide" onclick="hide_rectangle('{{cycle}}');">hide</p>
+	    				</td>
+	    				<td></td>
+	    			</tr>
+		    	{% endfor %}
+		    	</tbody>
+	    	</table>
+	    	<br>
+    	{% endfor %}
+    </div>
+
+</div>
+
+	{% if show_image %}
+		<img src={{ url_for('static', filename = image_src) }} width="1168px" height="416" style="left:277px; position:absolute;">
+	{% endif %}
+
+<div class="plot" style="left:360px; {% if show_image %} top:416px; {% endif %} position:absolute;">
+
+
+	{% for cs in cycles_sections %}
+		<div class="cycle_section {{cs.css_class}}" style="top:{{cs.top_y}}px; height:{{cs.height}}px; background-color:lightgray; opacity:{{cs.background_opacity}}"></div>
+		<div class="{{cs.css_class}}" style="left:-120px; top:{{cs.center_y}}px; position:absolute; font-size:larger; font-family: Arial">{{cs.name}}</div>
+		{% for rect in cs.rectangles %}
+			<div class="{{rect.css_class}}" style="left:{{rect.pos.x}}px; top:{{rect.pos.y}}px; width:{{rect.width}}px; height:{{rect.height}}px;">
+				<span class="tooltiptext"><a target="_blank" href="{{rect.tooltip_url}}" style="color:white; font-size:smaller; font-family: Arial; padding-left: 5px;">See in Genome Browser</a></span>
+			</div>
+		{% endfor %}
+		{% for segment_label in cs.segments_labels %}
+		{% endfor %}
+	{% endfor %}
+
+	{% for file_name in file_names %}
+		<div class="file_name" style="position:absolute; top:{{file_name.top_y}}px; width:1000px; text-align:center;font-size:larger; font-family: Arial">
+			{{file_name.text}}
+		</div>
+	{% endfor %}
+
+	{% for rect in rectangles %}
+		<div class="{{rect.css_class}}" style="left:{{rect.pos.x}}px; top:{{rect.pos.y}}px; width:{{rect.width}}px; height:{{rect.height}}px;">
+			<span class="tooltiptext"><a target="_blank" href="{{rect.tooltip_url}}" style="color:white; font-size:smaller; font-family: Arial; padding-left: 5px;">See in Genome Browser</a></span>
+		</div>
+	{% endfor %}
+
+	{% for line in horizontal_lines %}
+		<div class="{{line.css_class}}" style="left:{{line.left_x}}px; top:{{line.y}}px; width:{{line.width}}px; height:{{line.height}}px;"></div>
+	{% endfor %}	
+	{% for line in vertical_lines %}
+		<div class="{{line.css_class}}" style="left:{{line.x}}px; top:{{line.top_y}}px; width:{{line.width}}px; height:{{line.height}}px;"></div>
+	{% endfor %}	
+
+	{% for arrow in arrows %}
+		<div class="{{arrow.css_class}}" style="left:{{arrow.left_x}}px; top:{{arrow.y}}px; position:absolute;">
+			{% if arrow.right_direction %}
+				&#187;
+			{% else %}
+				&#171;
+			{% endif %}
+		</div>
+	{% endfor %}
+
+	{% for text in texts %}
+		<div style="left:{{text.left_x}}px; top:{{text.top_y}}px; position:absolute; font-size:larger; font-family: Arial">{{text.text}}</div>
+	{% endfor %}	
+
+	{% for text in axes_labels_texts %}
+		<div class="{{text.css_class}}" style="position:absolute; left:{{text.left_x}}px; top:{{text.top_y}}px; width:{{text.width}}px; height:{{text.height}}px; font-family: Arial;">{{text.text}}</div>
+	{% endfor %}	
+
+</div>
+</body>
