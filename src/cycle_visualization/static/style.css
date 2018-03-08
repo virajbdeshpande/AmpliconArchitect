@@ -1,0 +1,159 @@
+* {
+  position: initial; 
+}
+
+.menu{
+  background-color: azure;
+  width: 225px;
+  height: inherit;
+  position: absolute;
+}
+
+.upload_form{
+  position: initial;
+  font-size: medium;
+  margin: 5px;
+}
+
+.upload_error{
+  color: red;
+  position: initial;
+}
+
+.export_form{
+  padding-top: 5px;
+}
+
+.edit_structure_error{
+  padding-top: 5px;
+  color: red;
+  position: initial;
+}
+
+.form_item{
+  padding: 10px;
+  position: initial;
+  padding-bottom: 13px;
+}
+
+.form_item_title{
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.showhide{
+  position:initial;
+  margin: 0px;
+  display: inline-block;
+  padding-left: 10px;
+  curser: hand;
+  cursor: pointer;
+  color: blue;
+  text-decoration: underline;
+}
+
+.remove_low_cn_cycles_form{
+  font-size: medium;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.rectangle{
+  border-style: solid;
+  border-width:1px;
+  border-color:royalblue;
+  background-color:royalblue;
+  display: inline-block;
+  position: absolute;
+}
+
+.rectangle .tooltiptext {
+    visibility: hidden;
+    width: 140px;
+    height: 25px;
+    direction: ltr;
+    text-align: left;
+    background-color: #555;
+    color: #fff;
+    border-radius: 6px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -60px;
+    opacity: 0;
+    transition: opacity 1s;
+  position: absolute;
+}
+
+.rectangle .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+  position: absolute;
+}
+
+.rectangle:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  position: absolute;
+}
+
+.horizontal_line{
+  background-color: royalblue;
+  position: absolute;
+}
+
+.axes_line{
+  background-color: black;
+  position: absolute;
+}
+
+.vertical_line{
+  background-color: royalblue;
+  position: absolute;
+}
+
+.vertical_dashed_line{
+  border-width: 1px;
+  border-color: black;
+  border-style: dashed;
+  position: absolute;
+}
+
+.vertical_dotted_line{
+  border-width: 1px;
+  border-color: black;
+  border-style: dotted;
+  opacity: 1;
+  position: absolute;
+}
+
+.vertical_species_line{
+  border-width: 2px;
+  border-color: black;
+  background-color: black;
+  position: absolute;
+}
+
+.axes_label{
+    -o-transform: rotate(-90deg);
+    -ms-transform:rotate(-90deg);
+    transform: rotate(-90deg);
+    white-space:nowrap;
+    display:block;
+    bottom:0;
+  position: absolute;
+}
+
+.cycle_section{
+    position: absolute;
+    width: 1000px;
+    background-color: lightgray;
+}

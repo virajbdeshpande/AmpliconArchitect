@@ -1,41 +1,20 @@
-# This software is Copyright 2017 The Regents of the University of
-# California. All Rights Reserved.
+#This file is part of AmpliconArchitect.
+#AmpliconArchitect is software which can use whole genome sequencing data to reconstruct the structure of focal amplifications.
+#Copyright (C) 2018 Viraj Deshpande
 #
-# Permission to copy, modify, and distribute this software and its
-# documentation for educational, research and non-profit purposes, without fee,
-# and without a written agreement is hereby granted, provided that the above
-# copyright notice, this paragraph and the following three paragraphs appear
-# in all copies.
+#AmpliconArchitect is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
 #
-# Permission to make commercial use of this software may be obtained by
-# contacting:
-# Technology Transfer Office
-# 9500 Gilman Drive, Mail Code 0910
-# University of California
-# La Jolla, CA 92093-0910
-# (858) 534-5815
-# invent@ucsd.edu
+#AmpliconArchitect is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
 #
-# This software program and documentation are copyrighted by The Regents of the
-# University of California. The software program and documentation are supplied
-# "as is", without any accompanying services from The Regents. The Regents does
-# not warrant that the operation of the program will be uninterrupted or
-# error-free. The end-user understands that the program was developed for
-# research purposes and is advised not to rely exclusively on the program for
-# any reason.
-#
-# IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO
-# ANY PARTY FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR
-# CONSEQUENTIAL DAMAGES, INCLUDING LOST PROFITS, ARISING
-# OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION,
-# EVEN IF THE UNIVERSITY OF CALIFORNIA HAS BEEN ADVISED OF
-# THE POSSIBILITY OF SUCH DAMAGE. THE UNIVERSITY OF
-# CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
-# INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESSFOR A PARTICULAR PURPOSE.
-# THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS" BASIS, AND THE UNIVERSITY OF
-# CALIFORNIA HAS NO OBLIGATIONS TO PROVIDE MAINTENANCE, SUPPORT, UPDATES,
-# ENHANCEMENTS, OR MODIFICATIONS.
+#You should have received a copy of the GNU General Public License
+#along with AmpliconArchitect.  If not, see <http://www.gnu.org/licenses/>
+
 
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
@@ -61,10 +40,7 @@ import random
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
-import hg19util as hg
-import bam_to_breakpoint as b2b
-from breakpoint_graph import *
-
+import global_names
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -83,8 +59,21 @@ parser.add_argument('--cbam', dest='cbam',
 parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
+parser.add_argument('--ref', dest='ref',
+                    help="Values: [hg19, GRCh37, None]. \"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    action='store', type=str, default='hg19')
 
 args = parser.parse_args()
+
+global_names.REF = args.ref
+
+
+
+import hg19util as hg
+import bam_to_breakpoint as b2b
+from breakpoint_graph import *
+
+
 if os.path.splitext(args.bam[0])[-1] == '.cram':
     bamFile = pysam.Samfile(args.bam[0], 'rc')
 else:
@@ -96,6 +85,9 @@ if args.cbam is not None:
     else:
         cbam = pysam.Samfile(args.cbam, 'rb')
 cbed = args.cbed
+
+
+
 
 coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
 cstats = None
@@ -146,9 +138,5 @@ if args.cbam is not None:
             c2.write(a)
     c2.close()
     pysam.index(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam')
-
-
-
-
 
 

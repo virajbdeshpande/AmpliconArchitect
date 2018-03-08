@@ -1,4 +1,31 @@
+#This file is part of AmpliconArchitect.
+#AmpliconArchitect is software which can use whole genome sequencing data to reconstruct the structure of focal amplifications.
+#Copyright (C) 2018 Viraj Deshpande
+#
+#AmpliconArchitect is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+#
+#AmpliconArchitect is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with AmpliconArchitect.  If not, see <http://www.gnu.org/licenses/>
+
+
+
 chrcolor = {
+'b'	: 'b',
+'g'	: 'g',
+'r'	: 'r',
+'c'	: 'c',
+'m'	: 'm',
+'y'	: 'y',
+'k'	: 'k',
+'w'	: 'w',
 'chr1' : (153/256.0, 102/256.0, 0/256.0),
 'chr2' : (102/256.0, 102/256.0, 0/256.0),
 'chr3' : (153/256.0, 153/256.0, 30/256.0),
@@ -97,6 +124,11 @@ chrcolor = {
 'vlpgreen'   : (218/256.0,218/256.0,235/256.0)
 
 }
+
+
+
+
+
 ecolor = {'interchromosomal' : 'blue',
           'concordant' : 'black',
           'everted' : (139/256.0, 69/256.0, 19/256.0), # 'brown', yellow',
