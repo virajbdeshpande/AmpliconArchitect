@@ -1,3 +1,21 @@
+#This file is part of AmpliconArchitect.
+#AmpliconArchitect is software which can use whole genome sequencing data to reconstruct the structure of focal amplifications.
+#Copyright (C) 2018 Viraj Deshpande
+#
+#AmpliconArchitect is free software: you can redistribute it and/or modify
+#it under the terms of the GNU General Public License as published by
+#the Free Software Foundation, either version 3 of the License, or
+#(at your option) any later version.
+#
+#AmpliconArchitect is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+#
+#You should have received a copy of the GNU General Public License
+#along with AmpliconArchitect.  If not, see <http://www.gnu.org/licenses/>
+
+
 # This software is Copyright 2017 The Regents of the University of
 # California. All Rights Reserved.
 #
@@ -135,6 +153,45 @@ class breakpoint_edge(abstract_edge):
         self.edge_type = edge_type
         self.hom = hom
         self.hom_seq = hom_seq
+
+    def sequence(self, flank_size=-1):
+        if self.edge_type == 'sequence':
+            seq = hg.interval(self.v1.chrom, self.v1.pos, self.v2.pos).sequence()
+            if flank_size > 0:
+                seq = hg.interval(self.v1.chrom, self.v1.pos - flank_size + 1, self.v1.pos).sequence() + seq + hg.interval(self.v2.chrom, self.v2.pos, self.v2.pos + flank_size - 1).sequence()
+        else:
+            if self.hom == None:
+                seq = 'N' * 20
+            else:
+                seq = self.hom_seq
+            if flank_size == -1:
+                flank_size = 1000
+            if flank_size > 0:
+                if self.hom is not None and self.hom > 0:
+                    hom = self.hom
+                else:
+                    hom = 0
+                if self.edge_type == 'source':
+                    if self.v2.strand == -1:
+                        right_seq = hg.interval(self.v2.chrom, self.v2.pos + hom, self.v2.pos + hom + flank_size - 1).sequence()
+                        left_seq = ''
+                    else:
+                        left_seq = hg.interval(self.v2.chrom, self.v2.pos - hom - flank_size + 1, self.v2.pos - hom).sequence()
+                        right_seq = ''
+                elif self.v1.strand == 1:
+                    left_seq = hg.interval(self.v1.chrom, self.v1.pos - hom - flank_size + 1, self.v1.pos - hom).sequence()
+                    if self.v2.strand == -1:
+                        right_seq = hg.interval(self.v2.chrom, self.v2.pos + hom, self.v2.pos + hom + flank_size - 1).sequence()
+                    else:
+                        right_seq = hg.interval(self.v2.chrom, self.v2.pos - hom - flank_size + 1, self.v2.pos - hom, strand=-1).sequence()
+                else:
+                    right_seq = hg.interval(self.v1.chrom, self.v1.pos + hom, self.v1.pos + hom + flank_size - 1).sequence()
+                    if self.v2.strand == -1:
+                        left_seq = hg.interval(self.v2.chrom, self.v2.pos + hom, self.v2.pos + hom + flank_size - 1, strand=-1).sequence()
+                    else:
+                        left_seq = hg.interval(self.v2.chrom, self.v2.pos - hom - flank_size + 1, self.v2.pos - hom).sequence()
+            seq = left_seq + seq + right_seq
+        return seq
 
     def kmer_homology(self, k=10, span=100):
         """Number of shared k-mers within "span" distance on either side of vertex positions"""
@@ -348,23 +405,14 @@ class breakpoint_graph(abstract_graph):
             while len(a) > 0 and not completed:
                 # print len(a), str(a[0]), str(hdict[a[0][1]])
                 v1w, v1 = heapq.heappop(a)
-                # if hce[1].v1.pos == 133027113:
-                #     print "=============================================================="
-                #     print 'here0', str(v1), v1w
                 if v1 == hce[1].v1 and v1 in seenSet:
                     completed = True
                     break
-                # if hce[1].v1.pos == 133027113:
-                #     print 'here1'
                 for e in v1.elist:
-                    # if hce[1].v1.pos == 133027113:
-                    #     print 'here2', str(e)
                     if e.edge_type == 'sequence':
                         continue
                     else:
                         v2 =  e.neighbor(v1)
-                    # if hce[1].v1.pos == 133027113:
-                    #     print 'here2', str(v2)
                     if v2 == s:
                         v3 = v2
                         if e in hdict[v1][3]:
@@ -372,12 +420,9 @@ class breakpoint_graph(abstract_graph):
                         else:
                             nw = min(hdict[v1][0], wehc[e])
                         if not v3 in hdict or hdict[v3][2] is None or hdict[v3][0] < nw:
-                            # if hce[1].v1.pos == 133027113:
-                            #     print 'here3', str(v3)
                             nhdict = hdict[v1][3].copy()
                             nhdict.add(e)
                             hdict[v3] = (nw, [e], v1, nhdict)
-                            # print 'seen edges', e, v3, hdict[v3]
                             seenEdges.add(e)
                     else:
                         for e2 in v2.elist:
@@ -394,8 +439,6 @@ class breakpoint_graph(abstract_graph):
                         else:
                             nw = min(hdict[v1][0], wehc[e])
                         if not v3 in hdict or hdict[v3][2] is None or hdict[v3][0] < nw:
-                            # if hce[1].v1.pos == 133027113:
-                            #     print 'here4', str(v3)
                             nhdict = hdict[v1][3].copy()
                             nhdict.add(e)
                             nhdict.add(se)
@@ -404,11 +447,7 @@ class breakpoint_graph(abstract_graph):
                             seenEdges.add(e)
                             seenEdges.add(se)
                     if v3 in seenSet:
-                        # if hce[1].v1.pos == 133027113:
-                        #     print 'here5', str(v3), str(hdict[v3][0]), str(hdict[v3][1]), str(hdict[v3][2])
                         continue
-                    # if hce[1].v1.pos == 133027113:
-                    #     print 'here6', str(v3)
                     seenSet.add(v3)
                     heapq.heappush(a, (-1 * hdict[v3][0], v3))
             if len(a) == 0 and not completed:
@@ -428,7 +467,9 @@ class breakpoint_graph(abstract_graph):
                 s2Set.add(v2)
             #     print v2, tc
             return tc, hdict[hce[1].v1][0]
-        
+
+
+
         total_amplicon_content = sum([(e.v2.pos - e.v1.pos) * w[e] for e in w if e.edge_type == 'sequence'])
         amplicon_content_covered = 0
         w2 = w.copy()
@@ -445,6 +486,11 @@ class breakpoint_graph(abstract_graph):
             tchwmax = -1
             tchmax = None
             tchw = -1
+
+            # print "EEEEEEEEEEEEEE", len(w2)
+            # for e in w2:
+            #     print "EEEEEEEEEEEE", str(e), e.edge_type, w2[e]
+            # print "EEEEEEEEE========================"
             while wei < len(we):# and (tcwmax == -1 or we[wei][0] >= tcwmax / 2.0):
                 # if we[wei][1].edge_type == 'sequence':
                 #     wei += 1
@@ -465,8 +511,6 @@ class breakpoint_graph(abstract_graph):
                 #     tchmax = tc
                 #     tchw = tcw
                 wei += 1
-            for ci in tc:
-                print ci.v1, ci.v2
             if tcwmax == -1:
                 break
             tc = tcmax
@@ -540,7 +584,7 @@ class breakpoint_graph(abstract_graph):
                 cycle_edge_list.append((v1,v2))
             v1 = v2
             while ci < len(tc):
-                if tc[ci].v1.pos == v1.pos:
+                if (tc[ci].v1.chrom, tc[ci].v1.pos, tc[ci].v1.strand) == (v1.chrom, v1.pos, v1.strand):
                     v2 = tc[ci].v2
                 else:
                     v2 = tc[ci].v1
@@ -569,7 +613,7 @@ class breakpoint_graph(abstract_graph):
             if v0 is not None:
                 print v0, "->", v0c
                 cycle_edge_list.append((v0,v0c))
-            if amplicon_content_covered <= 0.9 * total_amplicon_content:
+            if amplicon_content_covered <= 0.9 * total_amplicon_content or (tcw > 0.2 * cycle_list[0][1]):
                 cycle_list.append([cycle_number, tcw, tc, cycle_edge_list])
                 acc = tcw * sum([abs(e[1].pos - e[0].pos) for e in cycle_edge_list if -1 not in [e[0].pos, e[1].pos]])
                 amplicon_content_covered += acc
@@ -581,7 +625,6 @@ class breakpoint_graph(abstract_graph):
             #         w2.pop(e)
             if amplicon_content_covered > total_amplicon_content:
                 break
-
 
         segment_list = []
         for c in cycle_list:
