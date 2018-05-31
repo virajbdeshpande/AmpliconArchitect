@@ -235,7 +235,7 @@ class bam_to_breakpoint():
                 (c,p) = hg.chrPos(newpos)
                 if c not in self.bamfile.references or p < 10000 or hg.chrLen[hg.chrNum(c)] < p + 10000 or len(hg.interval_list([hg.interval(c, p, p+10000)]).intersection(hg.conserved_regions, extend=10000)) > 0:
                     continue
-                read_length += [a.infer_query_length(always=False) for a in self.fetch(c, p, p+10000)]
+                read_length += [a.infer_query_length(always=False) for a in self.fetch(c, p, p+10000) if not a.is_unmapped]
                 insert_size += [a.template_length for a in self.fetch(c, p, p+10000) if a.is_proper_pair and not a.is_reverse and a.template_length < 10000 and a.template_length > 0]
                 iteri += 1
             self.read_length = np.average(read_length)
