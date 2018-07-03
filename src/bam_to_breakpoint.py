@@ -611,10 +611,13 @@ class bam_to_breakpoint():
             return [s for s in shifts if abs(s[2] - s[1]) >= 1]
         return [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
 
-    def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False):
+    def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False, shifts_unrefined=None):
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
             return self.meanshift_segmentation(i, window_size1, gcc)
-        shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
+        if shifts_unrefined is None:
+            shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
+        else:
+            shifts0 = shifts_unrefined
         shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s[0] - 3 * window_size0, s[0] + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shifts0], [])
 
         # shifts1 = self.meanshift_segmentation(i, window_size1, gcc)
@@ -885,28 +888,16 @@ class bam_to_breakpoint():
         # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][1]))
         return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
 
-    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, adaptive_counts=False, ms=None):
+    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None):
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
         if pair_support == -1:
             pair_support = self.pair_support
-        # if adaptive_counts == True:
-        #     raise "Warning: adaptive counts not supported"
-        #     adaptive_counts = False
         if type(interval) != hg.interval_list:
             ilist = hg.interval_list([interval])
         else:
             ilist = interval
-        # if (tuple(ilist), filter_repeats, pair_support, adaptive_counts) in self.discordant_edge_calls:
-        #     return self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support, adaptive_counts)]
-        mslist = []
-
-        # for i in ilist:
-        #     print str(i)
-
-        if adaptive_counts:
-            if ms is None:
-                msrlist = [self.meanshift_refined(i) for i in ilist]
-                ms = zip(ilist, msrlist)
+        # if (tuple(ilist), filter_repeats, pair_support, not ms is None) in self.discordant_edge_calls:
+        #     return self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support, not ms is None)]
         interval = ilist[0]
         dflist = []
         drlist = []
@@ -1070,7 +1061,7 @@ class bam_to_breakpoint():
                     bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].reference_start > 0]), 1)
                 else:
                     bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
-                if not adaptive_counts:
+                if ms is None:
                     ps = pair_support
                 else:
                     ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
@@ -1236,7 +1227,7 @@ class bam_to_breakpoint():
                 else:
                     bp2 = breakpoint_vertex(vl[0][1].reference_name,
                                             min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
-                if not adaptive_counts:
+                if ms is None:
                     ps = pair_support
                 else:
                     ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
@@ -1268,7 +1259,7 @@ class bam_to_breakpoint():
             # if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content() > 3 or (e[0].type() == 'everted' and (e[0].v1.pos - e[0].v2.pos) <30):
             #     for a in e[1]:
             #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
-        self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support, adaptive_counts)] = dnlist
+        self.discordant_edge_calls[(tuple(ilist), filter_repeats, pair_support, not ms is None)] = dnlist
         # for e in dnlist:
         #     print '#DDD', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
         #     for a in e[1]:
@@ -1313,7 +1304,7 @@ class bam_to_breakpoint():
         ms_window_size1 = 300
         msrlist = [self.meanshift_refined(i2, ms_window_size0, ms_window_size1, gcc)]
         cnlist = [np.average([c[1] for c in self.window_coverage(i2, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0]]
-        edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist), adaptive_counts=True)
+        edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist))
         edges = [(-1 * len(e[1]), e[0]) for e in edges]
         edges.sort()
         edges = [(e[1], -1 * e[0]) for e in edges]
@@ -1525,7 +1516,7 @@ class bam_to_breakpoint():
 
 
     # Method to create breakpoint graph, find network flow and cycle decomposition
-    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True):
+    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, msrlist=None, eilist=None):
         ms_window_size0 = 10000
         ms_window_size1 = 300
         ilist0.sort()
@@ -1534,10 +1525,16 @@ class bam_to_breakpoint():
         # finesearch edges near refined meanshifts and add to eilist, create vertices corresponding to all  meanshifts and uncovered meanshifts
         all_msv = []
         msv_diff = {}
-        msrlist = [self.meanshift_refined(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
-        cnlist = [np.average([c[1] for c in self.window_coverage(i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
         all_msv_nocover = []
-        eilist = self.interval_discordant_edges(ilist, adaptive_counts=adaptive_counts, ms=zip(ilist, msrlist, cnlist))
+        if msrlist is None:
+            msrlist = [self.meanshift_refined(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
+        if eilist is None:
+            if adaptive_counts:
+                cnlist = [np.average([c[1] for c in self.window_coverage(
+                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
+                eilist = self.interval_discordant_edges(ilist, ms=zip(ilist, msrlist, cnlist))
+            else:
+                eilist = self.interval_discordant_edges(ilist)
         print "Found dicordant edges ilist"
         eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
         eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
@@ -1953,7 +1950,7 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, outName, segments=[], scale_list=[]):
+    def plot_segmentation(self, ilist, outName, segments=[], scale_list=[], msrlist=None, eilist=None):
         fighsize = 12
         # fighsize = 24
         figvsize = 5
@@ -1996,13 +1993,14 @@ class bam_to_breakpoint():
 
         elist_dict = {}
         max_edge = 4
-        max_cov = 0
         scale_max_cov = 0
-        max_ms = 0
         scale_max_ms = 0
-        msrlist = [self.meanshift_refined(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-        cnlist = [np.average([c[1] for c in self.window_coverage(i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
-        eilist = self.interval_discordant_edges(ilist, adaptive_counts=True, ms=zip(ilist, msrlist, cnlist))
+        if msrlist is None:
+            msrlist = [self.meanshift_refined(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        if eilist is None:
+            cnlist = [np.average([c[1] for c in self.window_coverage(
+                i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
+            eilist = self.interval_discordant_edges(ilist, ms=zip(ilist, msrlist, cnlist))
         covl = []
         for i, msr in zip(ilist, msrlist):
             de = [e for e in eilist if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
