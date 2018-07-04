@@ -265,6 +265,7 @@ for ig in irdgroups:
                              float(ll[2]), bool(ll[3])])
         if ms_ilist is not None:
             msrlist.append(ms_ilist)
+        exit()
     else:
         msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
         msfile = open(outName + '_amplicon' +
