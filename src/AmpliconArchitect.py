@@ -250,9 +250,9 @@ for ig in irdgroups:
     graph_logger.addHandler(graph_handler)
     cycle_logger.addHandler(cycle_handler)
     if os.path.exists(outName + '_amplicon' +
-                      str(amplicon_id) + 'meanshift.txt'):
+                      str(amplicon_id) + '_meanshift.txt'):
         msfile = open(outName + '_amplicon' +
-                      str(amplicon_id) + 'meanshift.txt')
+                      str(amplicon_id) + '_meanshift.txt')
         msrlist = []
         ms_ilist = None
         for line in msfile:
@@ -269,7 +269,7 @@ for ig in irdgroups:
     else:
         msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
         msfile = open(outName + '_amplicon' +
-                    str(amplicon_id) + 'meanshift.txt', 'w')
+                    str(amplicon_id) + '_meanshift.txt', 'w')
         for ms_ilist in zip(ilist, msrlist):
             msfile.write('Interval\t%s\n' % str(ms_ilist[0]))
             for ms in ms_ilist[1]:
