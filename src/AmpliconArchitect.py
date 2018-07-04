@@ -257,7 +257,7 @@ for ig in irdgroups:
         ms_ilist = None
         for line in msfile:
             ll = line.strip().split()
-            if len(ll) == 1:
+            if len(ll) > 0 and ll[1] == 'Interval':
                 if ms_ilist is not None:
                     msrlist.append(ms_ilist)
                 ms_ilist = []
@@ -271,7 +271,7 @@ for ig in irdgroups:
         msfile = open(outName + '_amplicon' +
                     str(amplicon_id) + 'meanshift.txt', 'w')
         for ms_ilist in zip(ilist, msrlist):
-            msfile.write('%s\n' % str(ms_ilist[0]))
+            msfile.write('Interval\t%s\n' % str(ms_ilist[0]))
             for ms in ms_ilist[1]:
                 msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
         msfile.close()
