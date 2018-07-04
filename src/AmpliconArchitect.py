@@ -277,7 +277,6 @@ for ig in irdgroups:
                 msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
         msfile.close()
         print("Created meanshift file")
-        exit()
     bamFileb2b.interval_filter_vertices(ilist, msrlist=msrlist)
     summary_logger.info('-----------------------------------------------------------------------------------------')
     bamFileb2b.plot_segmentation(
