@@ -257,7 +257,7 @@ for ig in irdgroups:
         ms_ilist = None
         for line in msfile:
             ll = line.strip().split()
-            if len(line) == 1:
+            if len(ll) == 1:
                 if ms_ilist is not None:
                     msrlist.append(ms_ilist)
                 ms_ilist = []
