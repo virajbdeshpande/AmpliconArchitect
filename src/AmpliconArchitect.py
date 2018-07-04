@@ -265,7 +265,7 @@ for ig in irdgroups:
                              float(ll[2]), bool(ll[3])])
         if ms_ilist is not None:
             msrlist.append(ms_ilist)
-        exit()
+        print("Loaded meanshift file")
     else:
         msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
         msfile = open(outName + '_amplicon' +
@@ -275,6 +275,8 @@ for ig in irdgroups:
             for ms in ms_ilist[1]:
                 msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
         msfile.close()
+        print("Created meanshift file")
+        exit()
     bamFileb2b.interval_filter_vertices(ilist, msrlist=msrlist)
     summary_logger.info('-----------------------------------------------------------------------------------------')
     bamFileb2b.plot_segmentation(
