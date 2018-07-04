@@ -63,11 +63,12 @@ class breakpoint_cluster:
 
 
 class bam_to_breakpoint():
-    def __init__(self, bamfile, read_length=100, max_insert=400, insert_size=300,
+    def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300,
         window_size=10000, min_coverage=30, pair_support=-1, downsample=-1,
         secondary_index=None, coverage_stats=None, coverage_windows=None,
         sensitivems=False, span_coverage=True):
         self.bamfile = bamfile
+        self.sample_name = sample_name
         self.window_size = window_size
         self.min_coverage = min_coverage
         self.max_insert = max_insert
@@ -645,6 +646,23 @@ class bam_to_breakpoint():
                 matched_shifts.append((bests1[0], s0[1], s0[2], True))
                 print (bests1[0], s0[1], s0[2], True)
         return matched_shifts
+
+    def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
+        file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
+        if os.path.exists(file_name):
+            msfile = open(file_name)
+            msr = []
+            for line in msfile:
+                ll = line.strip().split()
+                msr.append([int(ll[0]), float(ll[1]),
+                                float(ll[2]), bool(ll[3])])
+        else:
+            msr = self.meanshift_refined(i, window_size0=window_size0, window_size1=window_size1, gcc=gcc)
+            msfile = open(file_name, 'w')
+            for ms in msr:
+                msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
+            msfile.close()
+        return msr
 
     def interval_crossing_arcs(self, chrom, start, end, strand, ilist):
             if strand == -1:
@@ -1302,7 +1320,7 @@ class bam_to_breakpoint():
         # i2 = self.interval_extend(i, ilist, rdlist)
         ms_window_size0 = 10000
         ms_window_size1 = 300
-        msrlist = [self.meanshift_refined(i2, ms_window_size0, ms_window_size1, gcc)]
+        msrlist = [self.get_meanshift(i2, ms_window_size0, ms_window_size1, gcc)]
         cnlist = [np.average([c[1] for c in self.window_coverage(i2, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0]]
         edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist))
         edges = [(-1 * len(e[1]), e[0]) for e in edges]
@@ -1516,7 +1534,7 @@ class bam_to_breakpoint():
 
 
     # Method to create breakpoint graph, find network flow and cycle decomposition
-    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, msrlist=None, eilist=None):
+    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, eilist=None):
         ms_window_size0 = 10000
         ms_window_size1 = 300
         ilist0.sort()
@@ -1526,8 +1544,7 @@ class bam_to_breakpoint():
         all_msv = []
         msv_diff = {}
         all_msv_nocover = []
-        if msrlist is None:
-            msrlist = [self.meanshift_refined(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
+        msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
         if eilist is None:
             if adaptive_counts:
                 cnlist = [np.average([c[1] for c in self.window_coverage(
@@ -1950,7 +1967,7 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, outName, segments=[], scale_list=[], msrlist=None, eilist=None):
+    def plot_segmentation(self, ilist, outName, segments=[], scale_list=[], eilist=None):
         fighsize = 12
         # fighsize = 24
         figvsize = 5
@@ -1995,8 +2012,7 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        if msrlist is None:
-            msrlist = [self.meanshift_refined(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
         if eilist is None:
             cnlist = [np.average([c[1] for c in self.window_coverage(
                 i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
