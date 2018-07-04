@@ -245,45 +245,19 @@ for ig in irdgroups:
     for handler in summary_logger.handlers:
         handler.setFormatter(summaryFormatter)
     summary_logger.info("AmpliconID = " + str(amplicon_id))
-    graph_handler = logging.FileHandler(outName + '_amplicon' + str(amplicon_id) + '_graph.txt', 'w')
-    cycle_handler = logging.FileHandler(outName + '_amplicon' + str(amplicon_id) + '_cycles.txt', 'w')
+    amplicon_name = outName + '_amplicon' + str(amplicon_id)
+    graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
+    cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
     graph_logger.addHandler(graph_handler)
     cycle_logger.addHandler(cycle_handler)
-    if os.path.exists(outName + '_amplicon' +
-                      str(amplicon_id) + '_meanshift.txt'):
-        msfile = open(outName + '_amplicon' +
-                      str(amplicon_id) + '_meanshift.txt')
-        msrlist = []
-        ms_ilist = None
-        for line in msfile:
-            ll = line.strip().split()
-            if len(ll) > 0 and ll[0] == 'Interval':
-                if ms_ilist is not None:
-                    msrlist.append(ms_ilist)
-                ms_ilist = []
-                continue
-            ms_ilist.append([int(ll[0]), float(ll[1]),
-                             float(ll[2]), bool(ll[3])])
-        if ms_ilist is not None:
-            msrlist.append(ms_ilist)
-        print("Loaded meanshift file")
-    else:
-        msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
-        msfile = open(outName + '_amplicon' +
-                    str(amplicon_id) + '_meanshift.txt', 'w')
-        for ms_ilist in zip(ilist, msrlist):
-            msfile.write('Interval\t%s\n' % str(ms_ilist[0]))
-            for ms in ms_ilist[1]:
-                msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
-        msfile.close()
-        print("Created meanshift file")
+    msrlist = bamFileb2b.get_meanshift(ilist, amplicon_name)
     bamFileb2b.interval_filter_vertices(ilist, msrlist=msrlist)
     summary_logger.info('-----------------------------------------------------------------------------------------')
     bamFileb2b.plot_segmentation(
-        ilist, outName + '_amplicon' + str(amplicon_id), segments=segments, msrlist=msrlist)
+        ilist, amplicon_name, segments=segments, msrlist=msrlist)
     graph_logger.removeHandler(graph_handler)
     cycle_logger.removeHandler(cycle_handler)
-    iout = open(outName + '_amplicon' + str(amplicon_id) + '_logs.txt', 'w')
+    iout = open(amplicon_name + '_logs.txt', 'w')
     iout.write(mystdout.getvalue())
     iout.close()
     sys.stdout = old_stdout

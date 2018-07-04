@@ -646,6 +646,33 @@ class bam_to_breakpoint():
                 print (bests1[0], s0[1], s0[2], True)
         return matched_shifts
 
+    def get_meanshift(self, ilist, amplicon_name):
+        if os.path.exists(amplicon_name + '_meanshift.txt'):
+            msfile = open(amplicon_name + '_meanshift.txt')
+            msrlist = []
+            ms_ilist = None
+            for line in msfile:
+                ll = line.strip().split()
+                if len(ll) > 0 and ll[0] == 'Interval':
+                    if ms_ilist is not None:
+                        msrlist.append(ms_ilist)
+                    ms_ilist = []
+                    continue
+                ms_ilist.append([int(ll[0]), float(ll[1]),
+                                float(ll[2]), bool(ll[3])])
+            if ms_ilist is not None:
+                msrlist.append(ms_ilist)
+        else:
+            msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
+            msfile = open(amplicon_name + '_meanshift.txt', 'w')
+            for ms_ilist in zip(ilist, msrlist):
+                msfile.write('Interval\t%s\n' % str(ms_ilist[0]))
+                for ms in ms_ilist[1]:
+                    msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
+            msfile.close()
+        return msrlist
+
+
     def interval_crossing_arcs(self, chrom, start, end, strand, ilist):
             if strand == -1:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
