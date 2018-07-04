@@ -663,7 +663,7 @@ class bam_to_breakpoint():
             if ms_ilist is not None:
                 msrlist.append(ms_ilist)
         else:
-            msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
+            msrlist = [self.meanshift_refined(i) for i in ilist]
             msfile = open(amplicon_name + '_meanshift.txt', 'w')
             for ms_ilist in zip(ilist, msrlist):
                 msfile.write('Interval\t%s\n' % str(ms_ilist[0]))
