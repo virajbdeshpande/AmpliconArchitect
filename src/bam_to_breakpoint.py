@@ -1544,8 +1544,7 @@ class bam_to_breakpoint():
         all_msv = []
         msv_diff = {}
         all_msv_nocover = []
-        if msrlist is None:
-            msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
+        msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
         if eilist is None:
             if adaptive_counts:
                 cnlist = [np.average([c[1] for c in self.window_coverage(
