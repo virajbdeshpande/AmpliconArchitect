@@ -250,9 +250,18 @@ for ig in irdgroups:
     graph_logger.addHandler(graph_handler)
     cycle_logger.addHandler(cycle_handler)
     msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
+    msfile = open(outName + '_amplicon' +
+                  str(amplicon_id) + 'meanshift.txt', 'w')
+    for ms_ilist in msrlist:
+        for ms in ms_ilist:
+            msfile.write('%s\t%s%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
+    msfile.close()
+    exit()
+
     bamFileb2b.interval_filter_vertices(ilist, msrlist=msrlist)
     summary_logger.info('-----------------------------------------------------------------------------------------')
-    bamFileb2b.plot_segmentation(ilist, outName, segments=segments, msrlist=msrlist)
+    bamFileb2b.plot_segmentation(
+        ilist, outName + '_amplicon' + str(amplicon_id), segments=segments, msrlist=msrlist)
     graph_logger.removeHandler(graph_handler)
     cycle_logger.removeHandler(cycle_handler)
     iout = open(outName + '_amplicon' + str(amplicon_id) + '_logs.txt', 'w')
