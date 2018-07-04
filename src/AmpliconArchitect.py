@@ -249,15 +249,31 @@ for ig in irdgroups:
     cycle_handler = logging.FileHandler(outName + '_amplicon' + str(amplicon_id) + '_cycles.txt', 'w')
     graph_logger.addHandler(graph_handler)
     cycle_logger.addHandler(cycle_handler)
-    msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
-    msfile = open(outName + '_amplicon' +
-                  str(amplicon_id) + 'meanshift.txt', 'w')
-    for ms_ilist in msrlist:
-        for ms in ms_ilist:
-            msfile.write('%s\t%s%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
-    msfile.close()
-    exit()
-
+    if os.path.exists(outName + '_amplicon' +
+                      str(amplicon_id) + 'meanshift.txt'):
+        msfile = open(outName + '_amplicon' +
+                      str(amplicon_id) + 'meanshift.txt')
+        msrlist = []
+        ms_ilist = None
+        for line in msfile:
+            ll = line.strip().split()
+            if len(line) == 1:
+                if ms_ilist is not None:
+                    msrlist.append(ms_ilist)
+                ms_ilist = []
+            ms_ilist.append([int(ll[0]), float(ll[1]),
+                             float(ll[2]), bool(ll[3])])
+        if ms_ilist is not None:
+            msrlist.append(ms_ilist)
+    else:
+        msrlist = [bamFileb2b.meanshift_refined(i) for i in ilist]
+        msfile = open(outName + '_amplicon' +
+                    str(amplicon_id) + 'meanshift.txt', 'w')
+        for ms_ilist in zip(ilist, msrlist):
+            msfile.write('%s\n' % str(ms_ilist[0]))
+            for ms in ms_ilist[1]:
+                msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
+        msfile.close()
     bamFileb2b.interval_filter_vertices(ilist, msrlist=msrlist)
     summary_logger.info('-----------------------------------------------------------------------------------------')
     bamFileb2b.plot_segmentation(
