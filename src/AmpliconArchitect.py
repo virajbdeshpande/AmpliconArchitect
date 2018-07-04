@@ -261,6 +261,7 @@ for ig in irdgroups:
                 if ms_ilist is not None:
                     msrlist.append(ms_ilist)
                 ms_ilist = []
+                continue
             ms_ilist.append([int(ll[0]), float(ll[1]),
                              float(ll[2]), bool(ll[3])])
         if ms_ilist is not None:
