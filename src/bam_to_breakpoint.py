@@ -2012,8 +2012,7 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        if msrlist is None:
-            msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
         if eilist is None:
             cnlist = [np.average([c[1] for c in self.window_coverage(
                 i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
