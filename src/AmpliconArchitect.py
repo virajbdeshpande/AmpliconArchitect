@@ -257,7 +257,7 @@ for ig in irdgroups:
         ms_ilist = None
         for line in msfile:
             ll = line.strip().split()
-            if len(ll) > 0 and ll[1] == 'Interval':
+            if len(ll) > 0 and ll[0] == 'Interval':
                 if ms_ilist is not None:
                     msrlist.append(ms_ilist)
                 ms_ilist = []
