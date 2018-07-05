@@ -906,7 +906,7 @@ class bam_to_breakpoint():
         # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][1]))
         return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
 
-    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None):
+    def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
         if pair_support == -1:
             pair_support = self.pair_support
@@ -1286,18 +1286,47 @@ class bam_to_breakpoint():
         #         print '#DD', a[1].query_name, a[1].mapping_quality, a[1].query_alignment_sequence, a[1].reference_start, a[1].reference_end
         return dnlist
 
-    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1,    ms_window_size0=10000,ms_window_size1=300, adaptive_counts=True, gcc=False):
-        if eilist is None:
-            if adaptive_counts:
-                cnlist = [np.average([c[1] for c in self.window_coverage(
-                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
-                eilist = self.interval_discordant_edges(
-                    ilist, ms=zip(ilist, msrlist, cnlist))
+    def load_edges(self, edge_file):
+        edge_lines = [line.strip().split() for line in open(edge_file)]
+        edges = []
+        for el in edge_lines:
+            if el[1] == 'None':
+                hom = None
+                hom_seq = None
             else:
-                eilist = self.interval_discordant_edges(ilist)
-
-        eilist.sort(key=lambda x: hg.absPos(
+                hom = int(el[1])
+                hom_seq = el[2]
+            e = breakpoint_edge(el[0], hom=hom, hom_seq=hom_seq)
+            edges.append(e, int(el[3]))
+        edges.sort(key=lambda x: hg.absPos(
                     x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
+        return edges
+        
+
+    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1,    ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
+        if amplicon_name is not None and os.path.exists("%s_edges.txt" % amplicon_name):
+            return self.load_edges("%s_edges.txt" % amplicon_name)
+        # if amplicon_name is not None and os.path.exists("%s_edges_unfiltered.txt" % amplicon_name):
+        #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
+
+        if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
+            eilist = self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
+        else:
+            if eilist is None:
+                if adaptive_counts:
+                    cnlist = [np.average([c[1] for c in self.window_coverage(
+                        i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
+                    eilist = self.interval_discordant_edges(
+                        ilist, ms=zip(ilist, msrlist, cnlist), pair_support=pair_support)
+                else:
+                    eilist = self.interval_discordant_edges(ilist, pair_support=pair_support)
+            eilist.sort(key=lambda x: hg.absPos(
+                        x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
+            if amplicon_name is not None:
+                edge_file = open("%s_edges_cnseg.txt" % amplicon_name)
+                for e in eilist:
+                    edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+                edge_file.close()
         eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
 
         for i, msr in zip(ilist, msrlist):
@@ -1344,6 +1373,13 @@ class bam_to_breakpoint():
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
                     msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
+
+        if amplicon_name is not None:
+            edge_file = open("%s_edges.txt" % amplicon_name)
+            for e in eilist:
+                edge_file.write("%s\t%s\t%s\t%s\n" %
+                                (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+            edge_file.close()
         return eilist
 
     def construct_segment(self, v):
@@ -1594,7 +1630,7 @@ class bam_to_breakpoint():
 
 
     # Method to create breakpoint graph, find network flow and cycle decomposition
-    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, eilist=None):
+    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, eilist=None, amplicon_name=None):
         ms_window_size0 = 10000
         ms_window_size1 = 300
         ilist0.sort()
@@ -1605,7 +1641,7 @@ class bam_to_breakpoint():
         msv_diff = {}
         all_msv_nocover = []
         msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
-        sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts)
+        sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts, amplicon_name=amplicon_name)
         eilist = sensitive_elist
         if adaptive_counts:
                 cnlist = [np.average([c[1] for c in self.window_coverage(
@@ -1802,7 +1838,6 @@ class bam_to_breakpoint():
                 logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
                 if ne is None:
                     raise ValueError("ne is None:" + str(e) + " " + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
-                    exit()
                 kbpe[ne] = e0[1]
             elif len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) == 0:
                 ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
@@ -2000,7 +2035,7 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, outName, segments=[], scale_list=[], eilist=None):
+    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None):
         fighsize = 12
         # fighsize = 24
         figvsize = 5
@@ -2015,7 +2050,7 @@ class bam_to_breakpoint():
         gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
         # plt.title(outName, fontsize=56)
-        plt.title(outName)
+        plt.title(amplicon_name)
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
@@ -2040,36 +2075,20 @@ class bam_to_breakpoint():
         ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=0001)
         cmax = max([c[1] for c in wc])
 
-
         elist_dict = {}
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
         msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-        if eilist is None:
-            cnlist = [np.average([c[1] for c in self.window_coverage(
-                i, 10000)]) * 2 / self.median_coverage()[0] for i in ilist]
-            eilist = self.interval_discordant_edges(ilist, ms=zip(ilist, msrlist, cnlist))
+
+        sensitive_elist = self.get_sensitive_discordant_edges(
+            ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
+        eilist = sensitive_elist
+
         covl = []
         for i, msr in zip(ilist, msrlist):
             de = [e for e in eilist if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
             elist_dict[i] = de
-            for ms in msr:
-                if ms[3]:
-                    msve = [e for e in elist_dict[i] if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 1000]
-                    if len(msve) == 0:
-                        efine = self.interval_discordant_edges(hg.interval(i.chrom, ms[0] - 1000, ms[0] + 1000), pair_support=2)
-                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
-                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 300]) > 0:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < 300])
-                            else:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
-                            ebest = (ebest[1], ebest[0])
-                            msve = [ebest]
-                            elist_Set = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in elist_dict[i]])
-                            elist_Set.update([(e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand, e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand) for e in elist_dict[i]])
-                            if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in elist_Set:
-                                elist_dict[i].append(ebest)
             elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
             max_edge = max(max_edge, max([1] + [e[1] for e in de
                 if len(scale_list) == 0 or len(hg.interval_list([hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos), hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(scale_list)) > 0]))
@@ -2216,6 +2235,6 @@ class bam_to_breakpoint():
         # ax3.xaxis.set_visible(False)
 
         fig.subplots_adjust(hspace=0)
-        fig.savefig(outName + '.png', dpi=dpi)
-        fig.savefig(outName + '.pdf', dpi=dpi)
+        fig.savefig(amplicon_name + '.png', dpi=dpi)
+        fig.savefig(amplicon_name + '.pdf', dpi=dpi)
 
