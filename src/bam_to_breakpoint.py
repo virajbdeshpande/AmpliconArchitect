@@ -2098,7 +2098,7 @@ class bam_to_breakpoint():
                     xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
                     ydia = (1.0 + xdia) * 3 * ymax
                     pseudo_edge = breakpoint_edge(breakpoint_vertex(e.v1.chrom, hg.absPos(e.v1.chrom, e.v1.pos), e.v1.strand), breakpoint_vertex(e.v1.chrom, hg.absPos(e.v2.chrom, e.v2.pos), e.v2.strand))
-                    ee = Arc((xmid, 0), xdia, ydia, fill=False, linewidth=4.0 * min(1, float(len(el[1]))/max_edge), color=ecolor[pseudo_edge.type()], zorder=4, theta1=0.1, theta2=180)
+                    ee = Arc((xmid, 0), xdia, ydia, fill=False, linewidth=4.0 * min(1, float(el[1])/max_edge), color=ecolor[pseudo_edge.type()], zorder=4, theta1=0.1, theta2=180)
                     ax2.add_patch(ee)
                     ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[pseudo_edge.type()])
                     ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[pseudo_edge.type()])
