@@ -123,12 +123,12 @@ if DATA_REPO == '.' or DATA_REPO == '':
     DATA_REPO = '.'
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Loading libraries and reference annotations for: " + args.ref)
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
 import hg19util as hg
 import bam_to_breakpoint as b2b
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Initiating bam_to_breakpoint object for: " + args.bam)
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
 rdList0 = hg.interval_list(rdAlts, 'bed')
 rdList = hg.interval_list([r for r in rdList0])
 coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
@@ -161,7 +161,7 @@ segments = []
 
 
 if args.extendmode == 'VIRAL':
-    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Finding integration sites: " + str(rdList[0]))
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Finding integration sites: " + str(rdList[0]))
     de = bamFileb2b.interval_discordant_edges(rdList)
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
@@ -183,7 +183,7 @@ irdSets = Set([Set([ird]) for ird in rdList])
 irdgroupdict = {ird:Set([ird]) for ird in rdList}
 if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
     for ird in rdList:
-        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Exploring interval: " + str(ird))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Exploring interval: " + str(ird))
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
         ilist = bamFileb2b.interval_hops(ird)
@@ -221,7 +221,7 @@ else:
     irdgroups = [hg.interval_list([r]) for r in rdList]
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Interval sets for amplicons determined: ")
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Interval sets for amplicons determined: ")
 for il in enumerate(irdgroups):
     logging.info("[amplicon" + str(il[0] + 1) + ']\t' + ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in il[1]]))
 
@@ -234,7 +234,7 @@ else:
     amplicon_id = 1
 
 for ig in irdgroups:
-    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Reconstructing amplicon" + str(amplicon_id))
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
     ilist = ig
     ird = ig[0]
     old_stdout = sys.stdout
@@ -271,4 +271,4 @@ if args.extendmode == 'VIRAL' or args.extendmode == 'VIRAL_CLUSTERED':
         amplicon_id += 1
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Total Runtime")  
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Total Runtime")  
