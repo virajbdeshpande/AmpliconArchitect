@@ -1323,7 +1323,7 @@ class bam_to_breakpoint():
             eilist.sort(key=lambda x: hg.absPos(
                         x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
             if amplicon_name is not None:
-                edge_file = open("%s_edges_cnseg.txt" % amplicon_name)
+                edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
                 for e in eilist:
                     edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
                 edge_file.close()
@@ -1375,7 +1375,7 @@ class bam_to_breakpoint():
                     msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
 
         if amplicon_name is not None:
-            edge_file = open("%s_edges.txt" % amplicon_name)
+            edge_file = open("%s_edges.txt" % amplicon_name, 'w')
             for e in eilist:
                 edge_file.write("%s\t%s\t%s\t%s\n" %
                                 (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
