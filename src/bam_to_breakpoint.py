@@ -1139,12 +1139,12 @@ class bam_to_breakpoint():
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
                     continue
                 if bre.type() != 'concordant':
-                    dnlist0.append((bre, vl))
+                    dnlist0.append((bre, len(vl)))
                 if bp1c is not None and bp2c is not None:
                     brec_refine = self.refine_discordant_edge(breakpoint_edge(bp1c, bp2c))
                     brec = brec_refine[0]
                     if brec.type() != 'concordant' and brec.v1.pos != brec.v2.pos:
-                        dnlist0.append((brec, [(v[1], v[0]) for v in vl]))
+                        dnlist0.append((brec, len([(v[1], v[0]) for v in vl])))
 
         # remove local edges with no complementary edges and add warning if any found
         for bb1 in dnlist0:
@@ -1266,13 +1266,13 @@ class bam_to_breakpoint():
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
                 if bre.type() != 'concordant':
-                    dnlist.append((bre, vl))
+                    dnlist.append((bre, len(vl)))
             # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 2" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
         dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
         print str(interval).strip(), len(dnlist)
         for e in dnlist:
-            print '#', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
+            print '#', e[0], e[1], e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
             # if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content() > 3 or (e[0].type() == 'everted' and (e[0].v1.pos - e[0].v2.pos) <30):
             #     for a in e[1]:
             #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
@@ -1323,9 +1323,9 @@ class bam_to_breakpoint():
         msrlist = [self.get_meanshift(i2, ms_window_size0, ms_window_size1, gcc)]
         cnlist = [np.average([c[1] for c in self.window_coverage(i2, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0]]
         edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist))
-        edges = [(-1 * len(e[1]), e[0]) for e in edges]
-        edges.sort()
-        edges = [(e[1], -1 * e[0]) for e in edges]
+        edges = [(e[1], e[0]) for e in edges]
+        edges.sort(reverse=True)
+        edges = [(e[1], e[0]) for e in edges]
         # edges.sort(cmp=lambda x, y: len(x[1]) > len(y[1]))
         for e in edges:
             logging.debug("#TIME " + '%.3f\t'%clock() + " interval_neighbors: edges " + str(i2) + " " + str(i) + " " + str(e[0]) + " " + str(e[1]))
@@ -1589,7 +1589,7 @@ class bam_to_breakpoint():
                                 ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
                             ebest = (ebest[1], ebest[0])
                             msve = [ebest]
-                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), len(ebest[1])
+                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), ebest[1]
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
                                 eilist.append(ebest)
@@ -1770,10 +1770,10 @@ class bam_to_breakpoint():
                 if ne is None:
                     raise ValueError("ne is None:" + str(e) + " " + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
                     exit()
-                kbpe[ne] = len(e0[1])
+                kbpe[ne] = e0[1]
             elif len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) == 0:
                 ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
-                koe[ne] = len(e0[1])
+                koe[ne] = e0[1]
         for nei in range(1,len(ngvlist_full)):
             if ngvlist_full[nei].strand == 1:
                 new_graph.new_edge(ngvlist_full[nei-1], ngvlist_full[nei], edge_type='sequence')
@@ -2038,7 +2038,7 @@ class bam_to_breakpoint():
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in elist_Set:
                                 elist_dict[i].append(ebest)
             elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-            max_edge = max(max_edge, max([1] + [len(e[1]) for e in de
+            max_edge = max(max_edge, max([1] + [e[1] for e in de
                 if len(scale_list) == 0 or len(hg.interval_list([hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos), hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(scale_list)) > 0]))
             pprev = i.start
             for shift in msr:
@@ -2092,7 +2092,7 @@ class bam_to_breakpoint():
                 e = el[0]
                 if ilist.xpos(e.v2.chrom, e.v2.pos) is None:
                     ax2.axvline(ilist.xpos(e.v1.chrom, e.v1.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(len(el[1]))/max_edge), alpha=0.5, zorder=10)
-                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(len(el[1]))/max_edge), color=ecolor[e.type()])
+                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
                 else:
                     xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2
                     xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
@@ -2100,8 +2100,8 @@ class bam_to_breakpoint():
                     pseudo_edge = breakpoint_edge(breakpoint_vertex(e.v1.chrom, hg.absPos(e.v1.chrom, e.v1.pos), e.v1.strand), breakpoint_vertex(e.v1.chrom, hg.absPos(e.v2.chrom, e.v2.pos), e.v2.strand))
                     ee = Arc((xmid, 0), xdia, ydia, fill=False, linewidth=4.0 * min(1, float(len(el[1]))/max_edge), color=ecolor[pseudo_edge.type()], zorder=4, theta1=0.1, theta2=180)
                     ax2.add_patch(ee)
-                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(len(el[1]))/max_edge), color=ecolor[pseudo_edge.type()])
-                    ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(len(el[1]))/max_edge), color=ecolor[pseudo_edge.type()])
+                    ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[pseudo_edge.type()])
+                    ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[pseudo_edge.type()])
         ax2.axhline(2.0, alpha=0.8, linewidth=0.5, color='r')
 
         gparity = 0
