@@ -1607,6 +1607,9 @@ class bam_to_breakpoint():
         msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
         sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts)
         eilist = sensitive_elist
+        if adaptive_counts:
+                cnlist = [np.average([c[1] for c in self.window_coverage(
+                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
 
         for i, msr in zip(ilist, msrlist):
             elist = []
