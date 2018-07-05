@@ -1286,6 +1286,66 @@ class bam_to_breakpoint():
         #         print '#DD', a[1].query_name, a[1].mapping_quality, a[1].query_alignment_sequence, a[1].reference_start, a[1].reference_end
         return dnlist
 
+    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1,    ms_window_size0=10000,ms_window_size1=300, adaptive_counts=True, gcc=False):
+        if eilist is None:
+            if adaptive_counts:
+                cnlist = [np.average([c[1] for c in self.window_coverage(
+                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
+                eilist = self.interval_discordant_edges(
+                    ilist, ms=zip(ilist, msrlist, cnlist))
+            else:
+                eilist = self.interval_discordant_edges(ilist)
+
+        eilist.sort(key=lambda x: hg.absPos(
+                    x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
+        eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
+
+        for i, msr in zip(ilist, msrlist):
+            elist = []
+            for e in eilist:
+                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
+                    elist.append(e)
+            ms_vlist = []
+            msv_index = {}
+            for msi in range(len((msr))):
+                if msr[msi][2] < msr[msi][1]:
+                    msv = breakpoint_vertex(i.chrom, msr[msi][0], 1)
+                else:
+                    msv = breakpoint_vertex(i.chrom, msr[msi][0] + 1, -1)
+                ms_vlist.append(msv)
+                msv_index[msv] = msi
+            print "Meanshift", str(i), len(ms_vlist), ms_vlist
+            sys.stdout.flush()
+            for msv in ms_vlist:
+                ms = msr[msv_index[msv]]
+                if ms[3]:
+                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
+                    if len(msve) == 0:
+                        print "finesearch discordant edges", i.chrom, ms
+                        efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
+                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
+                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
+                            else:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
+                            ebest = (ebest[1], ebest[0])
+                            msve = [ebest]
+                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), ebest[1]
+                            if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
+                                elist.append(ebest)
+                                eilist.append(ebest)
+                                eiSet.add((ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand))
+                                if hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos).intersects(i):
+                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
+                                if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos)]).intersection(ilist)) > 0:
+                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
+                                    eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
+                                elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+                                eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+                else:
+                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
+        return eilist
+
     def construct_segment(self, v):
         cpos = v.pos - v.strand * self.max_insert / 2
         cprevious = v.pos
@@ -1545,16 +1605,8 @@ class bam_to_breakpoint():
         msv_diff = {}
         all_msv_nocover = []
         msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
-        if eilist is None:
-            if adaptive_counts:
-                cnlist = [np.average([c[1] for c in self.window_coverage(
-                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
-                eilist = self.interval_discordant_edges(ilist, ms=zip(ilist, msrlist, cnlist))
-            else:
-                eilist = self.interval_discordant_edges(ilist)
-        print "Found dicordant edges ilist"
-        eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-        eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
+        sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts)
+        eilist = sensitive_elist
 
         for i, msr in zip(ilist, msrlist):
             elist = []
@@ -1579,28 +1631,6 @@ class bam_to_breakpoint():
                 ms = msr[msv_index[msv]]
                 if ms[3]:
                     msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
-                    if len(msve) == 0:
-                        print "finesearch discordant edges", i.chrom, ms
-                        efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
-                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
-                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
-                            else:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
-                            ebest = (ebest[1], ebest[0])
-                            msve = [ebest]
-                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), ebest[1]
-                            if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
-                                elist.append(ebest)
-                                eilist.append(ebest)
-                                eiSet.add((ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand))
-                                if hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos).intersects(i):
-                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos)]).intersection(ilist)) > 0:
-                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                    eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
-                                elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-                                eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
                     msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
                 if len(msve) > 0:
