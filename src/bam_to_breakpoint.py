@@ -1139,12 +1139,12 @@ class bam_to_breakpoint():
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
                     continue
                 if bre.type() != 'concordant':
-                    dnlist0.append((bre, vl, bre_refine[1], bre_refine[2], bre_refine[3]))
+                    dnlist0.append((bre, vl))
                 if bp1c is not None and bp2c is not None:
                     brec_refine = self.refine_discordant_edge(breakpoint_edge(bp1c, bp2c))
                     brec = brec_refine[0]
                     if brec.type() != 'concordant' and brec.v1.pos != brec.v2.pos:
-                        dnlist0.append((brec, [(v[1], v[0]) for v in vl], brec_refine[1], brec_refine[2], bre_refine[3]))
+                        dnlist0.append((brec, [(v[1], v[0]) for v in vl]))
 
         # remove local edges with no complementary edges and add warning if any found
         for bb1 in dnlist0:
@@ -1266,7 +1266,7 @@ class bam_to_breakpoint():
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
                 if bre.type() != 'concordant':
-                    dnlist.append((bre, vl, bre_refine[1], bre_refine[2], bre_refine[3]))
+                    dnlist.append((bre, vl))
             # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 2" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
         dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
@@ -1283,7 +1283,6 @@ class bam_to_breakpoint():
         #         print '#DDD', hg.interval(a[0], bamfile=self.bamfile).size(), hg.interval(a[0], bamfile=self.bamfile).rep_content(), hg.interval(a[1], bamfile=self.bamfile).size(), hg.interval(a[1], bamfile=self.bamfile).rep_content()
         #         print '#DD', a[0].query_name, a[0].mapping_quality, a[0].query_alignment_sequence, a[0].reference_start, a[0].reference_end
         #         print '#DD', a[1].query_name, a[1].mapping_quality, a[1].query_alignment_sequence, a[1].reference_start, a[1].reference_end
-        dnlist = [(e[0], e[1]) for e in dnlist]
         return dnlist
 
     def construct_segment(self, v):
