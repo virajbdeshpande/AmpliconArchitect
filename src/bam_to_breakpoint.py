@@ -1163,10 +1163,10 @@ class bam_to_breakpoint():
             logging.warning("dnlists do not match " + str(len(dnlist0)) + " " + str(len(dnlist)))
             for bb1 in dnlist0:
                 if bb1 not in dnlist:
-                    logging.warning('dnlist0: ' + str(bb1[0]) + " " + str(len(bb1[1])))
+                    logging.warning('dnlist0: ' + str(bb1[0]) + " " + str(bb1[1]))
             for bb1 in dnlist:
                 if bb1 not in dnlist0:
-                    logging.warning('dnlist: ' + str(bb1[0]) + " " + str(len(bb1[1])))
+                    logging.warning('dnlist: ' + str(bb1[0]) + " " + str(bb1[1]))
 
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local edges done " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)) + " " + str(len(dnlist)))
         self.get_mates_time = 0
