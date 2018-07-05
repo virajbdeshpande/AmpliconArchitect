@@ -1276,7 +1276,8 @@ class bam_to_breakpoint():
             # if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content() > 3 or (e[0].type() == 'everted' and (e[0].v1.pos - e[0].v2.pos) <30):
             #     for a in e[1]:
             #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
-        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]), filter_repeats, pair_support, not ms is None)] = dnlist
+        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
+                                    filter_repeats, pair_support, not ms is None)] = dnlist
         # for e in dnlist:
         #     print '#DDD', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1, ms)[0], + len(self.concordant_edge(e[0].v1, ms)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
         #     for a in e[1]:
