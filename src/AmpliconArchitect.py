@@ -126,7 +126,6 @@ if DATA_REPO == '.' or DATA_REPO == '':
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Loading libraries and reference annotations for: " + args.ref)
 import hg19util as hg
 import bam_to_breakpoint as b2b
-from breakpoint_graph import *
 
 
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Initiating bam_to_breakpoint object for: " + args.bam)

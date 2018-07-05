@@ -951,7 +951,6 @@ class bam_to_breakpoint():
         dlist = []
         v0listp = [v[0] for v in v0list]
         v1listp = [v[1] for v in v1list]
-        vli = 0
         plist = defaultdict(lambda: None, {})
         rlist = defaultdict(lambda: 0, {})
         nlist = defaultdict(lambda: 1, {})
