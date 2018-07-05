@@ -1283,6 +1283,7 @@ class bam_to_breakpoint():
         #         print '#DDD', hg.interval(a[0], bamfile=self.bamfile).size(), hg.interval(a[0], bamfile=self.bamfile).rep_content(), hg.interval(a[1], bamfile=self.bamfile).size(), hg.interval(a[1], bamfile=self.bamfile).rep_content()
         #         print '#DD', a[0].query_name, a[0].mapping_quality, a[0].query_alignment_sequence, a[0].reference_start, a[0].reference_end
         #         print '#DD', a[1].query_name, a[1].mapping_quality, a[1].query_alignment_sequence, a[1].reference_start, a[1].reference_end
+        dnlist = [(e[0], e[1]) for e in dnlist]
         return dnlist
 
     def construct_segment(self, v):
