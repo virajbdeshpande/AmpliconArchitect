@@ -616,8 +616,19 @@ class bam_to_breakpoint():
             #     print a[0], a[1], a[2], len(a[3]), len(a[4])
             # print '---------------------------------------------------------'
         if self.sensitivems:
-            return [s for s in shifts if abs(s[2] - s[1]) >= 1]
-        return [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
+            shifts_select = [s for s in shifts if abs(s[2] - s[1]) >= 1]
+        else:
+            shifts_select = [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
+        if len(shifts_select) == 0:
+            return hg.interval_list[hg.interval(i.chrom, i.start, i.end, info={'cn': np.average(cov[n:-n]) * 2 / self.median_coverage(window_size, gcc)[0]})]
+        else:
+            shift_intervals = hg.interval_list([])
+            start = i.start
+            for si in shifts_select:
+                shift_intervals.append(hg.interval(i.chrom, start, si[0], info={'cn':si[1]}))
+                start = si[0] + 1
+            shift_intervals.append(hg.interval(i.chrom, start, i.end, info={'cn':shifts_select[-1][2]}))
+            return shift_intervals
 
     def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False, shifts_unrefined=None):
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
@@ -626,32 +637,44 @@ class bam_to_breakpoint():
             shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
         else:
             shifts0 = shifts_unrefined
-        shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s[0] - 3 * window_size0, s[0] + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shifts0], [])
+
+        shift1_intervals = hg.interval_list([msi.chrom, msi.end, msi.end] for msi in shifts[0][:-1])
+        shift1_intervals = [msi[0] for msi in shift1_intervals.merge_clusters(extend=3 * window_size0)]
+        shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s[0] - 3 * window_size0, s[0] + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shift1_intervals], [])
 
         # shifts1 = self.meanshift_segmentation(i, window_size1, gcc)
 
         matched_shifts = []
-        for s0 in shifts0:
-            S1 = [s1 for s1 in shifts1 if abs(s0[0] - s1[0]) < window_size0]
-            S1_select = [s1 for s1 in S1 if (s0[2]-s0[1])*(s1[2] - s1[1]) > 0 and
-                                            (s0[2] - s0[1])/(s1[2] - s1[1]) > 0.5 and
-                                            (s0[2] - s0[1])/(s1[2] - s1[1]) < 2]
-            bests1 = None
+        prev_end = None
+        for s0i in shifts0[:-1]:
+            cndiff0 = shifts0[s0i + 1].info['cn'] - shifts0[s0i].info['cn']
+            bests1i = None
             bestscore = 0
-            for s1 in S1_select:
-                if bests1 is None:
-                    bests1 = s1
-                    bestscore = abs((s0[2] - s0[1]) - (s1[2] - s1[1]))
-                elif abs((s0[2] - s0[1]) - (s1[2] - s1[1])) < bestscore:
-                    bestscore = abs((s0[2] - s0[1]) - (s1[2] - s1[1]))
-                    bests1 = s1
+            s1i_select = []
+            for s1i in range(len(shifts1) - 1):
+                if abs(shifts0[s0i].end - shifts1[s1i].end) >= window_size0:
+                    continue
+                cndiff1 = shifts1[s1i + 1].info['cn']-shifts1[s1i].info['cn']
+                if cndiff0 * cndiff1 < 0 or cndiff0 / cndiff1 <= 0.5 and cndiff0 / cndiff1 >= 2:
+                    continue
+                if bests1i is None:
+                    bests1i = s1i
+                    bestscore = abs(cndiff0 - cndiff1)
+                elif abs(cndiff0 - cndiff1) < bestscore:
+                    bestscore = abs(cndiff0 - cndiff1)
+                    bests1i = s1i
             # print 'meanshift refined:', (s0, S1_select, S1, bests1, bestscore)
-            if bests1 is None:
-                matched_shifts.append((s0[0], s0[1], s0[2], False))
-                print  (s0[0], s0[1], s0[2], False)
-            else:
-                matched_shifts.append((bests1[0], s0[1], s0[2], True))
-                print (bests1[0], s0[1], s0[2], True)
+            best_start = prev_end + \
+                1 if prev_end is not None else shifts0[s0i].start
+            best_end = shifts1[bests1i].end if bests1i is not None else shifts0[s0i].end
+            matched_shifts.append(hg.interval(i.chrom, best_start, best_end, info={'cn':shifts0[s0i].info['cn'], 'start_refined':prev_end is not None, 'end_refined': bests1i is not None}))
+            prev_end = shifts1[bests1i].end if bests1i is not None else None
+        if len(shifts0) > 1:
+            s0i = -1
+            best_start = prev_end + \
+                1 if prev_end is not None else shifts0[s0i].start
+            best_end = shifts0[s0i].end
+            matched_shifts.append(hg.interval(i.chrom, best_start, best_end, info={'cn':shifts0[s0i].info['cn'], 'start_refined':prev_end is not None, 'end_refined': False}))        
         return matched_shifts
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
@@ -660,14 +683,18 @@ class bam_to_breakpoint():
             msfile = open(file_name)
             msr = []
             for line in msfile:
+                if len(line) == 0 or line[0] == '#':
+                    continue
                 ll = line.strip().split()
+                msi = hs.interval(str(ll[0]), int(ll[1]), int(ll[2]), info={'cn': float(ll[3]), 'start_refined': bool(ll[4]), 'end_refined': bool(ll[5])})
                 msr.append([int(ll[0]), float(ll[1]),
                                 float(ll[2]), bool(ll[3])])
         else:
             msr = self.meanshift_refined(i, window_size0=window_size0, window_size1=window_size1, gcc=gcc)
             msfile = open(file_name, 'w')
+            msfile.write('#chrom\tstart\tend\tcn\tstart_refined\tend_refined\n')
             for ms in msr:
-                msfile.write('%s\t%s\t%s\t%s\n' % (ms[0], ms[1], ms[2], ms[3]))
+                msfile.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (ms.chrom, ms.start, ms.end, ms.info['cn'], ms.info['start_refined'], ms.info['end_refined']))
             msfile.close()
         return msr
 
@@ -706,19 +733,16 @@ class bam_to_breakpoint():
             f = meanshift[fi]
             if not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
                 continue
-            cprev = 0
-            pi = bisect.bisect_left(f[1], (position,))
-            if pi > 0 and f[1][pi - 1][0] + self.ms_window_size >= pi and (f[1][pi - 1][2] - f[1][pi - 1][1]) / strand > 0:
-                cd = abs(f[1][pi - 1][2] - f[1][pi - 1][1])
-            elif pi < len(f[1]) and f[1][pi][0] - self.ms_window_size <= pi and (f[1][pi][2] - f[1][pi][1]) / strand > 0:
-                cd = abs(f[1][pi][2] - f[1][pi][1])
-            elif pi < len(f[1]):
-                cd = f[1][pi][1]
-            elif len(f[1]) > 0:
-                cd = f[1][-1][2]
+            for pi in range(len(f)):
+                if f[pi].start + self.ms_window_size >= position:
+                    break
+            # pi = bisect.bisect_left(f[1], (position,))
+            if pi > 0 and pi < len(f) and f[pi].start - self.ms_window_size <= position and (f[pi].info['cn'] - f[pi - 1].info['cn']) / strand > 0:
+                cd = abs(f[pi].info['cn'] - f[pi - 1].info['cn'])
+            elif pi > 0:
+                cd = f[pi - 1].info['cn']
             else:
-                cd = f[2]
-            break
+                cd = f[0].info['cn']
         mc = self.median_coverage()
         cd = max(1, cd)
         if self.sensitivems and sensitivems:
@@ -729,7 +753,7 @@ class bam_to_breakpoint():
             pcount = pmincount
         return pcount 
 
-    def concordant_edge(self, v, ms=None, bp_margin=0):
+    def concordant_edge(self, v, bp_margin=0):
         if v.pos == 0:
             return (None, [])
         elif v.strand == 1:
@@ -1321,10 +1345,8 @@ class bam_to_breakpoint():
         else:
             if eilist is None:
                 if adaptive_counts:
-                    cnlist = [np.average([c[1] for c in self.window_coverage(
-                        i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
                     eilist = self.interval_discordant_edges(
-                        ilist, ms=zip(ilist, msrlist, cnlist), pair_support=pair_support)
+                        ilist, ms=msrlist, pair_support=pair_support)
                 else:
                     eilist = self.interval_discordant_edges(ilist, pair_support=pair_support)
             eilist.sort(key=lambda x: hg.absPos(
@@ -1424,8 +1446,7 @@ class bam_to_breakpoint():
         ms_window_size0 = 10000
         ms_window_size1 = 300
         msrlist = [self.get_meanshift(i2, ms_window_size0, ms_window_size1, gcc)]
-        cnlist = [np.average([c[1] for c in self.window_coverage(i2, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0]]
-        edges = self.interval_discordant_edges(i2, ms=zip(hg.interval_list([i]), msrlist, cnlist))
+        edges = self.interval_discordant_edges(i2, ms=msrlist)
         edges = [(e[1], e[0]) for e in edges]
         edges.sort(reverse=True)
         edges = [(e[1], e[0]) for e in edges]
@@ -1650,9 +1671,6 @@ class bam_to_breakpoint():
         msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
         sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts, amplicon_name=amplicon_name)
         eilist = sensitive_elist
-        if adaptive_counts:
-                cnlist = [np.average([c[1] for c in self.window_coverage(
-                    i, ms_window_size0, gcc)]) * 2 / self.median_coverage(ms_window_size0, gcc)[0] for i in ilist]
 
         for i, msr in zip(ilist, msrlist):
             elist = []
@@ -1661,12 +1679,12 @@ class bam_to_breakpoint():
                     elist.append(e)
             ms_vlist = []
             msv_index = {}
-            for msi in range(len((msr))):
-                if msr[msi][2] < msr[msi][1]:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0], 1)
+            for msi in range(len((msr)) - 1):
+                if msr[msi + 1].info['cn'] < msr[msi].info['cn']:
+                    msv = breakpoint_vertex(i.chrom, msr[msi].end, 1)
                 else:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0] + 1, -1)
-                msv_diff[msv] = msr[msi][2] - msr[msi][1]
+                    msv = breakpoint_vertex(i.chrom, msr[msi].end + 1, -1)
+                msv_diff[msv] = msr[msi + 1].info['cn'] - msr[msi].info['cn']
                 ms_vlist.append(msv)
                 msv_index[msv] = msi
             all_msv.append(ms_vlist)
@@ -1674,11 +1692,11 @@ class bam_to_breakpoint():
             sys.stdout.flush()
             msve_match = {}
             for msv in ms_vlist:
-                ms = msr[msv_index[msv]]
-                if ms[3]:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
+                msi = msv_index[msv]
+                if msr[msi].info['end_refined']:
+                    msve = [e for e in elist if e[0].v1.strand * (msr[msi + 1].info['cn'] - msr[msi].info['cn']) < 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                 else:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
+                    msve = [e for e in elist if e[0].v1.strand * (msr[msi + 1].info['cn'] - msr[msi].info['cn']) < 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
                 if len(msve) > 0:
                     msve_match[msv] = msve
             msv_nocover = [msv for msv in ms_vlist if msv not in msve_match]
@@ -1719,7 +1737,7 @@ class bam_to_breakpoint():
             else:
                 nv = new_graph.new_vertex(i.chrom, elist[0][0].v1.pos, -1)
                 oecount = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
-                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nv.chrom, nv.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nv.chrom, nv.pos, -1, meanshift=msrlist, sensitivems=False)):
                     ne = new_graph.new_edge(s, nv)
                     koe[ne] = len(self.interval_crossing_arcs(nv.chrom, nv.pos, nv.pos + self.max_insert, -1, ilist))
                 ei += 1
@@ -1818,7 +1836,7 @@ class bam_to_breakpoint():
             elif ngvlist[nei].strand == 1 and ngvlist[nei].pos < i.end:
                 nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
                 oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, min(hg.chrLen[hg.chrNum(nvc_prime.chrom)], nvc_prime.pos + self.max_insert), -1, ilist))
-                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
+                if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=msrlist, sensitivems=False)):
                     ne = new_graph.new_edge(s, nvc_prime)
                     koe[ne] = oecount
                 ce = self.concordant_edge(vp)
@@ -1979,9 +1997,6 @@ class bam_to_breakpoint():
                 elif sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) == 0:
                     print 'MS0intersection', str(msi)
                     exit()
-            mslc = [sum([ap[0].intersection(ap[1]).size() * float(ap[1].info[0]) for ap in hg.interval_list([msi]).intersection(slist)]) / sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) for msi in mslist]
-            # for ap in zip(mslist, mslc):
-            #     print '\t'.join(map(str, ["MScount", str(ap[0]), ap[1]]))
 
         edge_code = defaultdict(lambda:'discordant', {'concordant':'concordant', 'source':'source'})
 
@@ -2057,7 +2072,7 @@ class bam_to_breakpoint():
         gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
         # plt.title(outName, fontsize=56)
-        plt.title(amplicon_name)
+        plt.title(os.path.basename(amplicon_name))
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
@@ -2076,7 +2091,6 @@ class bam_to_breakpoint():
                 wc_i = [w for w in self.window_coverage(i, 100)]
             cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
             wc += wc_i
-
 
         cx0 = [c for c in cx if ilist.xpos(c[0][0], c[0][1]) is not None]
         ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=0001)
@@ -2099,28 +2113,13 @@ class bam_to_breakpoint():
             elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
             max_edge = max(max_edge, max([1] + [e[1] for e in de
                 if len(scale_list) == 0 or len(hg.interval_list([hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos), hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(scale_list)) > 0]))
-            pprev = i.start
-            for shift in msr:
-                avg_cov = np.average([c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= pprev and c[0][1] <= shift[0]])
+            for seg in msr:
+                avg_cov = np.average([c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end])
                 if len(scale_list) == 0 or len(hg.interval_list([i]).intersection(scale_list)) > 0:
-                    covl += [c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= pprev and c[0][1] <= shift[0]]
+                    covl += [c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end]
                     scale_max_cov = max(scale_max_cov, avg_cov)
-                    scale_max_ms = max(scale_max_ms, shift[1])
-                ax2.plot((ilist.xpos(i.chrom, pprev), ilist.xpos(i.chrom, shift[0])), (shift[1], shift[1]), linewidth=4, color='k')
-                print 'MScount', i.chrom, pprev, shift[0], shift[1]
-                pprev = shift[0]
-            if len(msr) > 0:
-                ax2.plot((ilist.xpos(i.chrom, pprev), ilist.xpos(i.chrom, i.end)), (msr[-1][2], msr[-1][2]), linewidth=4, color='k')
-                print 'MScount', i.chrom, pprev, i.end, msr[-1][2]
-            else:
-                avg_cov = np.average([c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= i.start and c[0][1] <= i.end])
-                avg_cn = 2 * avg_cov / self.median_coverage()[0]
-                if len(scale_list) == 0 or len(hg.interval_list([i]).intersection(scale_list)) > 0:
-                    covl += [c[1] for c in cx0 if c[0][0] == i.chrom and c[0][1] >= i.start and c[0][1] <= i.end]
-                    scale_max_ms = max(scale_max_ms, avg_cn)
-                    scale_max_cov = max(scale_max_cov, avg_cov)
-                ax2.plot((ilist.xpos(i.chrom, i.start), ilist.xpos(i.chrom, i.end)), (avg_cn, avg_cn), linewidth=4, color='k')
-                print 'MScount', i.chrom, i.start, i.end, avg_cn
+                    scale_max_ms = max(scale_max_ms, seg.info['cn'])
+                ax2.plot((ilist.xpos(seg.chrom, seg.start), ilist.xpos(seg.chrom, seg.end)), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         
         print scale_max_cov, scale_max_ms
         covl.sort()
