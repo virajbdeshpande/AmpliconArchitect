@@ -114,6 +114,7 @@ class bam_to_breakpoint():
         if pair_support != -1:
             self.pair_support = pair_support
         self.discordant_edge_calls = {}
+        self.interval_coverage_calls = {}
 
     # Methods to find coverage and other statistics of bam file
 
@@ -139,6 +140,9 @@ class bam_to_breakpoint():
                         yield a
 
     def interval_coverage(self, i, clip=False, gcc=False):
+        call_args = (i.chrom, i.start, i.end, clip, gcc)
+        if call_args in self.interval_coverage_calls:
+            return self.interval_coverage_calls[call_args]
         if gcc:
             wc_raw = self.window_coverage(i)
             wc_corrected = 0
@@ -151,8 +155,8 @@ class bam_to_breakpoint():
                     j += 1
                     if j > 100:
                         raise ValueError("j>100")
-                        exit()
-            return wc_corrected / i.size()
+                self.interval_coverage_calls[call_args] = wc_corrected / i.size()
+            return self.interval_coverage_calls[call_args]
         s2 = i.start
         e2 = i.end
         if i.start < 0:
@@ -169,9 +173,12 @@ class bam_to_breakpoint():
         # if clip == True or (clip == False and i.size() >= 100 * self.read_length):
         #     return len(alist) * self.read_length / float(i.size())
         if clip == True or (clip is None and e2-s2 < 1000):
-            return sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
+            self.interval_coverage_calls[call_args] = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
+            return self.interval_coverage_calls[call_args]
         else:
-            return len([a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / float(e2-s2)
+            self.interval_coverage_calls[call_args] = len(
+                [a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / float(e2 - s2)
+            return self.interval_coverage_calls[call_args]
         for a in alist:
             ai = hg.interval(a, bamfile=self.bamfile).intersection(i)
             if ai is not None:
@@ -179,8 +186,8 @@ class bam_to_breakpoint():
         if sumb / float(i.size()) > 10 * len(alist) * self.read_length / float(i.size()):
             print str(i), sumb, len(alist)
             raise ValueError("isize exception")
-            exit()
-        return sumb / float(i.size())
+        self.interval_coverage_calls[call_args] = sumb / float(i.size())
+        return self.interval_coverage_calls[call_args]
 
     def window_coverage_stats(self, i, window_size=-1, gcc=False):
         if window_size == -1:
