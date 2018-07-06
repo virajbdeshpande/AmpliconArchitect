@@ -686,9 +686,8 @@ class bam_to_breakpoint():
                 if len(line) == 0 or line[0] == '#':
                     continue
                 ll = line.strip().split()
-                msi = hs.interval(str(ll[0]), int(ll[1]), int(ll[2]), info={'cn': float(ll[3]), 'start_refined': bool(ll[4]), 'end_refined': bool(ll[5])})
-                msr.append([int(ll[0]), float(ll[1]),
-                                float(ll[2]), bool(ll[3])])
+                msi = hg.interval(str(ll[0]), int(ll[1]), int(ll[2]), info={'cn': float(ll[3]), 'start_refined': bool(ll[4]), 'end_refined': bool(ll[5])})
+                msr.append(msi)
         else:
             msr = self.meanshift_refined(i, window_size0=window_size0, window_size1=window_size1, gcc=gcc)
             msfile = open(file_name, 'w')
