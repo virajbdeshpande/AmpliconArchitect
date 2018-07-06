@@ -638,7 +638,7 @@ class bam_to_breakpoint():
         else:
             shifts0 = shifts_unrefined
 
-        shift1_intervals = hg.interval_list([msi.chrom, msi.end, msi.end] for msi in shifts[0][:-1])
+        shift1_intervals = hg.interval_list([msi.chrom, msi.end, msi.end] for msi in shifts0[:-1])
         shift1_intervals = [msi[0] for msi in shift1_intervals.merge_clusters(extend=3 * window_size0)]
         shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s[0] - 3 * window_size0, s[0] + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shift1_intervals], [])
 
@@ -650,7 +650,6 @@ class bam_to_breakpoint():
             cndiff0 = shifts0[s0i + 1].info['cn'] - shifts0[s0i].info['cn']
             bests1i = None
             bestscore = 0
-            s1i_select = []
             for s1i in range(len(shifts1) - 1):
                 if abs(shifts0[s0i].end - shifts1[s1i].end) >= window_size0:
                     continue
