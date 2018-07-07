@@ -1363,30 +1363,32 @@ class bam_to_breakpoint():
                     elist.append(e)
             ms_vlist = []
             msv_index = {}
-            for msi in range(len((msr))):
-                if msr[msi][2] < msr[msi][1]:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0], 1)
+            for msi in range(len(msr) - 1):
+                if msr[msi + 1].info['cn'] < msr[msi].info['cn']:
+                    msv = breakpoint_vertex(i.chrom, msr[msi].end, 1)
                 else:
-                    msv = breakpoint_vertex(i.chrom, msr[msi][0] + 1, -1)
+                    msv = breakpoint_vertex(i.chrom, msr[msi].end + 1, -1)
                 ms_vlist.append(msv)
                 msv_index[msv] = msi
             print "Meanshift", str(i), len(ms_vlist), ms_vlist
             sys.stdout.flush()
             for msv in ms_vlist:
-                ms = msr[msv_index[msv]]
-                if ms[3]:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size1]
+                msi = msv_index[msv]
+                if msr[msi].info['end_refined']:
+                    msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                     if len(msve) == 0:
-                        print "finesearch discordant edges", i.chrom, ms
+                        print "finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1])
                         efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
-                        if len([e for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0]) > 0:
-                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
+                        if len([e for e in efine if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0]) > 0:
+                            if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (
+                                    msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1])
                             else:
-                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (ms[1]-ms[2]) > 0])
+                                ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (
+                                    msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
                             msve = [ebest]
-                            print "finesearch discordant edge found", i.chrom, ms, str(ebest[0]), ebest[1]
+                            print "finesearch discordant edge found", i.chro, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1]
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
                                 eilist.append(ebest)
@@ -1399,7 +1401,8 @@ class bam_to_breakpoint():
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
-                    msve = [e for e in elist if e[0].v1.strand * (ms[1]-ms[2]) > 0 and abs(e[0].v1.pos - ms[0]) < self.max_insert + ms_window_size0]
+                    msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
+                        e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
 
         if amplicon_name is not None:
             edge_file = open("%s_edges.txt" % amplicon_name, 'w')
