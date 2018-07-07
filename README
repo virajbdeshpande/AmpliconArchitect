@@ -1,6 +1,7 @@
- AmpliconArchitect
-## AmpliconArchitect (AA) is a tool to identify one or more connected genomic regions which have simultaneous copy number amplification and elucidates the architecture of the amplicon.
-## In the current version, AA takes as input next generation sequencing reads (paired-end Illumina reads) mapped to the hg19/GrCH37 reference sequence and one or more regions of interest.
+*AmpliconArchitect*
+Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region my undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The interchangeability between ecDNA and HSR may allow the tumor adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect is a tool which can reconstruct the structure of focally amplified regions using whole genome sequence data of a cancer sample.
+
+
 
 
 #=============================================================================================================================================================================================
