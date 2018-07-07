@@ -620,7 +620,7 @@ class bam_to_breakpoint():
         else:
             shifts_select = [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
         if len(shifts_select) == 0:
-            return hg.interval_list[hg.interval(i.chrom, i.start, i.end, info={'cn': np.average(cov[n:-n]) * 2 / self.median_coverage(window_size, gcc)[0]})]
+            return hg.interval_list([hg.interval(i.chrom, i.start, i.end, info={'cn': np.average(cov[n:-n]) * 2 / self.median_coverage(window_size, gcc)[0]})])
         else:
             shift_intervals = hg.interval_list([])
             start = i.start
@@ -638,7 +638,7 @@ class bam_to_breakpoint():
         else:
             shifts0 = shifts_unrefined
 
-        shift1_intervals = hg.interval_list([msi.chrom, msi.end, msi.end] for msi in shifts0[:-1])
+        shift1_intervals = hg.interval_list(hg.interval(msi.chrom, msi.end, msi.end) for msi in shifts0[:-1])
         shift1_intervals = [msi[0] for msi in shift1_intervals.merge_clusters(extend=3 * window_size0)]
         shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s[0] - 3 * window_size0, s[0] + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shift1_intervals], [])
 
