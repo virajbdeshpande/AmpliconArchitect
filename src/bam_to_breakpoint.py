@@ -646,7 +646,7 @@ class bam_to_breakpoint():
 
         matched_shifts = []
         prev_end = None
-        for s0i in shifts0[:-1]:
+        for s0i in range(len(shifts0[:-1])):
             cndiff0 = shifts0[s0i + 1].info['cn'] - shifts0[s0i].info['cn']
             bests1i = None
             bestscore = 0
