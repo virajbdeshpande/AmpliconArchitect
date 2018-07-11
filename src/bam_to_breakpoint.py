@@ -1659,7 +1659,7 @@ class bam_to_breakpoint():
 
 
     # Method to create breakpoint graph, find network flow and cycle decomposition
-    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, eilist=None, amplicon_name=None):
+    def interval_filter_vertices(self, ilist0, gcc=False, adaptive_counts=True, eilist=None, amplicon_name=None, runmode='FULL'):
         ms_window_size0 = 10000
         ms_window_size1 = 300
         ilist0.sort()
@@ -2016,7 +2016,6 @@ class bam_to_breakpoint():
         all_msv_cat = reduce(lambda x, y: x+y, all_msv, [])
         oncolist = ','.join(Set([a[1].info['Name'] for a in ilist.intersection(hg.oncogene_list)]))+','
         istr = ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in ilist])
-        summary_logger.info("#Intervals = " +  str(lenlist))
         summary_logger.info("TotalIntervalSize = " + str(sum([a.size() for a in ilist])))
         summary_logger.info("AmplifiedIntervalSize = " + str(sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5])))
         if len([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]) > 0:
@@ -2030,8 +2029,6 @@ class bam_to_breakpoint():
         summary_logger.info("#MeanshiftSegmentsCopyCount>5 = " + str(len([v for v in msv_diff.values() if v > 5])))
         summary_logger.info("#Foldbacks = " + str(len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1])))
         summary_logger.info("#CoverageShiftsWithBreakpointEdges = " + str(len([msa for msa in all_msv_cat if msa in ms_addlist])))
-        summary_logger.info("OncogenesAmplified = " + str(oncolist))
-        summary_logger.info("Intervals = " + str(istr))
 
 
         # Summary, #intervals, t talsize, size>2.5, AvgCoverage>2.5, #chromosomes, #sequenceedges, #breakpointedges, #meanshiftbreaks, #meanshift>5, #msfoldbackedges, #msfoldbackedges, #mswithoutbreakpoint, oncogenes, representativestring, #bpedgeswithcommonkmers
@@ -2047,7 +2044,8 @@ class bam_to_breakpoint():
             # print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr, len([e for e in kbpe if e.kmer_homology()])]))
             print '\t'.join(map(str, ["Summary:", lenlist, sum([a.size() for a in ilist]), sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n) if res[si] >= 2.5]), sum([res[si] * (seqlist[si].v2.pos - seqlist[si].v1.pos + 1) for si in range(n)]) / sum([seqlist[si].v2.pos - seqlist[si].v1.pos + 1 for si in range(n)]), len(Set([i.chrom for i in ilist])), n, len(kbpe), len(all_msv_cat), len([v for v in msv_diff.values() if v > 5]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if self.foldup_count(msa.chrom, msa.pos, msa.strand) >= 1]), len([msa for msa in all_msv_cat if msa in ms_addlist]), oncolist, istr]))
 
-
+        if runmode == 'BPGRAPH':
+            return
 
         interval_index = 1
         for i in ilist:

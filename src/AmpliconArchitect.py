@@ -57,12 +57,9 @@ parser.add_argument('--bam', dest='bam',
 parser.add_argument('--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
                     action='store', type=str, nargs=1)
-parser.add_argument('--cbam', dest='cbam',
-                    help="Optional bamfile to use for coverage calculation", metavar='FILE',
-                    action='store', type=str, default=None)
-parser.add_argument('--cbed', dest='cbed',
-                    help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
-                    action='store', type=str, default=None)
+parser.add_argument('--extendmode', dest='extendmode',
+                    help="Values: [FULL/BPGRAPH/CYCLES/SVVIEW]. This option determines which stages of AA will be run. FULL: Run the full reconstruction including breakpoint graph, cycles as well as SV visualization. BPGRAPH: Only reconstruct the breakpoint graph and estimate copy counts, but do not reconstruct the amplicon cycles. CYCLES: Only reconstruct the breakpoint graph and cycles, but do not create the output for SV visualization. SVVIEW: Only create the SV visualization, but do not reconstruct the breakpoint graph or cycles", metavar='STR',
+                    action='store', type=str, default='EXPLORE')
 parser.add_argument('--extendmode', dest='extendmode',
                     help="Values: [EXPLORE/CLUSTERED/UNCLUSTERED/VIRAL]. This determines how the input intervals in bed file are treated. EXPLORE : Search for all connected intervals in genome that may be connected to input intervals. CLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added. UNCLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added.", metavar='STR',
                     action='store', type=str, default='EXPLORE')
@@ -75,6 +72,12 @@ parser.add_argument('--ref', dest='ref',
 parser.add_argument('--downsample', dest='downsample',
                     help="Values: [-1, 0, C(>0)]. Decide how to downsample the bamfile during reconstruction. Reads are automatically downsampled in real time for speedup. Alternatively pre-process bam file using $AA_SRC/downsample.py. -1 : Do not downsample bam file, use full coverage. 0 (default): Downsample bamfile to 10X coverage if original coverage larger then 10. C (>0) : Downsample bam file to coverage C if original coverage larger than C", metavar='FLOAT',
                     action='store', type=float, default=0)
+parser.add_argument('--cbam', dest='cbam',
+                    help="Optional bamfile to use for coverage calculation", metavar='FILE',
+                    action='store', type=str, default=None)
+parser.add_argument('--cbed', dest='cbed',
+                    help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
+                    action='store', type=str, default=None)
 args = parser.parse_args()
 
 global_names.REF = args.ref
@@ -244,17 +247,26 @@ for ig in irdgroups:
     for handler in summary_logger.handlers:
         handler.setFormatter(summaryFormatter)
     summary_logger.info("AmpliconID = " + str(amplicon_id))
+    summary_logger.info("#Intervals = " + str(len(ilist)))
+    ilist1 = hg.interval_list([a[0] for a in ilist.merge_clusters()])
+    istr = ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in ilist1])
+    summary_logger.info("Intervals = " + str(istr))
+    oncolist = ','.join(Set([a[1].info['Name'] for a in ilist1.intersection(hg.oncogene_list)]))+','
+    summary_logger.info("OncogenesAmplified = " + str(oncolist))
     amplicon_name = outName + '_amplicon' + str(amplicon_id)
-    graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
-    cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
-    graph_logger.addHandler(graph_handler)
-    cycle_logger.addHandler(cycle_handler)
-    bamFileb2b.interval_filter_vertices(ilist)
-    summary_logger.info('-----------------------------------------------------------------------------------------')
-    bamFileb2b.plot_segmentation(
-        ilist, amplicon_name, segments=segments)
-    graph_logger.removeHandler(graph_handler)
-    cycle_logger.removeHandler(cycle_handler)
+    if args.runmode in ['ALL', 'CYCLES', 'BPGRAPH']:
+        graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
+        cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
+        graph_logger.addHandler(graph_handler)
+        cycle_logger.addHandler(cycle_handler)
+        bamFileb2b.interval_filter_vertices(ilist, runmode=args.runmode)
+        graph_logger.removeHandler(graph_handler)
+        cycle_logger.removeHandler(cycle_handler)
+    if args.runmode in ['ALL', 'SVVIEW']:
+        bamFileb2b.plot_segmentation(
+            ilist, amplicon_name, segments=segments)
+    summary_logger.info(
+            '-----------------------------------------------------------------------------------------')
     iout = open(amplicon_name + '_logs.txt', 'w')
     iout.write(mystdout.getvalue())
     iout.close()
@@ -263,7 +275,7 @@ for ig in irdgroups:
     continue
 
 
-if args.extendmode == 'VIRAL' or args.extendmode == 'VIRAL_CLUSTERED':
+if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL', 'SVVIEW']):
     for i in irdgroups[0]:
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
