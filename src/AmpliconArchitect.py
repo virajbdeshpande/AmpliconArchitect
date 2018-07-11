@@ -254,7 +254,7 @@ for ig in irdgroups:
     oncolist = ','.join(Set([a[1].info['Name'] for a in ilist1.intersection(hg.oncogene_list)]))+','
     summary_logger.info("OncogenesAmplified = " + str(oncolist))
     amplicon_name = outName + '_amplicon' + str(amplicon_id)
-    if args.runmode in ['ALL', 'CYCLES', 'BPGRAPH']:
+    if args.runmode in ['FULL', 'CYCLES', 'BPGRAPH']:
         graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
@@ -262,7 +262,7 @@ for ig in irdgroups:
         bamFileb2b.interval_filter_vertices(ilist, runmode=args.runmode)
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
-    if args.runmode in ['ALL', 'SVVIEW']:
+    if args.runmode in ['FULL', 'SVVIEW']:
         bamFileb2b.plot_segmentation(
             ilist, amplicon_name, segments=segments)
     summary_logger.info(
