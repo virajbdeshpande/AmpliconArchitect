@@ -57,9 +57,9 @@ parser.add_argument('--bam', dest='bam',
 parser.add_argument('--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
                     action='store', type=str, nargs=1)
-parser.add_argument('--extendmode', dest='extendmode',
+parser.add_argument('--runmode', dest='runmode',
                     help="Values: [FULL/BPGRAPH/CYCLES/SVVIEW]. This option determines which stages of AA will be run. FULL: Run the full reconstruction including breakpoint graph, cycles as well as SV visualization. BPGRAPH: Only reconstruct the breakpoint graph and estimate copy counts, but do not reconstruct the amplicon cycles. CYCLES: Only reconstruct the breakpoint graph and cycles, but do not create the output for SV visualization. SVVIEW: Only create the SV visualization, but do not reconstruct the breakpoint graph or cycles", metavar='STR',
-                    action='store', type=str, default='EXPLORE')
+                    action='store', type=str, default='FULL')
 parser.add_argument('--extendmode', dest='extendmode',
                     help="Values: [EXPLORE/CLUSTERED/UNCLUSTERED/VIRAL]. This determines how the input intervals in bed file are treated. EXPLORE : Search for all connected intervals in genome that may be connected to input intervals. CLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added. UNCLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added.", metavar='STR',
                     action='store', type=str, default='EXPLORE')
