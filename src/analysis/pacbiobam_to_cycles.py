@@ -29,7 +29,7 @@ c = open("pacbio_cycles.txt", 'w')
 ri = 0
 for r in refi:
     ri += 1
-    c.write("Interval\t%s\t%s\t%s\t%s\n" % (ri, i.chrom, i.start, i.end))
+    c.write("Interval\t%s\t%s\t%s\t%s\n" % (ri, r.chrom, r.start, r.end))
 c.write("List of cycle segments\n")
 for q in segs:
     for s in segs[q]:
