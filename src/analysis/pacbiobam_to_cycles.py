@@ -31,12 +31,12 @@ for r in refi:
     c.write("Interval\t%s\t%s\t%s\t%s\n" % (ri, i.chrom, i.start, i.end))
 c.write("List of cycle segments\n")
 for q in segs:
-    for s in q:
+    for s in segs[q]:
         c.write('Segment\t%s\n' % ('\t'.join([str(si) for si in s])))
 ci = 0
 for q in segs:
     ci += 1
-    c.write('Cycle%s;Copy_count=1;Segments=%s\n' % (ci, ','.join([str(s[0]) + ('+') if s[7] == 1 else '-')))
+    c.write('Cycle%s;Copy_count=1;Segments=%s\n' % (ci, ','.join([str(s[0]) + ('+') if s[7] == 1 else '-' for s in segs[q]])))
 
 c.close()
 
