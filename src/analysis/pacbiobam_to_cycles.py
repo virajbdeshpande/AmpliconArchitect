@@ -43,14 +43,14 @@ ri = 0
 for r in refi:
     ri += 1
     c.write("Interval\t%s\t%s\t%s\t%s\n" % (ri, r.chrom, r.start, r.end))
-c.write("List of cycle segments\n")
+c.write("List of cycle segments: chrom start end readname readstart readend strand, readlength\n")
 for q in qlist:
     for s in segs[q]:
         c.write('Segment\t%s\n' % ('\t'.join([str(si) for si in s])))
 ci = 0
 for q in qlist:
     ci += 1
-    c.write('Cycle%s;Copy_count=1;Segments=%s\n' % (ci, ','.join([str(s[0]) + ('+') if s[7] == 1 else '-' for s in segs[q]])))
+    c.write('Cycle=%s;Copy_count=1;Segments=%s\n' % (ci, ','.join([str(s[0]) + (('+') if s[7] == 1 else '-') for s in segs[q]])))
 
 c.close()
 
