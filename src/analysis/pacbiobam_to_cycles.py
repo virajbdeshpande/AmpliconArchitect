@@ -1,4 +1,4 @@
-from collections import defaultdicts
+from collections import defaultdict
 import pysam
 
 import hg19util as hg
