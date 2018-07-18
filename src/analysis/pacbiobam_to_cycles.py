@@ -25,7 +25,7 @@ for q in segs:
     segs[q].sort(key=lambda x: x[5])
 
 
-c = open("pacbio_cycles.txt")
+c = open("pacbio_cycles.txt", 'w')
 ri = 0
 for r in refi:
     ri += 1
