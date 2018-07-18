@@ -50,7 +50,7 @@ for q in qlist:
 ci = 0
 for q in qlist:
     ci += 1
-    c.write('Cycle=%s;Copy_count=1;Segments=0+%s0-\n' % (ci, ','.join([str(s[0]) + (('+') if s[7] == 1 else '-') for s in segs[q]])))
+    c.write('Cycle=%s;Copy_count=1;Segments=0+,%s,0-\n' % (ci, ','.join([str(s[0]) + (('+') if s[7] == 1 else '-') for s in segs[q]])))
 
 c.close()
 
