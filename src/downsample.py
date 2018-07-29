@@ -117,6 +117,7 @@ if cstats[0] <= final:
     exit()    
 ratio = float(final) / cstats[0]
 
+print ("Downsampling:", args.bam[0], cstats[0], final)
 
 downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
