@@ -2063,7 +2063,7 @@ class bam_to_breakpoint():
         fighsize = 12
         figvsize = 5
         if font == 'large':
-            matplotlib.rcParams.update({'font.size': 20})
+            matplotlib.rcParams.update({'font.size': 18})
             figvsize = 5.85
         if font == 'all_amplicons':
             matplotlib.rcParams.update({'font.size': 28})
@@ -2083,7 +2083,7 @@ class bam_to_breakpoint():
         ax = fig.add_subplot(gs[0,0])
         plt.title(os.path.basename(amplicon_name))
         if font == 'large':
-            plt.title(os.path.basename(amplicon_name), fontsize=24)
+            plt.title(os.path.basename(amplicon_name), fontsize=28)
         if font == 'all_amplicons':
             plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
