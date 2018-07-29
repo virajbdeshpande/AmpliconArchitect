@@ -84,6 +84,8 @@ class bam_to_breakpoint():
         self.span_coverage = span_coverage
         self.mapping_quality_cutoff = 5
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
+        self.discordant_edge_calls = {}
+        self.interval_coverage_calls = {}
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -113,8 +115,6 @@ class bam_to_breakpoint():
 
         if pair_support != -1:
             self.pair_support = pair_support
-        self.discordant_edge_calls = {}
-        self.interval_coverage_calls = {}
 
     # Methods to find coverage and other statistics of bam file
 
