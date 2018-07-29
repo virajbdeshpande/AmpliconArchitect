@@ -2193,16 +2193,20 @@ class bam_to_breakpoint():
                 #     ty = 0.20
                 #     ty = 0.3
                 ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
-                ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
-                # ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                if font == 'large':
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                else:
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
                 gparity = (gparity + 1) % 2
             for s in segments:
                 if not i.intersects(s):
                     continue
                 ss = i.intersection(s)
                 ax3.add_patch(Rectangle([ilist.xpos(i.chrom, max(ss.start, i.start)), 0.65], ilist.xpos(i.chrom, min(ss.end, i.end)) - ilist.xpos(i.chrom, max(ss.start, i.start)), 0.25, fc=chrcolor[s.info[1]], ec='k'))
-                ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
-                # ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                if font == 'large':
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                else:
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
         
 
