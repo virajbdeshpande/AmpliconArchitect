@@ -2062,7 +2062,7 @@ class bam_to_breakpoint():
         if font == 'large':
             matplotlib.rcParams.update({'font.size': 24})
             figvsize = 5.85
-        if font == 'all_amplicons'
+        if font == 'all_amplicons':
             matplotlib.rcParams.update({'font.size': 28})
             fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
