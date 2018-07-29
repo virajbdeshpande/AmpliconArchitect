@@ -2187,7 +2187,7 @@ class bam_to_breakpoint():
             foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
             glist = hg.interval_list([i]).intersection(hg.oncogene_list) + hg.interval_list([i]).intersection(hg.interval_list([hg.interval(foxe1_gff, file_format='gff'), hg.interval('chr20', 17200000, 17400000, info={'Name': 'test'})]))
             for g in glist:
-                if font = 'large':
+                if font == 'large':
                     ty = 0
                 elif gparity == 0:
                     ty = -0.1
