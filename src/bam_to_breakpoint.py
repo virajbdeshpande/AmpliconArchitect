@@ -2182,6 +2182,7 @@ class bam_to_breakpoint():
         if font == 'large':
             ry = 0.85
             ry = 0.87
+            ry = 0.77
         # ogene_width = 12
         for i in ilist:
             foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
@@ -2195,6 +2196,8 @@ class bam_to_breakpoint():
                 else:
                     ty = 0.20
                     ty = 0.3
+                if font == 'large':
+                    ogene_width = 0.25
                 ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
                 if font == 'large':
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
