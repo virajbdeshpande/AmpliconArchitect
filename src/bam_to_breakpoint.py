@@ -1319,14 +1319,14 @@ class bam_to_breakpoint():
         edge_lines = [line.strip().split() for line in open(edge_file)]
         edges = []
         for el in edge_lines:
-            if el[1] == 'None':
+            if el[2] == 'None':
                 hom = None
                 hom_seq = None
             else:
-                hom = int(el[1])
-                hom_seq = el[2]
+                hom = int(el[2])
+                hom_seq = el[3]
             e = breakpoint_edge(el[0], hom=hom, hom_seq=hom_seq)
-            edges.append((e, int(el[3])))
+            edges.append((e, int(el[1])))
         edges.sort(key=lambda x: hg.absPos(
                     x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
         return edges
@@ -1408,7 +1408,7 @@ class bam_to_breakpoint():
             edge_file = open("%s_edges.txt" % amplicon_name, 'w')
             for e in eilist:
                 edge_file.write("%s\t%s\t%s\t%s\n" %
-                                (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+                                (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
             edge_file.close()
         return eilist
 
@@ -2060,15 +2060,16 @@ class bam_to_breakpoint():
         fighsize = 12
         figvsize = 5
         if font == 'large':
-            matplotlib.rcParams.update({'font.size': 28})
-            # fighsize = 24
+            matplotlib.rcParams.update({'font.size': 16})
             figvsize = 5.85
+            # matplotlib.rcParams.update({'font.size': 28})
+            # fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
         # dpi = 300
         if font == 'large':
-            # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
-            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
+            # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
 
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
