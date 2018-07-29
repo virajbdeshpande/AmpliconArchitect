@@ -2056,22 +2056,27 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None):
+    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='regular'):
         fighsize = 12
-        # fighsize = 24
         figvsize = 5
-        # figvsize = 5.85
+        if font == 'large':
+            matplotlib.rcParams.update({'font.size': 28})
+            # fighsize = 24
+            figvsize = 5.85
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
-        # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
-        # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
         # dpi = 300
+        if font == 'large':
+            # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
         gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
-        # plt.title(outName, fontsize=56)
         plt.title(os.path.basename(amplicon_name))
+        if font == 'large':
+            plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
@@ -2191,10 +2196,11 @@ class bam_to_breakpoint():
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
         
 
-        # axyticks = ax.get_yticks()
-        # ax.set_yticks([0, axyticks[-1]])
-        # ax2yticks = ax2.get_yticks()
-        # ax2.set_yticks([0, ax2yticks[-1]])
+        if font == 'large':
+            axyticks = ax.get_yticks()
+            ax.set_yticks([0, axyticks[-1]])
+            ax2yticks = ax2.get_yticks()
+            ax2.set_yticks([0, ax2yticks[-1]])
 
 
         ax.xaxis.set_visible(False)
