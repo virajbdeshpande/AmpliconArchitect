@@ -1324,7 +1324,10 @@ class bam_to_breakpoint():
                 hom_seq = None
             else:
                 hom = int(el[2])
-                hom_seq = el[3]
+                if hom != 0:
+                    hom_seq = el[3]
+                else:
+                    hom_seq = ''
             e = breakpoint_edge(el[0], hom=hom, hom_seq=hom_seq)
             edges.append((e, int(el[1])))
         edges.sort(key=lambda x: hg.absPos(
