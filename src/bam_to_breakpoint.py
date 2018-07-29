@@ -2179,19 +2179,22 @@ class bam_to_breakpoint():
         ry = 0.60
         ty = 0.65
         ogene_width = 4
-        # ry = 0.85
-        # ry = 0.87
+        if font == 'large':
+            ry = 0.85
+            ry = 0.87
         # ogene_width = 12
         for i in ilist:
             foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
             glist = hg.interval_list([i]).intersection(hg.oncogene_list) + hg.interval_list([i]).intersection(hg.interval_list([hg.interval(foxe1_gff, file_format='gff'), hg.interval('chr20', 17200000, 17400000, info={'Name': 'test'})]))
             for g in glist:
-                # if gparity == 0:
-                #     ty = -0.1
-                #     ty = -0.07
-                # else:
-                #     ty = 0.20
-                #     ty = 0.3
+                if font = 'large':
+                    ty = 0
+                elif gparity == 0:
+                    ty = -0.1
+                    ty = -0.07
+                else:
+                    ty = 0.20
+                    ty = 0.3
                 ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
                 if font == 'large':
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
