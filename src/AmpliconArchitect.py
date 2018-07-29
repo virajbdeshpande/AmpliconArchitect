@@ -277,9 +277,10 @@ for ig in irdgroups:
 
 if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL', 'SVVIEW', 'VIRALVIEW']):
     for i in irdgroups[0]:
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Viral view for interval" + str(i))
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
-        bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]))
+        bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]), font=large)
         amplicon_id += 1
 
 
