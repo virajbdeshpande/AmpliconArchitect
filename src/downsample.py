@@ -131,6 +131,7 @@ for a in bamFile.fetch():
     random.seed(a.qname)
     ru = random.uniform(0, 1)
     if i == 100:
+        i+= 1
         break
     if ru < ratio:
         ns += 1
