@@ -2060,23 +2060,26 @@ class bam_to_breakpoint():
         fighsize = 12
         figvsize = 5
         if font == 'large':
-            matplotlib.rcParams.update({'font.size': 16})
+            matplotlib.rcParams.update({'font.size': 24})
             figvsize = 5.85
-            # matplotlib.rcParams.update({'font.size': 28})
-            # fighsize = 24
+        if font == 'all_amplicons'
+            matplotlib.rcParams.update({'font.size': 28})
+            fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
         # dpi = 300
         if font == 'large':
             plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
-            # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+        if font == 'all_amplicons':
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
 
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
-        gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
+        if font == 'all_amplicons':
+            gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
         plt.title(os.path.basename(amplicon_name))
-        if font == 'large':
+        if font == 'all_amplicons':
             plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
