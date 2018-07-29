@@ -620,7 +620,7 @@ class bam_to_breakpoint():
         else:
             shifts_select = [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
         if len(shifts_select) == 0:
-            return hg.interval_list([hg.interval(i.chrom, i.start, i.end, info={'cn': np.average(cov[n:-n]) * 2 / self.median_coverage(window_size, gcc)[0]})])
+            return hg.interval_list([hg.interval(i.chrom, i.start, i.end, info={'cn': np.average([c[1] for c in cov[n:-n]]) * 2 / self.median_coverage(window_size, gcc)[0]})])
         else:
             shift_intervals = hg.interval_list([])
             start = i.start
