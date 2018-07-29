@@ -130,7 +130,7 @@ for a in bamFile.fetch():
 b2.close()
 pysam.index(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam')
 
-if args.cbam is not None:
+if args.cbam is not None and not os.path.exists(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam'):
     c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)
     for a in cbam.fetch():
         random.seed(a.qname)
