@@ -2063,7 +2063,7 @@ class bam_to_breakpoint():
         fighsize = 12
         figvsize = 5
         if font == 'large':
-            matplotlib.rcParams.update({'font.size': 24})
+            matplotlib.rcParams.update({'font.size': 20})
             figvsize = 5.85
         if font == 'all_amplicons':
             matplotlib.rcParams.update({'font.size': 28})
@@ -2082,6 +2082,8 @@ class bam_to_breakpoint():
             gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
         plt.title(os.path.basename(amplicon_name))
+        if font == 'large':
+            plt.title(os.path.basename(amplicon_name), fontsize=24)
         if font == 'all_amplicons':
             plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
