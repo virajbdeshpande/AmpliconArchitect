@@ -1352,7 +1352,7 @@ class bam_to_breakpoint():
             if amplicon_name is not None:
                 edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
                 for e in eilist:
-                    edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+                    edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
                 edge_file.close()
         eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
 
