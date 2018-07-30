@@ -37,6 +37,7 @@ from matplotlib.patches import Ellipse
 import logging
 import JobNotifier
 import random
+import hashlib
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
@@ -124,21 +125,15 @@ if args.downsample_dir != '':
     downsample_dir = args.downsample_dir
 
 
-i = 0
-ns = 0
 b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
 for a in bamFile.fetch():
-    random.seed(a.qname)
+    random.seed(hashlib.md5(a.qname).hexdigest())
     ru = random.uniform(0, 1)
-    i+= 1
-    if i == 100:
-        break
     if ru < ratio:
-        ns += 1
         b2.write(a)
 b2.close()
 pysam.index(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam')
-print ("Downsampling:", args.bam[0], float(cstats[0]), final, ratio, ns)
+print ("Downsampling:", args.bam[0], float(cstats[0]), final, ratio)
 
 # if args.cbam is not None and not os.path.exists(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam'):
 #     c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)
