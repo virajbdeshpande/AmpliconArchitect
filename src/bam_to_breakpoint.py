@@ -136,7 +136,8 @@ class bam_to_breakpoint():
                     yield a
         else:                    
             for a in self.bamfile.fetch(c, s, e + 1):
-                if hash(a.query_name) % 1000000 < 1000000 * self.downsample_ratio:
+                random.seed(a.query_name.encode('hex'))
+                if random.uniform(0, 1) < self.downsample_ratio:
                         yield a
 
     def interval_coverage(self, i, clip=False, gcc=False):
@@ -2161,9 +2162,14 @@ class bam_to_breakpoint():
         for i in ilist:
             for el in elist_dict[i]:
                 e = el[0]
-                if ilist.xpos(e.v2.chrom, e.v2.pos) is None:
+                if ilist.xpos(e.v2.chrom, e.v2.pos) is None and ilist.xpos(e.v1.chrom, e.v1.pos) is None:
+                    continue
+                elif ilist.xpos(e.v2.chrom, e.v2.pos) is None:
                     ax2.axvline(ilist.xpos(e.v1.chrom, e.v1.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(el[1])/max_edge), alpha=0.5, zorder=10)
                     ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
+                elif ilist.xpos(e.v1.chrom, e.v1.pos) is None:
+                    ax2.axvline(ilist.xpos(e.v2.chrom, e.v2.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(el[1])/max_edge), alpha=0.5, zorder=10)
+                    ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
                 else:
                     xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2
                     xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
