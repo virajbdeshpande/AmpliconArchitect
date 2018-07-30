@@ -277,6 +277,7 @@ for ig in irdgroups:
 
 
 if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL', 'SVVIEW', 'VIRALVIEW']):
+    amplicon_id = 1
     for i in irdgroups[0]:
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
