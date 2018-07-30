@@ -679,6 +679,8 @@ class bam_to_breakpoint():
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
         file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
+        print ("MSfile", file_name, os.path.exists(file_name))
+        exit()
         if os.path.exists(file_name):
             msfile = open(file_name)
             msr = []
