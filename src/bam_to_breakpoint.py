@@ -1361,7 +1361,7 @@ class bam_to_breakpoint():
         for i, msr in zip(ilist, msrlist):
             elist = []
             for e in eilist:
-                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
+                if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
                     elist.append(e)
             ms_vlist = []
             msv_index = {}
