@@ -679,8 +679,6 @@ class bam_to_breakpoint():
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
         file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
-        print ("MSfile", file_name, os.path.exists(file_name))
-        exit()
         if os.path.exists(file_name):
             msfile = open(file_name)
             msr = []
@@ -2106,8 +2104,9 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
+        print ("Loading msrlist")
         msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-
+        print ("Loading edgelist")
         sensitive_elist = self.get_sensitive_discordant_edges(
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
