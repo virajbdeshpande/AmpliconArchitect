@@ -124,11 +124,12 @@ downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
     downsample_dir = args.downsample_dir
 
-
+rulist = []
 b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
 for a in bamFile.fetch():
-    random.seed(hashlib.md5(a.qname).hexdigest())
+    random.seed(a.query_name.encode('hex'))
     ru = random.uniform(0, 1)
+    rulist.append(ru)
     if ru < ratio:
         b2.write(a)
 b2.close()
