@@ -1343,6 +1343,7 @@ class bam_to_breakpoint():
         #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
 
         if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
+            print ('here')
             eilist = self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
         else:
             if eilist is None:
@@ -1359,7 +1360,7 @@ class bam_to_breakpoint():
                     edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
                 edge_file.close()
         eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
-
+        exit()
         for i, msr in zip(ilist, msrlist):
             elist = []
             for e in eilist:
@@ -2098,6 +2099,17 @@ class bam_to_breakpoint():
 
         cx = []
         wc = []
+
+        elist_dict = {}
+        max_edge = 4
+        scale_max_cov = 0
+        scale_max_ms = 0
+        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+
+        sensitive_elist = self.get_sensitive_discordant_edges(
+            ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
+        eilist = sensitive_elist
+
         for i in ilist:
             if i.size() > 1000000:
                 wc_i = [w for w in self.window_coverage(i, 10000)]
@@ -2109,16 +2121,6 @@ class bam_to_breakpoint():
         cx0 = [c for c in cx if ilist.xpos(c[0][0], c[0][1]) is not None]
         ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=0001)
         cmax = max([c[1] for c in wc])
-
-        elist_dict = {}
-        max_edge = 4
-        scale_max_cov = 0
-        scale_max_ms = 0
-        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-
-        sensitive_elist = self.get_sensitive_discordant_edges(
-            ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
-        eilist = sensitive_elist
 
         covl = []
         for i, msr in zip(ilist, msrlist):
