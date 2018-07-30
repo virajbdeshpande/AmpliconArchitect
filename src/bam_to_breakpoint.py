@@ -1341,7 +1341,8 @@ class bam_to_breakpoint():
             return self.load_edges("%s_edges.txt" % amplicon_name)
         # if amplicon_name is not None and os.path.exists("%s_edges_unfiltered.txt" % amplicon_name):
         #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
-
+        print (amplicon_name is not None, "%s_edges_cnseg.txt" % amplicon_name, os.path.exists("%s_edges_cnseg.txt" % amplicon_name))
+        exit()
         if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
             print ('here')
             eilist = self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
