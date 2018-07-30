@@ -1376,7 +1376,7 @@ class bam_to_breakpoint():
             sys.stdout.flush()
             for msv in ms_vlist:
                 msi = msv_index[msv]
-                if msr[msi].info['end_refined']:
+                if ('end_refined' not in msr[msi].info) or msr[msi].info['end_refined']:
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                     if len(msve) == 0:
                         print "finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1])
