@@ -1376,7 +1376,7 @@ class bam_to_breakpoint():
             sys.stdout.flush()
             for msv in ms_vlist:
                 msi = msv_index[msv]
-                if ('end_refined' not in msr[msi].info) or msr[msi].info['end_refined']:
+                if ('end_refined' in msr[msi].info) and msr[msi].info['end_refined']:
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                     if len(msve) == 0:
                         print "finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1])
@@ -1390,7 +1390,7 @@ class bam_to_breakpoint():
                                     msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
                             msve = [ebest]
-                            print "finesearch discordant edge found", i.chro, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1]
+                            print "finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1]
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
                                 eilist.append(ebest)
