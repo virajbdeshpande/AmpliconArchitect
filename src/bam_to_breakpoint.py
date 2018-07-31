@@ -2090,6 +2090,8 @@ class bam_to_breakpoint():
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
         ax.set_xlim(0, 1)
         ax.set_ylabel("Coverage")
+        ax.yaxis.set_label_coords(-0.05, 0.33)
+        ax2.yaxis.set_label_coords(1.05, 0.33)
         for b in ilist.offset_breaks():
             ax.axvline(b[0], linestyle=b[1], color='k')
             ax3.axvline(b[0], linestyle=b[1], color='k')
@@ -2101,28 +2103,24 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        print ("Loading msrlist")
         msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-        print ("Loading edgelist")
         sensitive_elist = self.get_sensitive_discordant_edges(
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
-
 
 
         for i, msr in zip(ilist, msrlist):
             de = [e for e in eilist if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
             elist_dict[i] = de
             elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-            eposlist = []
-            if e[0].v1.pos != -1:
-                eposlist.append(hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos))
-            if e[0].v2.pos != -1:
-                eposlist.append(hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos))
-            max_edge = max(max_edge, max([1] + [e[1] for e in de
-                if len(scale_list) == 0 or len(hg.interval_list(eposlist).intersection(scale_list)) > 0]))
-        print (max_edge, max([1] + [e[1] for e in eilist]))
-        exit()
+            for e in eilist:
+                eposlist = []
+                if e[0].v1.pos != -1:
+                    eposlist.append(hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos))
+                if e[0].v2.pos != -1:
+                    eposlist.append(hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos))
+                if len(scale_list) == 0 or len(hg.interval_list(eposlist).intersection(scale_list)) > 0:
+                    max_edge = max(max_edge, e[1])
 
         for i in ilist:
             if i.size() > 1000000:
