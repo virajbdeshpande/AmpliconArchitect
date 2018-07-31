@@ -2108,6 +2108,22 @@ class bam_to_breakpoint():
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
 
+
+
+        for i, msr in zip(ilist, msrlist):
+            de = [e for e in eilist if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
+            elist_dict[i] = de
+            elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+            eposlist = []
+            if e[0].v1.pos != -1:
+                eposlist.append(hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos))
+            if e[0].v2.pos != -1:
+                eposlist.append(hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos))
+            max_edge = max(max_edge, max([1] + [e[1] for e in de
+                if len(scale_list) == 0 or len(hg.interval_list(eposlist).intersection(scale_list)) > 0]))
+        print (max_edge, max([1] + [e[1] for e in eilist]))
+        exit()
+
         for i in ilist:
             if i.size() > 1000000:
                 wc_i = [w for w in self.window_coverage(i, 10000)]
@@ -2122,16 +2138,6 @@ class bam_to_breakpoint():
 
         covl = []
         for i, msr in zip(ilist, msrlist):
-            de = [e for e in eilist if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
-            elist_dict[i] = de
-            elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-            eposlist = []
-            if e[0].v1.pos != -1:
-                eposlist.append(hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos))
-            if e[0].v2.pos != -1:
-                eposlist.append(hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos))
-            max_edge = max(max_edge, max([1] + [e[1] for e in de
-                if len(scale_list) == 0 or len(hg.interval_list(eposlist).intersection(scale_list)) > 0]))
             for seg in msr:
                 avg_cov = np.average([c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end])
                 if len(scale_list) == 0 or len(hg.interval_list([i]).intersection(scale_list)) > 0:
