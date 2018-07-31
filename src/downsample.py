@@ -23,7 +23,7 @@
 import pysam
 import argparse
 import math
-from time import clock
+from time import clock, time
 from collections import defaultdict
 from sets import Set
 from cStringIO import StringIO
@@ -124,12 +124,14 @@ downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
     downsample_dir = args.downsample_dir
 
+i=0
 rulist = []
+t0 = time()
 b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
 for a in bamFile.fetch():
-    random.seed(a.query_name.encode('hex'))
+    random.seed(a.query_name + str(t0))
+    random.uniform(0,1)
     ru = random.uniform(0, 1)
-    rulist.append(ru)
     if ru < ratio:
         b2.write(a)
 b2.close()
