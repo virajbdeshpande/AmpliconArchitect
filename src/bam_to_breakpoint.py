@@ -84,6 +84,8 @@ class bam_to_breakpoint():
         self.span_coverage = span_coverage
         self.mapping_quality_cutoff = 5
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
+        self.discordant_edge_calls = {}
+        self.interval_coverage_calls = {}
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -113,8 +115,6 @@ class bam_to_breakpoint():
 
         if pair_support != -1:
             self.pair_support = pair_support
-        self.discordant_edge_calls = {}
-        self.interval_coverage_calls = {}
 
     # Methods to find coverage and other statistics of bam file
 
@@ -136,7 +136,8 @@ class bam_to_breakpoint():
                     yield a
         else:                    
             for a in self.bamfile.fetch(c, s, e + 1):
-                if hash(a.query_name) % 1000000 < 1000000 * self.downsample_ratio:
+                random.seed(a.query_name.encode('hex'))
+                if random.uniform(0, 1) < self.downsample_ratio:
                         yield a
 
     def interval_coverage(self, i, clip=False, gcc=False):
@@ -620,7 +621,7 @@ class bam_to_breakpoint():
         else:
             shifts_select = [s for s in shifts if abs(s[2] - s[1]) >= max(1, min(max(s[2], s[1]) / 10.0, math.sqrt(max(s[2], s[1]))))]
         if len(shifts_select) == 0:
-            return hg.interval_list([hg.interval(i.chrom, i.start, i.end, info={'cn': np.average(cov[n:-n]) * 2 / self.median_coverage(window_size, gcc)[0]})])
+            return hg.interval_list([hg.interval(i.chrom, i.start, i.end, info={'cn': np.average([c[1] for c in cov[n:-n]]) * 2 / self.median_coverage(window_size, gcc)[0]})])
         else:
             shift_intervals = hg.interval_list([])
             start = i.start
@@ -1319,14 +1320,17 @@ class bam_to_breakpoint():
         edge_lines = [line.strip().split() for line in open(edge_file)]
         edges = []
         for el in edge_lines:
-            if el[1] == 'None':
+            if el[2] == 'None':
                 hom = None
                 hom_seq = None
             else:
-                hom = int(el[1])
-                hom_seq = el[2]
+                hom = int(el[2])
+                if hom != 0:
+                    hom_seq = el[3]
+                else:
+                    hom_seq = ''
             e = breakpoint_edge(el[0], hom=hom, hom_seq=hom_seq)
-            edges.append((e, int(el[3])))
+            edges.append((e, int(el[1])))
         edges.sort(key=lambda x: hg.absPos(
                     x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
         return edges
@@ -1337,7 +1341,6 @@ class bam_to_breakpoint():
             return self.load_edges("%s_edges.txt" % amplicon_name)
         # if amplicon_name is not None and os.path.exists("%s_edges_unfiltered.txt" % amplicon_name):
         #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
-
         if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
             eilist = self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
         else:
@@ -1352,14 +1355,13 @@ class bam_to_breakpoint():
             if amplicon_name is not None:
                 edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
                 for e in eilist:
-                    edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+                    edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
                 edge_file.close()
         eiSet = Set([(e[0].v1.chrom, e[0].v1.pos, e[0].v1.strand, e[0].v2.chrom, e[0].v2.pos, e[0].v2.strand) for e in eilist])
-
         for i, msr in zip(ilist, msrlist):
             elist = []
             for e in eilist:
-                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
+                if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
                     elist.append(e)
             ms_vlist = []
             msv_index = {}
@@ -1374,7 +1376,7 @@ class bam_to_breakpoint():
             sys.stdout.flush()
             for msv in ms_vlist:
                 msi = msv_index[msv]
-                if msr[msi].info['end_refined']:
+                if ('end_refined' in msr[msi].info) and msr[msi].info['end_refined']:
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                     if len(msve) == 0:
                         print "finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1])
@@ -1388,7 +1390,7 @@ class bam_to_breakpoint():
                                     msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
                             msve = [ebest]
-                            print "finesearch discordant edge found", i.chro, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1]
+                            print "finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1]
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
                                 eilist.append(ebest)
@@ -1408,7 +1410,7 @@ class bam_to_breakpoint():
             edge_file = open("%s_edges.txt" % amplicon_name, 'w')
             for e in eilist:
                 edge_file.write("%s\t%s\t%s\t%s\n" %
-                                (str(e[0]), e[0].hom, e[0].hom_seq, e[1]))
+                                (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
             edge_file.close()
         return eilist
 
@@ -2056,33 +2058,70 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None):
+    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='regular'):
         fighsize = 12
-        # fighsize = 24
         figvsize = 5
-        # figvsize = 5.85
+        if font == 'large':
+            matplotlib.rcParams.update({'font.size': 18})
+            figvsize = 5.85
+        if font == 'all_amplicons':
+            matplotlib.rcParams.update({'font.size': 28})
+            fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
-        # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
-        # plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
         # dpi = 300
+        if font == 'large':
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
+        if font == 'all_amplicons':
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
-        gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
+        if font == 'all_amplicons':
+            gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
         ax = fig.add_subplot(gs[0,0])
-        # plt.title(outName, fontsize=56)
         plt.title(os.path.basename(amplicon_name))
+        if font == 'large':
+            plt.title(os.path.basename(amplicon_name), fontsize=28)
+        if font == 'all_amplicons':
+            plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
         ax.set_xlim(0, 1)
         ax.set_ylabel("Coverage")
+        ax.yaxis.set_label_coords(-0.05, 0.33)
+        ax2.yaxis.set_label_coords(1.05, 0.33)
         for b in ilist.offset_breaks():
             ax.axvline(b[0], linestyle=b[1], color='k')
             ax3.axvline(b[0], linestyle=b[1], color='k')
 
         cx = []
         wc = []
+
+        elist_dict = {}
+        max_edge = 4
+        scale_max_cov = 0
+        scale_max_ms = 0
+        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        sensitive_elist = self.get_sensitive_discordant_edges(
+            ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
+        eilist = sensitive_elist
+
+
+        for i, msr in zip(ilist, msrlist):
+            de = [e for e in eilist if e[0].v1.pos != -1 and hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
+            elist_dict[i] = de
+            elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
+            for e in eilist:
+                eposlist = []
+                if e[0].v1.pos != -1:
+                    eposlist.append(hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos))
+                if e[0].v2.pos != -1:
+                    eposlist.append(hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos))
+                if len(scale_list) == 0 or len(hg.interval_list(eposlist).intersection(scale_list)) > 0:
+                    max_edge = max(max_edge, e[1])
+
         for i in ilist:
             if i.size() > 1000000:
                 wc_i = [w for w in self.window_coverage(i, 10000)]
@@ -2095,23 +2134,8 @@ class bam_to_breakpoint():
         ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=0001)
         cmax = max([c[1] for c in wc])
 
-        elist_dict = {}
-        max_edge = 4
-        scale_max_cov = 0
-        scale_max_ms = 0
-        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-
-        sensitive_elist = self.get_sensitive_discordant_edges(
-            ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
-        eilist = sensitive_elist
-
         covl = []
         for i, msr in zip(ilist, msrlist):
-            de = [e for e in eilist if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i)]  # self.interval_discordant_edges(i)
-            elist_dict[i] = de
-            elist_dict[i].sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-            max_edge = max(max_edge, max([1] + [e[1] for e in de
-                if len(scale_list) == 0 or len(hg.interval_list([hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos), hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos)]).intersection(scale_list)) > 0]))
             for seg in msr:
                 avg_cov = np.average([c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end])
                 if len(scale_list) == 0 or len(hg.interval_list([i]).intersection(scale_list)) > 0:
@@ -2147,9 +2171,14 @@ class bam_to_breakpoint():
         for i in ilist:
             for el in elist_dict[i]:
                 e = el[0]
-                if ilist.xpos(e.v2.chrom, e.v2.pos) is None:
+                if ilist.xpos(e.v2.chrom, e.v2.pos) is None and ilist.xpos(e.v1.chrom, e.v1.pos) is None:
+                    continue
+                elif ilist.xpos(e.v2.chrom, e.v2.pos) is None:
                     ax2.axvline(ilist.xpos(e.v1.chrom, e.v1.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(el[1])/max_edge), alpha=0.5, zorder=10)
                     ax2.plot((ilist.xpos(e.v1.chrom, e.v1.pos), ilist.xpos(e.v1.chrom, e.v1.pos) - 0.01 * e.v1.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
+                elif ilist.xpos(e.v1.chrom, e.v1.pos) is None:
+                    ax2.axvline(ilist.xpos(e.v2.chrom, e.v2.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(el[1])/max_edge), alpha=0.5, zorder=10)
+                    ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
                 else:
                     xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2
                     xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
@@ -2165,36 +2194,46 @@ class bam_to_breakpoint():
         ry = 0.60
         ty = 0.65
         ogene_width = 4
-        # ry = 0.85
-        # ry = 0.87
-        # ogene_width = 12
+        if font == 'large':
+            ry = 0.85
+            ry = 0.87
+            ry = 0.77
+            ogene_width = 12
         for i in ilist:
-            glist = hg.interval_list([i]).intersection(hg.oncogene_list)
+            foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
+            glist = hg.interval_list([i]).intersection(hg.oncogene_list) + hg.interval_list([i]).intersection(hg.interval_list([hg.interval(foxe1_gff, file_format='gff')]))
             for g in glist:
-                # if gparity == 0:
-                #     ty = -0.1
-                #     ty = -0.07
-                # else:
-                #     ty = 0.20
-                #     ty = 0.3
+                if font == 'large':
+                    ty = 0
+                elif gparity == 0:
+                    ty = -0.1
+                    ty = -0.07
+                else:
+                    ty = 0.20
+                    ty = 0.3
                 ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
-                ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
-                # ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                if font == 'large':
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                else:
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
                 gparity = (gparity + 1) % 2
             for s in segments:
                 if not i.intersects(s):
                     continue
                 ss = i.intersection(s)
                 ax3.add_patch(Rectangle([ilist.xpos(i.chrom, max(ss.start, i.start)), 0.65], ilist.xpos(i.chrom, min(ss.end, i.end)) - ilist.xpos(i.chrom, max(ss.start, i.start)), 0.25, fc=chrcolor[s.info[1]], ec='k'))
-                ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
-                # ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                if font == 'large':
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                else:
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
         
 
-        # axyticks = ax.get_yticks()
-        # ax.set_yticks([0, axyticks[-1]])
-        # ax2yticks = ax2.get_yticks()
-        # ax2.set_yticks([0, ax2yticks[-1]])
+        if font == 'large':
+            axyticks = ax.get_yticks()
+            ax.set_yticks([0, axyticks[-1]])
+            ax2yticks = ax2.get_yticks()
+            ax2.set_yticks([0, ax2yticks[-1]])
 
 
         ax.xaxis.set_visible(False)

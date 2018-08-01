@@ -237,7 +237,6 @@ else:
     amplicon_id = 1
 
 for ig in irdgroups:
-    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
     ilist = ig
     ird = ig[0]
     old_stdout = sys.stdout
@@ -255,6 +254,7 @@ for ig in irdgroups:
     summary_logger.info("OncogenesAmplified = " + str(oncolist))
     amplicon_name = outName + '_amplicon' + str(amplicon_id)
     if args.runmode in ['FULL', 'CYCLES', 'BPGRAPH']:
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
         graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
@@ -263,8 +263,9 @@ for ig in irdgroups:
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
     if args.runmode in ['FULL', 'SVVIEW']:
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
-            ilist, amplicon_name, segments=segments)
+            ilist, amplicon_name, segments=segments, font='large')
     summary_logger.info(
             '-----------------------------------------------------------------------------------------')
     iout = open(amplicon_name + '_logs.txt', 'w')
@@ -275,11 +276,13 @@ for ig in irdgroups:
     continue
 
 
-if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL', 'SVVIEW']):
+if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL', 'SVVIEW', 'VIRALVIEW']):
+    amplicon_id = 1
     for i in irdgroups[0]:
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
-        bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting viral view for interval " + str(i))
+        bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]), font='large')
         amplicon_id += 1
 
 

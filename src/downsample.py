@@ -23,7 +23,7 @@
 import pysam
 import argparse
 import math
-from time import clock
+from time import clock, time
 from collections import defaultdict
 from sets import Set
 from cStringIO import StringIO
@@ -37,6 +37,7 @@ from matplotlib.patches import Ellipse
 import logging
 import JobNotifier
 import random
+import hashlib
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
@@ -115,28 +116,35 @@ final = args.final
 
 if cstats[0] <= final:
     exit()    
-ratio = float(final) / cstats[0]
+ratio = float(final) / float(cstats[0])
+
 
 
 downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
     downsample_dir = args.downsample_dir
 
+i=0
+rulist = []
+t0 = time()
 b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
 for a in bamFile.fetch():
-    random.seed(a.qname)
-    if random.uniform(0, 1) < ratio:
+    random.seed(a.query_name + str(t0))
+    random.uniform(0,1)
+    ru = random.uniform(0, 1)
+    if ru < ratio:
         b2.write(a)
 b2.close()
 pysam.index(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam')
+print ("Downsampling:", args.bam[0], float(cstats[0]), final, ratio)
 
-if args.cbam is not None:
-    c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)
-    for a in cbam.fetch():
-        random.seed(a.qname)
-        if random.uniform(0, 1) < ratio:
-            c2.write(a)
-    c2.close()
-    pysam.index(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam')
+# if args.cbam is not None and not os.path.exists(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam'):
+#     c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)
+#     for a in cbam.fetch():
+#         random.seed(a.qname)
+#         if random.uniform(0, 1) < ratio:
+#             c2.write(a)
+#     c2.close()
+#     pysam.index(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam')
 
 
