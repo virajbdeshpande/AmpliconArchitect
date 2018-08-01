@@ -265,7 +265,7 @@ for ig in irdgroups:
     if args.runmode in ['FULL', 'SVVIEW']:
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
-            ilist, amplicon_name, segments=segments)
+            ilist, amplicon_name, segments=segments, font='large')
     summary_logger.info(
             '-----------------------------------------------------------------------------------------')
     iout = open(amplicon_name + '_logs.txt', 'w')
