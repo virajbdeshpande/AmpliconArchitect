@@ -2093,6 +2093,9 @@ class bam_to_breakpoint():
         ax.set_ylabel("Coverage")
         ax.yaxis.set_label_coords(-0.05, 0.25)
         ax2.yaxis.set_label_coords(1.05, 0.33)
+        if font == 'all_amplicons':
+            ax.set_ylabel("")
+            ax2.set_ylabel("")
         for b in ilist.offset_breaks():
             ax.axvline(b[0], linestyle=b[1], color='k')
             ax3.axvline(b[0], linestyle=b[1], color='k')
