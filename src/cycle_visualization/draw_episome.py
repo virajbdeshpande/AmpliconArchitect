@@ -384,7 +384,7 @@ class EpisomeDrawer():
                     # print ('cycle:', seg[0], " ", yoff - height / 2, " ", seg[1] - seg[0], ' ', height)
                     chromosome = self.get_chromosome(seg[0], seg[1], chr_offs)
                     tooltip_url = self.BASE_URL % (chromosome, seg[3], seg[4])
-                    rectangles.append(Rectangle(seg[0], (yoff - height / 4), seg[1] - seg[0], height, tooltip_url, 'rectangle ' + css_class))
+                    rectangles.append(Rectangle(seg[0], (yoff - height / 3), seg[1] - seg[0], height, tooltip_url, 'rectangle ' + css_class))
                     segments_labels.append(Text(seg[-1], seg[0] - 0.04, yoff - 5, css_class=css_class))
 
                     if (segment_num + 1 < len(cycle) and (cycle[segment_num + 1] != '0' and dirs[j] < 0)) or cycle[len(cycle) - 1] != '0' or (segment_num > 0 and dirs[j] > 0):
