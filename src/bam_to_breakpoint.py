@@ -2092,7 +2092,7 @@ class bam_to_breakpoint():
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
         ax.set_xlim(0, 1)
         ax.set_ylabel("Coverage")
-        ax.yaxis.set_label_coords(-0.05, 0.33)
+        ax.yaxis.set_label_coords(-0.05, 0.25)
         ax2.yaxis.set_label_coords(1.05, 0.33)
         for b in ilist.offset_breaks():
             ax.axvline(b[0], linestyle=b[1], color='k')
@@ -2158,6 +2158,8 @@ class bam_to_breakpoint():
 
         y_scale = 3.0
         # y_scale = 2.5
+        if font == 'all_amplicons':
+            y_scale = 2.0
         if scale_max_cov > 0:
             ax.set_ylim(0, y_scale * scale_max_cov)
         else:
@@ -2218,7 +2220,7 @@ class bam_to_breakpoint():
                 elif font == 'all_amplicons':
                     ogene_width = 36
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [0.85, 0.85], 'r-', linewidth=ogene_width)
-                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, 0.37 * gparity, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=48, zorder=4)
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, -.05 + 0.37 * gparity, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=48, zorder=4)
                 else:
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
@@ -2264,6 +2266,8 @@ class bam_to_breakpoint():
             for i in ilist:
                 if i.chrom != previous_chrom:
                     chrom_index = 1
+                else:
+                    chrom_index += 1
                 imin = ilist.xpos(i.chrom, i.start)
                 imax = ilist.xpos(i.chrom, i.end)
                 chrom_string = i.chrom if imax - imin > 0.05 else i.chrom.strip('chr')
