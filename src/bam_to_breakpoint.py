@@ -2065,7 +2065,8 @@ class bam_to_breakpoint():
             matplotlib.rcParams.update({'font.size': 18})
             figvsize = 5.85
         if font == 'all_amplicons':
-            matplotlib.rcParams.update({'font.size': 28})
+            matplotlib.rcParams.update({'font.size': 48})
+            figvsize = 5.85
             fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
@@ -2073,18 +2074,19 @@ class bam_to_breakpoint():
         if font == 'large':
             plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
         if font == 'all_amplicons':
-            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/5.85, top=85/100.0)
 
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
         if font == 'all_amplicons':
-            gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
+            gs = gridspec.GridSpec(2, 1, height_ratios=[5,4])
         ax = fig.add_subplot(gs[0,0])
-        plt.title(os.path.basename(amplicon_name))
         if font == 'large':
             plt.title(os.path.basename(amplicon_name), fontsize=28)
-        if font == 'all_amplicons':
-            plt.title(os.path.basename(amplicon_name), fontsize=56)
+        elif font != 'all_amplicons':
+            plt.title(os.path.basename(amplicon_name))
+        # if font == 'all_amplicons':
+        #     plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
         ax2.set_ylabel("Copy number")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
@@ -2200,8 +2202,7 @@ class bam_to_breakpoint():
             ry = 0.77
             ogene_width = 12
         for i in ilist:
-            foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
-            glist = hg.interval_list([i]).intersection(hg.oncogene_list) + hg.interval_list([i]).intersection(hg.interval_list([hg.interval(foxe1_gff, file_format='gff')]))
+            glist = hg.interval_list([i]).intersection(hg.oncogene_list)
             for g in glist:
                 if font == 'large':
                     ty = 0
@@ -2211,10 +2212,15 @@ class bam_to_breakpoint():
                 else:
                     ty = 0.20
                     ty = 0.3
-                ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
                 if font == 'large':
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                elif font == 'all_amplicons':
+                    ogene_Width = 48
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [0.85], 'r-', linewidth=ogene_width)
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, 0.33 * gparity, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=48, zorder=4)
                 else:
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
                 gparity = (gparity + 1) % 2
             for s in segments:
@@ -2224,6 +2230,8 @@ class bam_to_breakpoint():
                 ax3.add_patch(Rectangle([ilist.xpos(i.chrom, max(ss.start, i.start)), 0.65], ilist.xpos(i.chrom, min(ss.end, i.end)) - ilist.xpos(i.chrom, max(ss.start, i.start)), 0.25, fc=chrcolor[s.info[1]], ec='k'))
                 if font == 'large':
                     ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                elif font == 'large' or font == 'all_amplicons':
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=48)
                 else:
                     ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
