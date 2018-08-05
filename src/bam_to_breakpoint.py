@@ -730,7 +730,7 @@ class bam_to_breakpoint():
         cd = 1
         for fi in range(len(meanshift)):
             f = meanshift[fi]
-            if not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
+            if len(f) == 0 or not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
                 continue
             for pi in range(len(f)):
                 if f[pi].start + self.ms_window_size >= position:
