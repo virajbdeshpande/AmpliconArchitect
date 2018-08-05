@@ -155,7 +155,7 @@ AmpliconArchitect.py --help
 sudo pip install Flask
 
 ## Running the visualization tool locally on port 8000:
-export FLASK_APP=episome/web_app.py
+export FLASK_APP=cycle_visualiation/web_app.py
 flask run --host=0.0.0.0 --port=8000
 
 #==============================================================================================================================================================================================
