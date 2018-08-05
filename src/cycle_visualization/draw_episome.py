@@ -51,7 +51,7 @@ class EpisomeDrawer():
         chr_dict = {}  # Dictionary that maintains the chromosomes, etc.
         lines = content.split('\n')
         for linestr in lines:
-#             print (linestr)
+            # print (linestr)
             if (linestr == [] or linestr == ''):
                 pass
             elif re.match('Interval', linestr):
@@ -62,7 +62,7 @@ class EpisomeDrawer():
                 intervals.append([chr_name, start, end])
             elif (re.match('Segment', linestr)):
                 line = re.split('[\t\s]+', linestr)
-    #             print(line[3], line[4])
+                # print(line[3], line[4])
                 m = re.search('(gi\|[^\|]+)', line[2])
                 if (m != None):
                     line[2] = m.group(1)
@@ -99,9 +99,9 @@ class EpisomeDrawer():
                     copy_counts.append(copy_count)
                     cycles.append(cycle)
                     directions.append(dirs)
-#         print(segs)
-#         print(cycles)
-#         print(chr_dict)
+        # print(segs)
+        # print(cycles)
+        # print(chr_dict)
         return (intervals, segs, seg_name_to_index_map, cycles, directions, chr_dict, copy_counts, cycles_names)
 
 
@@ -118,7 +118,7 @@ class EpisomeDrawer():
             # chr_offs['src']=[0,s_len]
             # offs=offs+s_len
             for ch in sorted(chr_offs.keys()):
-    #             print "Chr types:", ch
+                # print "Chr types:", ch
                 if (re.match('chr', ch)):
                     chr_offs[ch] = [offs, h_len]
                     offs = offs + h_len
@@ -130,7 +130,7 @@ class EpisomeDrawer():
                     offs = offs + v_len
         elif (numkeys == 1):
             for ch in sorted(chr_offs.keys()):
-    #             print "Chr types:", ch
+                # print "Chr types:", ch
                 if (re.match('gi', ch)):  # Viral
                     chr_offs[ch] = [0, 1]
                 elif (re.match('chr', ch)):
@@ -216,7 +216,7 @@ class EpisomeDrawer():
         compactL = []
         x = L.pop()
         while (not(L == [])):
-    #         print("x:", x)
+            # print("x:", x)
             x1 = L.pop()
             if (x[0] - x1[1] < maxGap):
                 x[0] = x1[0]
@@ -238,18 +238,18 @@ class EpisomeDrawer():
                 offset += intend - intbeg + gap
             elif (intbeg <= beg):
                 offset += beg - intbeg
-    #         print("offset:", offset)
+            # print("offset:", offset)
         return(offset)
 
     def convertSegmentCoordinates(self, segs, span, compact, maxGap, ilist):
         newlist = []
         for s in segs:
             len = s[1] - s[0]
-#             offset = self.findMergedIntervalOffset(compact[s[4]], s[0], maxGap[s[4]])
-    #         print "chr_offs", s[4]
-    #         print "chr_offs", chr_offs[s[4]][0]
-#             x1 = chr_offs[s[4]][0] + chr_offs[s[4]][1] * (offset + maxGap[s[4]] / 2.0) / (span[s[4]] + 0.0)
-#             x2 = chr_offs[s[4]][0] + chr_offs[s[4]][1] * (offset + len + maxGap[s[4]] / 2.0) / (span[s[4]] + 0.0)
+            # offset = self.findMergedIntervalOffset(compact[s[4]], s[0], maxGap[s[4]])
+            # print "chr_offs", s[4]
+            # print "chr_offs", chr_offs[s[4]][0]
+            # x1 = chr_offs[s[4]][0] + chr_offs[s[4]][1] * (offset + maxGap[s[4]] / 2.0) / (span[s[4]] + 0.0)
+            # x2 = chr_offs[s[4]][0] + chr_offs[s[4]][1] * (offset + len + maxGap[s[4]] / 2.0) / (span[s[4]] + 0.0)
             chromosome_name = s[4]
             x1 = ilist.xpos(chromosome_name, s[0])
             x2 = ilist.xpos(chromosome_name, s[1])
@@ -260,7 +260,7 @@ class EpisomeDrawer():
     def drawAxes(self, span, compact, maxIntvl, chr_offs, cycles_section_bottom):
         for ch in compact.keys():
             for s in compact[ch]:
-    #             print "ch:", ch, s[0], s[1]
+                # print "ch:", ch, s[0], s[1]
                 len = s[1] - s[0]
                 offset = self.findMergedIntervalOffset(compact[ch], s[0], maxIntvl[ch])
                 x1 = chr_offs[ch][0] + chr_offs[ch][1] * (offset + maxIntvl[ch] / 2.0) / (span[ch] + 0.0)
@@ -275,7 +275,7 @@ class EpisomeDrawer():
             ox = ox + 0.011
         else:
             oy = 0
-    #     print("labeloffset:", x, x - prevX, ox, oy)
+        # print("labeloffset:", x, x - prevX, ox, oy)
         return(ox, oy)
 
 
@@ -288,7 +288,7 @@ class EpisomeDrawer():
                 offset = self.findMergedIntervalOffset(compact[ch], s[0], maxIntvl[ch])
                 offsetX = chr_offs[ch][0] + chr_offs[ch][1] * (offset + maxIntvl[ch] / 2) / (span[ch] + 0.0)
                 newList.append([offsetX, s[0]])
-#                 print ("s[0]:", s[0])
+                # print ("s[0]:", s[0])
 
                 offset = self.findMergedIntervalOffset(compact[ch], s[1], maxIntvl[ch])
                 offsetX = chr_offs[ch][0] + chr_offs[ch][1] * (offset + maxIntvl[ch] / 2) / (span[ch] + 0.0)
@@ -348,7 +348,7 @@ class EpisomeDrawer():
         yoff = top_y - 10
         delx = 0.02
         dely = 2
-    #     print(cycles)
+        # print(cycles)
         cycle_count = 0
         self.cycle_show.append([])
         for i in range(len(cycles)):
@@ -360,28 +360,28 @@ class EpisomeDrawer():
                 bottom_y_of_cycle += height + 2 * dely
             if len(cycle) > 0 and abs(dirs[len(cycle) - 1]) > 0:
                 bottom_y_of_cycle += height + 2 * dely
-#             yoff = bottom_y_of_cycle
+            # yoff = bottom_y_of_cycle
             yoff += 16
-#             print('start yoff', yoff)
+            # print('start yoff', yoff)
 
             rectangles = []
             segments_labels = []
             css_class = '%s_cycle_%s' % (struct, cycle_count)
-            cycle_title = 'Cycle %s' % (cycles_names[cycle_count]) + ': CN=%.2f' % float(copy_counts[cycle_count])
+            cycle_title = 'Read %s' % (cycles_names[cycle_count]))# + ': CN=%.2f' % float(copy_counts[cycle_count])
             self.cycle_show[struct].append((cycle_title, css_class))
             prev = -1000
             first = -1000
             segment_num = 0
-#             print ("cycle %s :" % str(cycle_count + 1), cycle)
+            # print ("cycle %s :" % str(cycle_count + 1), cycle)
             for j in range(len(cycle)):
                 elem = cycle[j]
-#                 print(cycle)
-#                 print(elem)
-#                 print(seg_name_to_index_map)
+                # print(cycle)
+                # print(elem)
+                # print(seg_name_to_index_map)
                 if elem != '0':
                     seg = segs[seg_name_to_index_map[elem]]
-#                     print ("cycle label:", seg)
-#                     print ('cycle:', seg[0], " ", yoff - height / 2, " ", seg[1] - seg[0], ' ', height)
+                    # print ("cycle label:", seg)
+                    # print ('cycle:', seg[0], " ", yoff - height / 2, " ", seg[1] - seg[0], ' ', height)
                     chromosome = self.get_chromosome(seg[0], seg[1], chr_offs)
                     tooltip_url = self.BASE_URL % (chromosome, seg[3], seg[4])
                     rectangles.append(Rectangle(seg[0], (yoff - height / 2), seg[1] - seg[0], height, tooltip_url, 'rectangle ' + css_class))
@@ -400,7 +400,7 @@ class EpisomeDrawer():
                     t = segs[seg_name_to_index_map[elem]]
                     prev_dir = dirs[j - 1] if j > 0 else dirs[j]
                     x1, y1, typ1, x2, y2, typ2 = self.convertEdgeOrientation(prev_dir, dirs[j], s, t, yoff - height - 2 * dely, yoff)
-#                     print("edge coord", x1, y1, typ1, x2, y2, typ2)
+                    # print("edge coord", x1, y1, typ1, x2, y2, typ2)
                     self.drawEdge(x1, y1, typ1, x2, y2, typ2, height, 0.02 + segment_num * 0.001, 2, css_class)
                 prev = elem
                 yoff = yoff + height + 2 * dely
@@ -425,15 +425,15 @@ class EpisomeDrawer():
                 self.drawLastEdge(x1, y1, last_dir, x2, y2, first_dir, height, 0.02, 2, css_class)
                 yoff = yoff + height + 2 * dely
             cycle_count += 1
-#             print ('bottom and top: ', yoff, top_y_of_cycle)
-#             print ('yoff', yoff)
+            # print ('bottom and top: ', yoff, top_y_of_cycle)
+            # print ('yoff', yoff)
             background_opacity = '1' if cycle_count % 2 else '0';
             self.cycle_sections.append(CycleSection(top_y_of_cycle, bottom_y_of_cycle, cycle_title, rectangles, segments_labels, background_opacity=background_opacity, css_class=css_class))
             yoff = bottom_y_of_cycle + height
 
 
     def convertEdgeOrientation(self, el1, el2, s, t, y1, y2):
-    #     print("edge", el1, el2)
+        # print("edge", el1, el2)
         if (el1 < 0):
             typ1 = 0
             x1 = s[0]
@@ -453,7 +453,7 @@ class EpisomeDrawer():
 
 
     def drawLine(self, x1, y1, x2, y2, css_class):
-#         print("draw line", x1, y1, x2, y2)
+        # print("draw line", x1, y1, x2, y2)
         llim = 0.001
         rlim = 0.999
         if (x1 < llim):
@@ -476,7 +476,7 @@ class EpisomeDrawer():
 
 
     def drawEdge(self, x1, y1, t1, x2, y2, t2, h, delx, dely, css_class):
-#         print("drawing edge:", x1, y1, t1, x2, y2, t2, h, delx, dely)
+        # print("drawing edge:", x1, y1, t1, x2, y2, t2, h, delx, dely)
         if (y1 < y2):
             dely = -dely
             h = -h
@@ -550,13 +550,13 @@ class EpisomeDrawer():
         cycles_section_bottom = cycles_section_top + cycles_section_size
 
 
-#         print ('cycle section_top:', cycles_section_top)
-#         print ('cycle section_bottom:', cycles_section_bottom)
+        # print ('cycle section_top:', cycles_section_top)
+        # print ('cycle section_bottom:', cycles_section_bottom)
         for i in range(len(input_files)):
             input_content = input_files[i][1]
             self.file_names.append(Text('%s: %s' % (str(i + 1), input_files[i][0]), 0.5, tops[i] - 27))
-#             print ('bottom:', bottoms[i])
-#             print ('top:', tops[i])
+            # print ('bottom:', bottoms[i])
+            # print ('top:', tops[i])
             intervals, segments, seg_name_to_index_map, cycles, directions, chr_offs, copy_counts, cycles_names = self.readDataFile(input_content)
             if i == 0:
                 self.reconstructed_cycles = [cname for cname in cycles_names]
@@ -581,9 +581,9 @@ class EpisomeDrawer():
             if i == 0:
                 self.drawSections(intervals, ilist, cycles_section_top, cycles_section_bottom, auto_scale)
 
-#             self.drawAxesLabels(sortedL, compact, maxIntvl, span, chr_offs, bottoms[i])
-#             self.drawAxes(span, compact, maxIntvl, chr_offs, bottoms[i])
-#             self.drawAxesDottedLines(sortedL, compact, maxIntvl, span, chr_offs, tops[i], bottoms[i])
+            # self.drawAxesLabels(sortedL, compact, maxIntvl, span, chr_offs, bottoms[i])
+            # self.drawAxes(span, compact, maxIntvl, chr_offs, bottoms[i])
+            # self.drawAxesDottedLines(sortedL, compact, maxIntvl, span, chr_offs, tops[i], bottoms[i])
             self.drawCycles(newsegs, seg_name_to_index_map, cycles, directions, tops[i], chr_offs, i, copy_counts, cycles_names)
 
         # fig.canvas.mpl_connect('motion_notify_event', on_plot_hover)
