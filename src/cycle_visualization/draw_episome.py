@@ -4,7 +4,7 @@ import re
 import sys, getopt
 
 from graphic_elements import Rectangle, HorizontalLine, VerticalLine, Arrow, Text, CycleSection
-from .. import hg19util as hg
+import hg19util as hg
 
 class Segment():
     def __init__(self, start, end, viral, segment_name, chr_name):
