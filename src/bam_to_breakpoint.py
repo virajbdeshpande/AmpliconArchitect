@@ -2216,7 +2216,7 @@ class bam_to_breakpoint():
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
                 elif font == 'all_amplicons':
-                    ogene_Width = 48
+                    ogene_width = 48
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [0.85, 0.85], 'r-', linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, 0.33 * gparity, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=48, zorder=4)
                 else:
