@@ -367,7 +367,7 @@ class EpisomeDrawer():
             rectangles = []
             segments_labels = []
             css_class = '%s_cycle_%s' % (struct, cycle_count)
-            cycle_title = 'Read %s' % (cycles_names[cycle_count]))# + ': CN=%.2f' % float(copy_counts[cycle_count])
+            cycle_title = 'Read %s' % (cycles_names[cycle_count])# + ': CN=%.2f' % float(copy_counts[cycle_count])
             self.cycle_show[struct].append((cycle_title, css_class))
             prev = -1000
             first = -1000
