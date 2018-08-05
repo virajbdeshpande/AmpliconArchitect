@@ -2229,7 +2229,7 @@ class bam_to_breakpoint():
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
         
 
-        if font == 'large':
+        if font == 'large' or font == 'all_amplicons':
             axyticks = ax.get_yticks()
             ax.set_yticks([0, axyticks[-1]])
             ax2yticks = ax2.get_yticks()
@@ -2249,28 +2249,43 @@ class bam_to_breakpoint():
         ax3.spines['right'].set_visible(False)
         ax3.tick_params('x', length=0, which='major')
         ax3.tick_params('x', length=5, which='minor')
-        chrmin = {}
-        chrmax = {}
-        for i in ilist:
-            if i.chrom not in chrmin:
-                chrmin[i.chrom] = ilist.xpos(i.chrom, i.start)
-                chrmax[i.chrom] = ilist.xpos(i.chrom, i.end)
-            else:
-                chrmin[i.chrom] = min(ilist.xpos(i.chrom, i.start), chrmin[i.chrom])
-                chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
-        chrposlist = []
-        for c in chrmin:
-            chrposlist.append((c if chrmax[c] - chrmin[c] > 0.05 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
-        ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
-        ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
+        if font == 'all_amplicons':
+            previous_chrom = ''
+            chrom_index = 1
+            interval_poslist = []
+            for i in ilist:
+                if i.chrom != previous_chrom:
+                    chrom_index = 1
+                imin = ilist.xpos(i.chrom, i.start)
+                imax = ilist.xpos(i.chrom, i.end)
+                chrom_string = i.chrom if imax - imin > 0.05 else i.chrom.strip('chr')
+                iposlist = ((chrom_string + '.' + str(chrom_index), (imax + imin) / 2))
+            ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in iposlist]))
+            ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in iposlist]))
+        else:
+            chrmin = {}
+            chrmax = {}
+            for i in ilist:
+                if i.chrom not in chrmin:
+                    chrmin[i.chrom] = ilist.xpos(i.chrom, i.start)
+                    chrmax[i.chrom] = ilist.xpos(i.chrom, i.end)
+                else:
+                    chrmin[i.chrom] = min(ilist.xpos(i.chrom, i.start), chrmin[i.chrom])
+                    chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
+            chrposlist = []
+            for c in chrmin:
+                chrposlist.append((c if chrmax[c] - chrmin[c] > 0.05 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
+            ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
+            ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
         xposlist = []
-        for i in ilist:
-            xposlist.append((str(i.start), ilist.xpos(i.chrom, i.start)))
-            xposlist.append((str(i.end), ilist.xpos(i.chrom, i.end)))
-        ax3.xaxis.set_minor_locator(ticker.FixedLocator([c[1] for c in xposlist]))
-        ax3.xaxis.set_minor_formatter(ticker.FixedFormatter([c[0] for c in xposlist]))
-        plt.setp(ax3.xaxis.get_minorticklabels(), rotation=90)
-        ax3.tick_params(axis='x', which='minor', pad=15)
+        if font != 'all_amplicons':
+            for i in ilist:
+                xposlist.append((str(i.start), ilist.xpos(i.chrom, i.start)))
+                xposlist.append((str(i.end), ilist.xpos(i.chrom, i.end)))
+            ax3.xaxis.set_minor_locator(ticker.FixedLocator([c[1] for c in xposlist]))
+            ax3.xaxis.set_minor_formatter(ticker.FixedFormatter([c[0] for c in xposlist]))
+            plt.setp(ax3.xaxis.get_minorticklabels(), rotation=90)
+            ax3.tick_params(axis='x', which='minor', pad=15)
         # ax3.tick_params(axis='x', which='minor', pad=-5)
         ax3.yaxis.set_major_formatter(ticker.NullFormatter())
         ax3.set_ylim(0,1)
