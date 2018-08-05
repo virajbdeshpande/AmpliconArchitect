@@ -1395,13 +1395,10 @@ class bam_to_breakpoint():
                                 elist.append(ebest)
                                 eilist.append(ebest)
                                 eiSet.add((ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand))
-                                if hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos).intersects(i):
-                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                    eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
-                                elif len(hg.interval_list([hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos)]).intersection(ilist)) > 0:
-                                    alist = [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]
-                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), alist))
-                                    eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
+                                if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos)]).intersection(ilist)) > 0:
+                                    if (ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand) not in eiSet:
+                                        eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), ebest[1]))
+                                        eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
