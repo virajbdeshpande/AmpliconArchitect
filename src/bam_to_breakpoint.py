@@ -2259,7 +2259,7 @@ class bam_to_breakpoint():
                 imin = ilist.xpos(i.chrom, i.start)
                 imax = ilist.xpos(i.chrom, i.end)
                 chrom_string = i.chrom if imax - imin > 0.05 else i.chrom.strip('chr')
-                iposlist = ((chrom_string + '.' + str(chrom_index), (imax + imin) / 2))
+                iposlist.append((chrom_string + '.' + str(chrom_index), (imax + imin) / 2))
             ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in iposlist]))
             ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in iposlist]))
         else:
