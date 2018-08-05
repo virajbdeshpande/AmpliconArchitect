@@ -2088,7 +2088,7 @@ class bam_to_breakpoint():
         # if font == 'all_amplicons':
         #     plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
-        ax2.set_ylabel("Copy number")
+        ax2.set_ylabel("CN")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
         ax.set_xlim(0, 1)
         ax.set_ylabel("Coverage")
