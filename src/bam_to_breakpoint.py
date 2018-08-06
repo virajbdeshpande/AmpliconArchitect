@@ -730,7 +730,7 @@ class bam_to_breakpoint():
         cd = 1
         for fi in range(len(meanshift)):
             f = meanshift[fi]
-            if not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
+            if len(f) == 0 or not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
                 continue
             for pi in range(len(f)):
                 if f[pi].start + self.ms_window_size >= position:
@@ -1395,11 +1395,10 @@ class bam_to_breakpoint():
                                 elist.append(ebest)
                                 eilist.append(ebest)
                                 eiSet.add((ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand))
-                                if hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos).intersects(i):
-                                    elist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
                                 if len(hg.interval_list([hg.interval(ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.pos)]).intersection(ilist)) > 0:
-                                    eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), [(hg.interval(self.get_mates(a[1])[0], bamfile=self.bamfile), self.get_mates(a[1])) for a in ebest[1]]))
-                                    eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
+                                    if (ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand) not in eiSet:
+                                        eilist.append((breakpoint_edge(ebest[0].v2, ebest[0].v1), ebest[1]))
+                                        eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
@@ -2065,7 +2064,8 @@ class bam_to_breakpoint():
             matplotlib.rcParams.update({'font.size': 18})
             figvsize = 5.85
         if font == 'all_amplicons':
-            matplotlib.rcParams.update({'font.size': 28})
+            matplotlib.rcParams.update({'font.size': 48})
+            figvsize = 5.21
             fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
@@ -2073,25 +2073,29 @@ class bam_to_breakpoint():
         if font == 'large':
             plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
         if font == 'all_amplicons':
-            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.3/5.85, top=85/100.0)
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/5.21, top=95/100.0)
 
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
         if font == 'all_amplicons':
-            gs = gridspec.GridSpec(2, 1, height_ratios=[5,2])
+            gs = gridspec.GridSpec(2, 1, height_ratios=[5,4])
         ax = fig.add_subplot(gs[0,0])
-        plt.title(os.path.basename(amplicon_name))
         if font == 'large':
             plt.title(os.path.basename(amplicon_name), fontsize=28)
-        if font == 'all_amplicons':
-            plt.title(os.path.basename(amplicon_name), fontsize=56)
+        elif font != 'all_amplicons':
+            plt.title(os.path.basename(amplicon_name))
+        # if font == 'all_amplicons':
+        #     plt.title(os.path.basename(amplicon_name), fontsize=56)
         ax2 = ax.twinx()
-        ax2.set_ylabel("Copy number")
+        ax2.set_ylabel("CN")
         ax3 = fig.add_subplot(gs[1,0], sharex=ax)
         ax.set_xlim(0, 1)
         ax.set_ylabel("Coverage")
-        ax.yaxis.set_label_coords(-0.05, 0.33)
+        ax.yaxis.set_label_coords(-0.05, 0.25)
         ax2.yaxis.set_label_coords(1.05, 0.33)
+        if font == 'all_amplicons':
+            ax.set_ylabel("")
+            ax2.set_ylabel("")
         for b in ilist.offset_breaks():
             ax.axvline(b[0], linestyle=b[1], color='k')
             ax3.axvline(b[0], linestyle=b[1], color='k')
@@ -2156,6 +2160,8 @@ class bam_to_breakpoint():
 
         y_scale = 3.0
         # y_scale = 2.5
+        if font == 'all_amplicons':
+            y_scale = 2.5
         if scale_max_cov > 0:
             ax.set_ylim(0, y_scale * scale_max_cov)
         else:
@@ -2199,9 +2205,10 @@ class bam_to_breakpoint():
             ry = 0.87
             ry = 0.77
             ogene_width = 12
+        ogene_plotted = []
         for i in ilist:
-            foxe1_gff = "chr9    RNG     Genes_hg19      100615536       100618986       1       +       .       ID=28946;Accession=NM_004473;Name=FOXE1;color=9400D3;url=http://genome.ucsc.edu/cgi-bin/hgTracks?&clade=vertebrate&org=Human&db=hg19&position=chr9:100615536-100618986&pix620&Submit=submit;"
-            glist = hg.interval_list([i]).intersection(hg.oncogene_list) + hg.interval_list([i]).intersection(hg.interval_list([hg.interval(foxe1_gff, file_format='gff')]))
+            glist = hg.interval_list([i]).intersection(hg.oncogene_list)
+            ogene_plotted += [g[1].info['Name'] for g in glist]
             for g in glist:
                 if font == 'large':
                     ty = 0
@@ -2211,10 +2218,15 @@ class bam_to_breakpoint():
                 else:
                     ty = 0.20
                     ty = 0.3
-                ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-', linewidth=ogene_width)
                 if font == 'large':
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
+                elif font == 'all_amplicons':
+                    ogene_width = 36
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [0.85, 0.85], 'r-', linewidth=ogene_width)
+                    ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, -.05 + 0.37 * gparity, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=48, zorder=4)
                 else:
+                    ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom')
                 gparity = (gparity + 1) % 2
             for s in segments:
@@ -2224,12 +2236,13 @@ class bam_to_breakpoint():
                 ax3.add_patch(Rectangle([ilist.xpos(i.chrom, max(ss.start, i.start)), 0.65], ilist.xpos(i.chrom, min(ss.end, i.end)) - ilist.xpos(i.chrom, max(ss.start, i.start)), 0.25, fc=chrcolor[s.info[1]], ec='k'))
                 if font == 'large':
                     ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=28)
+                elif font == 'large' or font == 'all_amplicons':
+                    ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0 , s.info[0], horizontalalignment='center', verticalalignment='bottom', fontsize=48)
                 else:
                     ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
-        
 
-        if font == 'large':
+        if font == 'large' or font == 'all_amplicons':
             axyticks = ax.get_yticks()
             ax.set_yticks([0, axyticks[-1]])
             ax2yticks = ax2.get_yticks()
@@ -2247,30 +2260,55 @@ class bam_to_breakpoint():
         ax2.spines['top'].set_visible(False)
         ax3.spines['left'].set_visible(False)
         ax3.spines['right'].set_visible(False)
+        ax2.spines['bottom'].set_linewidth(4)
         ax3.tick_params('x', length=0, which='major')
         ax3.tick_params('x', length=5, which='minor')
-        chrmin = {}
-        chrmax = {}
-        for i in ilist:
-            if i.chrom not in chrmin:
-                chrmin[i.chrom] = ilist.xpos(i.chrom, i.start)
-                chrmax[i.chrom] = ilist.xpos(i.chrom, i.end)
-            else:
-                chrmin[i.chrom] = min(ilist.xpos(i.chrom, i.start), chrmin[i.chrom])
-                chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
-        chrposlist = []
-        for c in chrmin:
-            chrposlist.append((c if chrmax[c] - chrmin[c] > 0.05 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
-        ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
-        ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
+        if font == 'all_amplicons':
+            previous_chrom = ''
+            chrom_index = 1
+            interval_poslist = []
+            for i in ilist:
+                if i.chrom != previous_chrom:
+                    chrom_index = 1
+                else:
+                    chrom_index += 1
+                previous_chrom = i.chrom
+                imin = ilist.xpos(i.chrom, i.start)
+                imax = ilist.xpos(i.chrom, i.end)
+                segname = ''
+                if imax - imin > 0.2:
+                    segname = i.chrom + '.' + str(chrom_index)
+                elif imax - imin > 0.05:
+                    segname = i.chrom.strip('chr') + '.' + str(chrom_index)
+                elif imax - imin > 0.02:
+                    segname = i.chrom.strip('chr')
+                interval_poslist.append((segname, (imax + imin) / 2))
+            ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in interval_poslist]))
+            ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in interval_poslist]))
+        else:
+            chrmin = {}
+            chrmax = {}
+            for i in ilist:
+                if i.chrom not in chrmin:
+                    chrmin[i.chrom] = ilist.xpos(i.chrom, i.start)
+                    chrmax[i.chrom] = ilist.xpos(i.chrom, i.end)
+                else:
+                    chrmin[i.chrom] = min(ilist.xpos(i.chrom, i.start), chrmin[i.chrom])
+                    chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
+            chrposlist = []
+            for c in chrmin:
+                chrposlist.append((c if chrmax[c] - chrmin[c] > 0.10 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
+            ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
+            ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
         xposlist = []
-        for i in ilist:
-            xposlist.append((str(i.start), ilist.xpos(i.chrom, i.start)))
-            xposlist.append((str(i.end), ilist.xpos(i.chrom, i.end)))
-        ax3.xaxis.set_minor_locator(ticker.FixedLocator([c[1] for c in xposlist]))
-        ax3.xaxis.set_minor_formatter(ticker.FixedFormatter([c[0] for c in xposlist]))
-        plt.setp(ax3.xaxis.get_minorticklabels(), rotation=90)
-        ax3.tick_params(axis='x', which='minor', pad=15)
+        if font != 'all_amplicons':
+            for i in ilist:
+                xposlist.append((str(i.start), ilist.xpos(i.chrom, i.start)))
+                xposlist.append((str(i.end), ilist.xpos(i.chrom, i.end)))
+            ax3.xaxis.set_minor_locator(ticker.FixedLocator([c[1] for c in xposlist]))
+            ax3.xaxis.set_minor_formatter(ticker.FixedFormatter([c[0] for c in xposlist]))
+            plt.setp(ax3.xaxis.get_minorticklabels(), rotation=90)
+            ax3.tick_params(axis='x', which='minor', pad=15)
         # ax3.tick_params(axis='x', which='minor', pad=-5)
         ax3.yaxis.set_major_formatter(ticker.NullFormatter())
         ax3.set_ylim(0,1)
