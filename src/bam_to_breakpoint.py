@@ -2065,7 +2065,7 @@ class bam_to_breakpoint():
             figvsize = 5.85
         if font == 'all_amplicons':
             matplotlib.rcParams.update({'font.size': 48})
-            figvsize = 5.85
+            figvsize = 5.21
             fighsize = 24
         fig = plt.figure(figsize=(fighsize,figvsize))
         plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/4.0, top=1-1/10.0)
@@ -2073,7 +2073,7 @@ class bam_to_breakpoint():
         if font == 'large':
             plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=2.1/5.85, top=90/100.0)
         if font == 'all_amplicons':
-            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/5.85, top=85/100.0)
+            plt.subplots_adjust(left=73/1000.0, right=1-73/1000.0, bottom=1/5.21, top=95/100.0)
 
         dpi = 1000.0/fighsize
         gs = gridspec.GridSpec(2, 1, height_ratios=[8,2])
@@ -2161,7 +2161,7 @@ class bam_to_breakpoint():
         y_scale = 3.0
         # y_scale = 2.5
         if font == 'all_amplicons':
-            y_scale = 2.0
+            y_scale = 2.5
         if scale_max_cov > 0:
             ax.set_ylim(0, y_scale * scale_max_cov)
         else:
@@ -2205,8 +2205,10 @@ class bam_to_breakpoint():
             ry = 0.87
             ry = 0.77
             ogene_width = 12
+        ogene_plotted = []
         for i in ilist:
             glist = hg.interval_list([i]).intersection(hg.oncogene_list)
+            ogene_plotted += [g[1].info['Name'] for g in glist]
             for g in glist:
                 if font == 'large':
                     ty = 0
@@ -2239,7 +2241,6 @@ class bam_to_breakpoint():
                 else:
                     ax3.text((ilist.xpos(i.chrom, max(ss.start, i.start)) + ilist.xpos(i.chrom, min(ss.end, i.end)))/2.0, 0.2+int(s[0])%2*0.15, s.info[0], horizontalalignment='center', verticalalignment='top')
                 # ax3.text((xpos(max(s[1].start, i.start)) + xpos(min(s[1].end, i.end)))/2.0, 0.2+0%2*0.15, s[0], horizontalalignment='center', verticalalignment='top')
-        
 
         if font == 'large' or font == 'all_amplicons':
             axyticks = ax.get_yticks()
@@ -2259,6 +2260,7 @@ class bam_to_breakpoint():
         ax2.spines['top'].set_visible(False)
         ax3.spines['left'].set_visible(False)
         ax3.spines['right'].set_visible(False)
+        ax2.spines['bottom'].set_linewidth(4)
         ax3.tick_params('x', length=0, which='major')
         ax3.tick_params('x', length=5, which='minor')
         if font == 'all_amplicons':
@@ -2270,10 +2272,17 @@ class bam_to_breakpoint():
                     chrom_index = 1
                 else:
                     chrom_index += 1
+                previous_chrom = i.chrom
                 imin = ilist.xpos(i.chrom, i.start)
                 imax = ilist.xpos(i.chrom, i.end)
-                chrom_string = i.chrom if imax - imin > 0.05 else i.chrom.strip('chr')
-                interval_poslist.append((chrom_string + '.' + str(chrom_index), (imax + imin) / 2))
+                segname = ''
+                if imax - imin > 0.2:
+                    segname = i.chrom + '.' + str(chrom_index)
+                elif imax - imin > 0.05:
+                    segname = i.chrom.strip('chr') + '.' + str(chrom_index)
+                elif imax - imin > 0.02:
+                    segname = i.chrom.strip('chr')
+                interval_poslist.append((segname, (imax + imin) / 2))
             ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in interval_poslist]))
             ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in interval_poslist]))
         else:
@@ -2288,7 +2297,7 @@ class bam_to_breakpoint():
                     chrmax[i.chrom] = max(ilist.xpos(i.chrom, i.end), chrmax[i.chrom])
             chrposlist = []
             for c in chrmin:
-                chrposlist.append((c if chrmax[c] - chrmin[c] > 0.05 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
+                chrposlist.append((c if chrmax[c] - chrmin[c] > 0.10 else c.strip('chr'), (chrmin[c] + chrmax[c]) / 2))
             ax3.xaxis.set_major_locator(ticker.FixedLocator([c[1] for c in chrposlist]))
             ax3.xaxis.set_major_formatter(ticker.FixedFormatter([c[0] for c in chrposlist]))
         xposlist = []
