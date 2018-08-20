@@ -14,6 +14,7 @@ docker pull us.gcr.io/aa-test-175718/aa
 
 ## Make sure the AA_DATA_REPO environmental variable is correctly set as in the README for AmpliconArchitect
 
+
 ## Use run_aa_docker.sh to run AmpliconArchitect
 sh run_aa_docker <INPUT_DIR> <BAM_FILENAME> <BED_FILENAME> <OUTPUT_DIR> <OUTPUT_PREFIX> <OPTIONS>
 
