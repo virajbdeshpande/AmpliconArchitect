@@ -31,5 +31,8 @@ where
 ##To build the Docker image from scratch, first make sure that Mosek has been installed as according to the AA README, and the Mosek license is in the correct location.  Set an environmental variable to the Mosek folder as follows:
 MOSEK_DIR=<path_to_mosek_directory>
 
+##Then build the docker file
+docker build --build-arg MOSEK_DIR=$MOSEK_DIR . -t aa
+
 ## Run the build_docker.sh file
 sh build_docker.sh
