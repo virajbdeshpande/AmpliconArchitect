@@ -10,14 +10,18 @@ RUN mkdir -p /home/programs
 #Download libraries for AA
 RUN apt-get update && apt-get install -y
 RUN apt-get install python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools unzip -y
-RUN pip install pysam
+RUN pip install pysam Flask
+
+RUN cd /home/programs && RUN wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
+RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
+ADD mosek.lic /home/programs/mosek/8/licenses
 
 RUN mkdir -p /home/output/
 RUN mkdir -p /home/input/
 ADD run_aa_script.sh /home/
 
 #Set environmental variables
-ADD $MOSEK_DIR /home/programs/
+
 RUN echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
 RUN export MOSEKPLATFORM=linux64x86
 RUN echo export PATH=$PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
