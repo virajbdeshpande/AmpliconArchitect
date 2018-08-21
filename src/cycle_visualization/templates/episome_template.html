@@ -322,7 +322,7 @@ function goBack() {
 	{% endfor %}
 
 	{% for file_name in file_names %}
-		<div class="file_name" style="position:absolute; top:{{file_name.top_y}}px; width:1000px; text-align:center;">
+		<div class="file_name" style="position:absolute; top:{{file_name.top_y}}px; width:1000px; text-align:center;font-size:larger; font-family: Arial">
 			{{file_name.text}}
 		</div>
 	{% endfor %}
