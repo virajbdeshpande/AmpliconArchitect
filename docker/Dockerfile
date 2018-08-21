@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y
 RUN apt-get install python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools unzip -y
 RUN pip install pysam Flask
 
-RUN cd /home/programs && RUN wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
+RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
 ADD mosek.lic /home/programs/mosek/8/licenses
 
