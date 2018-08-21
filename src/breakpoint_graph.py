@@ -863,8 +863,8 @@ class graph_decomposition(object):
             self.segment_dict[ns2] = hg.interval(seg1.chrom, seg2.start, seg1.end, info=[ns2])
             self.segment_list.append(self.segment_dict[ns2])
         cycle1_init = cycle1[2][:si1]
-        if not cycle1[2][si1][1]:
-            (overlap1, overlap2, ns1, ns2) = (overlap2, overlap1, ns2, ns1)
+        if cycle1[2][si1][1] == -1:
+            (overlap1, overlap2, ns1, ns2) = ((overlap2[0], -1 * overlap2[1]), (overlap1[0], -1 * overlap1[1]), ns2, ns1)
         cycle1_span = [(s[0], -1 * s[1]) for s in cycle1[2][si1 + 1:si2][::-1]]
         cycle1_final = cycle1[2][si2 + 1:]
         mcycle = cycle1_init + [overlap1] + cycle1_span + [overlap2] + cycle1_final

@@ -99,7 +99,7 @@ The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may 
 
 Alternatively, the use may run the visualization tool locally on port 8000 using the following command:
 ```bash
-export FLASK_APP=episome/web_app.py
+export FLASK_APP=cycle_visualization/web_app.py
 flask run --host=0.0.0.0 --port=8000
 ```
 ## Instructions for web interface:
