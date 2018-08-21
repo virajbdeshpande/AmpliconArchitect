@@ -9,7 +9,7 @@ RUN mkdir -p /home/programs
 
 #Download libraries for AA
 RUN apt-get update && apt-get install -y
-RUN apt-get install python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools unzip -y
+RUN apt-get install python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools wget unzip -y
 RUN pip install pysam Flask
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
