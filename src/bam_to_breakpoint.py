@@ -674,7 +674,9 @@ class bam_to_breakpoint():
             best_start = prev_end + \
                 1 if prev_end is not None else shifts0[s0i].start
             best_end = shifts0[s0i].end
-            matched_shifts.append(hg.interval(i.chrom, best_start, best_end, info={'cn':shifts0[s0i].info['cn'], 'start_refined':prev_end is not None, 'end_refined': False}))        
+            matched_shifts.append(hg.interval(i.chrom, best_start, best_end, info={'cn':shifts0[s0i].info['cn'], 'start_refined':prev_end is not None, 'end_refined': False}))
+        else:
+            matched_shifts.append(hg.interval(i.chrom, i.start, i.end, info={'cn':shifts0[0].info['cn'], 'start_refined': False, 'end_refined': False}))
         return matched_shifts
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
