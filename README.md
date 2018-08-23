@@ -68,6 +68,7 @@ source ~/.bashrc
 Here `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
 Optional Arguments:
+
 | Argument | Type | Description |
 | ---------- | ---- | ----------- |
 | -h, --help    |    |   show this help message and exit| 
@@ -91,8 +92,7 @@ The software generates 4 types of output files. 1 summary file and 3 files per a
 | {out}_summary.txt | This file includes a summary for all amplicons detected |
 | {out}_amplicon{id}_graph.txt | For each amplicon, breakpoint graph describing sequence edges and akpoint edges in the graph Edge each consists of 2 vertices in the format romosome>:{position}{orientation} e.g. A sequence edge chr1:10001-->chr1:20000+ represents the 00bp genomic sequence. A breakpoint edge chr1:10001-->chr1:20000+ lies that on chr1, the forward strand from position 20000 is tinues onto the forward strand at position 10001 in the 5' to 3' ection to create a 10000bp loop. Breakpoint vertices with position are reserved for source vertex at the end of linear contig. |
 | {out}_amplicon{id}_cycle.txt | For each amplicon, this file represents the list of structures tained in the amplicon. Segments represent genomic intervals (with possible overlaps) and h segment is assigned a unique id. Segment id 0 is reserved for source vertices. Cycles are represented as ordered lists of connected segments along h orientation of the segments. The last segment connects back to the first segment of the cycle. Linear contigs have 0+ and 0- as their first and last segments. May be  uploaded to web interface for visualization and operations cycles (See below). |
-| {out}_amplicon{id}.png | A single image file displaying the set of intervals, underlying erage, segmentation of coverage, discordant read pairs and oncogene otations.
-May be uploaded to web interface for visualization and operations on cycles (See below). |
+| {out}_amplicon{id}.png | A single image file displaying the set of intervals, underlying erage, segmentation of coverage, discordant read pairs and oncogene annotations. May be uploaded to web interface for visualization and operations on cycles (See below). |
 
 # Visualizing reconstruction:
 The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to genomequery.ucsd.edu:8800 to visualize and interactively modify the cycle.
