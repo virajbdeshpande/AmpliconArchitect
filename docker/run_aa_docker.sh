@@ -11,4 +11,4 @@ BED_FILENAME=`basename "$BED_FILE"`
 OUT_NAME=`basename "$OUT_PREFIX"`
 
 
-docker run --rm -it -e AA_DATA_REPO=/home/data_repo -e OPTIONS="$OPTIONS" -e BED_FILE="/home/bed_dir/$BED_FILENAME" -e BAM_FILENAME="/home/bam_dir/$BAM_FILENAME" -e OUT_PREFIX="/home/output/$OUT_NAME" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output aa sh /home/run_aa_script.sh
+docker run --rm -it -e AA_DATA_REPO=/home/data_repo -e OPTIONS="$OPTIONS" -e BED_FILE="/home/bed_dir/$BED_FILENAME" -e BAM_FILE="/home/bam_dir/$BAM_FILENAME" -e OUT_PREFIX="/home/output/$OUT_NAME" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output aa sh /home/run_aa_script.sh
