@@ -14,7 +14,7 @@ RUN pip install pysam Flask
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
-ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
+# ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
 
 RUN mkdir -p /home/output/
 RUN mkdir -p /home/input/
