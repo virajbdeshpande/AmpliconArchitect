@@ -2,8 +2,8 @@
 BAM_FILE=`readlink -f "$1"`
 BED_FILE=`readlink -f "$2"`
 OUT_PREFIX=`readlink -f "$3"`
-OPTIONS=$4
-MOSEK_LICENSE_FOLDER=$5
+MOSEK_LICENSE_FOLDER=$4
+OPTIONS=$5
 BAM_DIR=`dirname "$BAM_FILE"`
 BED_DIR=`dirname "$BED_FILE"`
 OUT_DIR=`dirname "$OUT_PREFIX"`
