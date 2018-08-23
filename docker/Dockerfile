@@ -18,6 +18,7 @@ RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
 
 RUN mkdir -p /home/output/
 RUN mkdir -p /home/input/
+RUN mkdir -p /home/programs/mosek/8/licenses/
 ADD run_aa_script.sh /home/
 
 #Set environmental variables
