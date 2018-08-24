@@ -1,5 +1,8 @@
- # Use an official Python runtime as a parent image
+# Use an official Python runtime as a parent image
 FROM ubuntu
+
+# Build in non-interactive mode for online continuous building
+ARG DEBIAN_FRONTEND=noninteractive
 
 # Set the working directory to /app
 WORKDIR /home/
