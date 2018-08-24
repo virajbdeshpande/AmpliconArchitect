@@ -35,8 +35,8 @@ source ~/.bashrc
 ## Data repositories:
 Download data repositories for hg19/GRCh37 from:
 
+https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k
 
-https://drive.google.com/open?id=0ByYcg0axX7udUDRxcTdZZkg0X1k
 ```bash
 tar zxf data_repo.tar.gz
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
