@@ -4,11 +4,47 @@
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
 ## Table of contents:
-1. The AA Algorithm
-2. Installation
-3. Usage
-4. File formats
-5. Checkpointing and modularity
+1. Quickstart
+2. The AA Algorithm
+3. Installation
+4. Usage
+5. File formats
+6. Checkpointing and modularity
+
+## Quickstart:
+### Installation:
+#### Prerequisites:
+1. Docker:
+    * Install docker: `https://docs.docker.com/install/`
+    * (Optional): Add user to the docker group and relogin:
+        `sudo usermod -a -G docker $USER`
+2. License for Mosek optimization tool:
+    * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
+    * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
+3. Download AA data repositories and set environment variable AA_DATA_REPO:
+    * Download from `https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k`
+    * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
+        ```bash
+        tar zxf data_repo.tar.gz
+        echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
+        source ~/.bashrc
+        ```
+#### Obtain AmpliconArchitect image and execution script:
+1. Pull docker image:
+    * `docker pull virajbdeshpande/ampliconarchitect`
+
+2. Clone run script `run_aa_docker.sh` from Github:
+    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+
+#### Usage:
+
+`$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
+
+The execution script `$AA` may point to `AA=AmpliconArchitect/docker/run_aa_docker.sh`.
+
+See instructions below for manual installation without docker.
+
+
 
 ## The AA Algorithm
 ### Definitions:
@@ -36,7 +72,7 @@ AA generates informative output at each step in the algorithm (details below):
 The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
 
 
-## Installation:
+## Installation
 AA can be installed in 2 ways:
 1. Docker image: This will automatically pull the latest build including necessary dependencies
 2. Github source code
@@ -103,7 +139,7 @@ source ~/.bashrc
 ```
 
 
-## AmpliconArchitect reconstruction:
+## AmpliconArchitect reconstruction
 
 ### 1) Input data:
 AA requires 2 input files:
