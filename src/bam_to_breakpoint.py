@@ -636,7 +636,7 @@ class bam_to_breakpoint():
             ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
             for ii in ms_ws1:
                 ii.info['start_refined'] = True
-                ii.info['end_refined'] = False
+                ii.info['end_refined'] = True
             return ms_ws1
         if shifts_unrefined is None:
             shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
