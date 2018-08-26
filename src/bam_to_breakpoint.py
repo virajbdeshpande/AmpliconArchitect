@@ -633,7 +633,11 @@ class bam_to_breakpoint():
 
     def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False, shifts_unrefined=None):
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
-            return self.meanshift_segmentation(i, window_size1, gcc)
+            ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
+            for ii in ms_ws1:
+                ii.info['start_refined'] = True
+                ii.info['end_refined'] = False
+            return ms_ws1
         if shifts_unrefined is None:
             shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
         else:
