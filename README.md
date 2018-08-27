@@ -178,6 +178,8 @@ The execution script `$AA` is provided within the Github source code and the exa
 
 **NOTE2:** The user should be aware that AA uses intermediate files with prefix provided to `--out`. If these files are already present then AA will reuse these files. If the user intends to run AA without using any prior data, then the user should ensure that these files are not already present in the provided path (See checkpoint and modularity section).
 
+**NOTE3:** The current docker script cannot accept paths with special characters including spaces. For paths with special characters, please install AA from the github source.
+
 #### Optional Arguments:
 
 | Argument | Type | Description |

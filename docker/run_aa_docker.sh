@@ -50,6 +50,5 @@ for i in "$@"; do
         argstring="$argstring $i"
     fi
 done
-echo $MOSEKLM_LICNESE_FILE
 
-docker run --rm -e AA_DATA_REPO=/home/data_repo -e argstring="$argstring" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output -v $MOSEKLM_LICENSE_FILE:/home/programs/mosek/8/licenses virajbdeshpande/ampliconarchitect:dev /home/run_aa_script.sh
+docker run --rm -e AA_DATA_REPO=/home/data_repo -e argstring="$argstring" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output -v $MOSEKLM_LICENSE_FILE:/home/programs/mosek/8/licenses virajbdeshpande/ampliconarchitect bash /home/run_aa_script.sh
