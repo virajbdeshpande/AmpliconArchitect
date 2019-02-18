@@ -456,8 +456,6 @@ class bam_to_breakpoint():
         i2 = hg.interval(i.chrom, s2, e2)
         cov = [c for c in self.window_coverage(i2, window_size, gcc)]
         cov = [(None, 0) for ni in range(startskip)] + cov + [(None, 0) for ni in range(endskip)]
-        for c in cov:
-            logging.debug("#TIME " + '%.3f\t'%clock() + " meanshift coverage %s %f" % (str(c[0]), c[1]))
         frozen = []
         def hr(c, wlen):
             if c < rd_global / 4.0:
