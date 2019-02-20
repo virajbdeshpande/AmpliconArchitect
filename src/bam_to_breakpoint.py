@@ -893,6 +893,8 @@ class bam_to_breakpoint():
                 continue
 
             if hom > 0:
+                # p1 = a1.reference_end - hom - 1 if e.v1.strand == 1 else a1.reference_start + hom
+                # p2 = a2.reference_end - hom - 1 if e.v2.strand == 1 else a2.reference_start + hom
                 p1 = a1.reference_end - 1 if e.v1.strand == 1 else a1.reference_start
                 p2 = a2.reference_end - 1 if e.v2.strand == 1 else a2.reference_start
             else:
