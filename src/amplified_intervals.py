@@ -39,6 +39,9 @@ ArgumentParser(description="Filter and merge amplified intervals")
 parser.add_argument('--bed', dest='bed',
                     help="Input bed file with list of amplified intervals", metavar='FILE',
                     action='store', type=str)
+parser.add_argument('--out', dest='out',
+                    help="OPTIONAL: Output bed file with list of amplified intervals. Default: <INPUT_NAME>_amplified.bed", metavar='FILE',
+                    action='store', type=str)
 parser.add_argument('--bam', dest='bam',
                     help="OPTIONAL: Bamfile, used to avoid large aneuploidies", metavar='FILE',
                     action='store', type=str, default='')
