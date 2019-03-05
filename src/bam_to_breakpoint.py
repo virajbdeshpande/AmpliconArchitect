@@ -2061,7 +2061,7 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='regular'):
+    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='small'):
         fighsize = 12
         figvsize = 5
         if font == 'large':
