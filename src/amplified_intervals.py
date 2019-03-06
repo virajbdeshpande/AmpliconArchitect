@@ -45,6 +45,14 @@ parser.add_argument('--out', dest='out',
 parser.add_argument('--bam', dest='bam',
                     help="OPTIONAL: Bamfile, used to avoid large aneuploidies", metavar='FILE',
                     action='store', type=str, default='')
+
+parser.add_argument('--gain', dest='gain',
+                    help="OPTIONAL: CN gain threshold for interval to be considered as a seed. Default: 5",
+                    action='store', type=int, default=5)
+
+parser.add_argument('--cnsize_min', dest='cnsize_min',
+                    help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
+                    action='store', type=int, default=100000)
 args = parser.parse_args()
 
 if args.bed != '':
@@ -54,6 +62,9 @@ if args.out != '':
     outname= args.out + ".bed"
 else:
     outname = os.path.splitext(rdAlts)[0] + "_amplified.bed"
+
+GAIN,CNSIZE_MIN = args.gain,args.cnsize_min
+
 
 
 rdList0 = hg.interval_list(rdAlts, 'bed')
