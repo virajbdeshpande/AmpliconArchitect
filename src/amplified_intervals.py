@@ -38,20 +38,17 @@ parser = argparse.\
 ArgumentParser(description="Filter and merge amplified intervals")
 parser.add_argument('--bed', dest='bed',
                     help="Input bed file with list of amplified intervals", metavar='FILE',
-                    action='store', type=str, nargs=1, default='')
+                    action='store', type=str)
+parser.add_argument('--out', dest='out',
+                    help="OPTIONAL: Output bed file with list of amplified intervals. Default: <INPUT_NAME>_amplified.bed", metavar='FILE',
+                    action='store', type=str)
 parser.add_argument('--bam', dest='bam',
                     help="OPTIONAL: Bamfile, used to avoid large aneuploidies", metavar='FILE',
-                    action='store', type=str, nargs=1, default='')
-parser.add_argument('--bedlist', dest='bedlist',
-                    help="List of bed files with amplified intervals in each sample", metavar='FILE',
-                    action='store', type=str, nargs=1, default=[])
+                    action='store', type=str, default='')
 args = parser.parse_args()
 rdAltsl = []
-if args.bed[0] != '':
-    rdAltsl.append(args.bed[0])
-elif len(args.bedlist) != 0 and args.bedlist[0] != '':
-    for l in open(args.bedlist[0]):
-        rdAltsl.append(l.strip())
+if args.bed != '':
+    rdAltsl.append(args.bed)
 
 
 for rdAlts in rdAltsl:
@@ -61,10 +58,10 @@ for rdAlts in rdAltsl:
 
     if args.bam != "":
         import bam_to_breakpoint as b2b
-        if os.path.splitext(args.bam[0])[-1] == '.cram':
-            bamFile = pysam.Samfile(args.bam[0], 'rc')
+        if os.path.splitext(args.bam)[-1] == '.cram':
+            bamFile = pysam.Samfile(args.bam, 'rc')
         else:
-            bamFile = pysam.Samfile(args.bam[0], 'rb')
+            bamFile = pysam.Samfile(args.bam, 'rb')
         coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
         cstats = None
         cb = bamFile
@@ -101,14 +98,10 @@ for rdAlts in rdAltsl:
     uc_merge = uc_list.merge_clusters(extend=300000)
     all_uc = hg.interval_list([a[0] for a in uc_merge if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN] )
 
-    if len(args.bedlist) != 0 and args.bedlist[0] != '':
-        outfile = open(rdAlts[:-4] + "_amplified.bed")
+    outfile = open(rdAlts[:-4] + "_amplified.bed")
     for a in uc_merge:
-        if sum([ai.size() for ai in a[1]]) > 100000:
-            if len(args.bedlist) != 0 and args.bedlist[0] != '':
-                outfile.write('\t'.join([str(a[0]), sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]]), rdAlts]) + '\n')
-            else:
-                print str(a[0]), sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]]), rdAlts
+        if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
+            outfile.write('\t'.join([str(a[0]), sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]]), rdAlts]) + '\n')
 exit()
 
 
