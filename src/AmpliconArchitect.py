@@ -258,7 +258,7 @@ for ig in irdgroups:
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
         cycle_logger.addHandler(cycle_handler)
-        bamFileb2b.interval_filter_vertices(ilist, runmode=args.runmode)
+        bamFileb2b.interval_filter_vertices(ilist, amplicon_name=amplicon_name, runmode=args.runmode)
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
     if args.runmode in ['FULL', 'SVVIEW']:
