@@ -2210,12 +2210,18 @@ class bam_to_breakpoint():
             for g in glist:
                 if font == 'large':
                     ty = 0
-                elif gparity == 0:
-                    ty = -0.1
-                    ty = -0.07
+                elif font == 'all_amplicons':
+                    if gparity == 0:
+                        ty = -0.1
+                        ty = -0.07
+                    else:
+                        ty = 0.20
+                        ty = 0.3
                 else:
-                    ty = 0.20
-                    ty = 0.3
+                    if gparity == 0:
+                        ty = 0
+                    else:
+                        ty = 0.37
                 if font == 'large':
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
