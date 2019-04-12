@@ -45,11 +45,9 @@ parser.add_argument('--out', dest='out',
 parser.add_argument('--bam', dest='bam',
                     help="OPTIONAL: Bamfile, used to avoid large aneuploidies", metavar='FILE',
                     action='store', type=str, default='')
-
 parser.add_argument('--gain', dest='gain',
                     help="OPTIONAL: CN gain threshold for interval to be considered as a seed. Default: 5",
                     action='store', type=int, default=5)
-
 parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
                     action='store', type=int, default=100000)
@@ -116,7 +114,5 @@ with open(outname,"w") as outfile:
     for a in uc_merge:
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
             outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
-
-exit()
 
 
