@@ -65,6 +65,9 @@ parser.add_argument('--extendmode', dest='extendmode',
 parser.add_argument('--sensitivems', dest='sensitivems',
                     help="Values: [True, False]. Set \"True\" only if expected copy counts to vary by orders of magnitude, .e.g viral integration. Default: False", metavar='STR',
                     action='store', type=str, default='False')
+parser.add_argument('--plotstyle', dest='plotstyle',
+                    help="Values: [small large, all_amplicons]. \"small\": small font, \"all_amplicons\": display a large number of intervals in a single plot, recommeded for visualizing multiple amplicons in CLUSTERED mode. Default: \"large\"", metavar='STR',
+                    action='store', type=str, default="small")
 parser.add_argument('--ref', dest='ref',
                     help="Values: [hg19, GRCh37, None]. \"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
@@ -258,13 +261,13 @@ for ig in irdgroups:
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
         cycle_logger.addHandler(cycle_handler)
-        bamFileb2b.interval_filter_vertices(ilist, runmode=args.runmode)
+        bamFileb2b.interval_filter_vertices(ilist, amplicon_name=amplicon_name, runmode=args.runmode)
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
     if args.runmode in ['FULL', 'SVVIEW']:
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
-            ilist, amplicon_name, segments=segments, font='all_amplicons')
+            ilist, amplicon_name, segments=segments, font=args.plotstyle)
     summary_logger.info(
             '-----------------------------------------------------------------------------------------')
     iout = open(amplicon_name + '_logs.txt', 'w')

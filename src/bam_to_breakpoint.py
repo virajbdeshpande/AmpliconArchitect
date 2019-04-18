@@ -645,8 +645,6 @@ class bam_to_breakpoint():
         shift1_intervals = [msi[0] for msi in shift1_intervals.merge_clusters(extend=3 * window_size0)]
         shifts1 = reduce(lambda x,y: x+y, [self.meanshift_segmentation(hg.interval(i.chrom, s.start - 3 * window_size0, s.start + 3 * window_size0), window_size1, gcc, pvalue=0.05) for s in shift1_intervals], [])
 
-        # shifts1 = self.meanshift_segmentation(i, window_size1, gcc)
-
         matched_shifts = []
         prev_end = None
         for s0i in range(len(shifts0[:-1])):
@@ -654,6 +652,8 @@ class bam_to_breakpoint():
             bests1i = None
             bestscore = 0
             for s1i in range(len(shifts1) - 1):
+                if shifts1[s1i].end < i.start or shifts1[s1i].end >= i.end:
+                    continue
                 if abs(shifts0[s0i].end - shifts1[s1i].end) >= window_size0:
                     continue
                 cndiff1 = shifts1[s1i + 1].info['cn']-shifts1[s1i].info['cn']
@@ -665,7 +665,6 @@ class bam_to_breakpoint():
                 elif abs(cndiff0 - cndiff1) < bestscore:
                     bestscore = abs(cndiff0 - cndiff1)
                     bests1i = s1i
-            # print 'meanshift refined:', (s0, S1_select, S1, bests1, bestscore)
             best_start = prev_end + \
                 1 if prev_end is not None else shifts0[s0i].start
             best_end = shifts1[bests1i].end if bests1i is not None else shifts0[s0i].end
@@ -806,14 +805,14 @@ class bam_to_breakpoint():
                      and abs(a.next_reference_start - a.reference_start) < 100000]#self.ms_window_size]
         return len(dlist)
 
-    def refine_discordant_edge(self, e):
-        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
+
+    def refine_discordant_edge(self, e):        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
         v1min = max(0, (e.v1.pos - self.max_insert + self.read_length if e.v1.strand == 1 else e.v1.pos) - 1)
         v2min = max(0, (e.v2.pos - self.max_insert + self.read_length if e.v2.strand == 1 else e.v2.pos) - 1)
         v1max = min(e.v1.pos + self.max_insert - self.read_length if e.v1.strand == -1 else e.v1.pos, hg.chrLen[hg.chrNum(e.v1.chrom)]) - 1
         v2max = min(e.v2.pos + self.max_insert - self.read_length if e.v2.strand == -1 else e.v2.pos, hg.chrLen[hg.chrNum(e.v2.chrom)]) - 1
-        d1list = [a for a in self.fetch(e.v1.chrom, v1min, v1max)]
-        d2list = [a for a in self.fetch(e.v2.chrom, v2min, v2max)]
+        d1list = [a for a in self.fetch(e.v1.chrom, v1min, v1max) if not a.is_unmapped]
+        d2list = [a for a in self.fetch(e.v2.chrom, v2min, v2max) if not a.is_unmapped]
         d1Set = Set([(a.query_name, a.is_read1, a.is_reverse, a.is_secondary) for a in d1list])
         if e.v1.strand == e.v2.strand:
             d2Set = Set([(a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary) for a in d2list])
@@ -821,7 +820,6 @@ class bam_to_breakpoint():
             d2Set = Set([(a.query_name, a.is_read1, a.is_reverse, not a.is_secondary) for a in d2list])
         rSet = d1Set.intersection(d2Set)        
         if len(rSet) == 0:
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge rSet empty " + str(e))
             return (e, 0, [], None)
         multi_r = Set([])
         d1reads = {}
@@ -904,11 +902,9 @@ class bam_to_breakpoint():
             dpairs[(hom, p1, p2)].append((a1, a2, r1, r2))
 
         if len(dpairs) == 0:
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge dpairs empty " + str(e))
             return (e, 0, [], None)
         max_s = max([len(s) for s in dpairs.values()])
         max_p = [p for p in dpairs.keys() if len(dpairs[p]) == max_s]
-
 
         if len(max_p) != 1:
             logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge max_p not 1 " + str(e) + " " + str(max_p))
@@ -936,10 +932,9 @@ class bam_to_breakpoint():
         logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found "
             + str(breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand)))
             + " " + str(hom) + " " + str(len(dpairs[max_p[0]])) + " " + str(len(rSet)))
-        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][0].query_alignment_end) + " " + str(dpairs[max_p[0]][0][0]))
-        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge found " + str(dpairs[max_p[0]][0][1]))
         return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
 
+ 
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
         if pair_support == -1:
@@ -1880,7 +1875,6 @@ class bam_to_breakpoint():
             #     new_graph.new_edge(ngvlist[nei-1], ngvlist[nei])
         for e in koe:
             koe[e] = max(0.0001, koe[e])
-
         # set up all constants
         C = self.median_coverage()[0] / 2
         print "C (haploid coverage) = ", C
@@ -2061,7 +2055,7 @@ class bam_to_breakpoint():
 
 
     # Plot coverage, meanshift copy count estimates and discordant edges in interval
-    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='regular'):
+    def plot_segmentation(self, ilist, amplicon_name, segments=[], scale_list=[], eilist=None, font='small'):
         fighsize = 12
         figvsize = 5
         if font == 'large':
@@ -2216,12 +2210,18 @@ class bam_to_breakpoint():
             for g in glist:
                 if font == 'large':
                     ty = 0
-                elif gparity == 0:
-                    ty = -0.1
-                    ty = -0.07
+                elif font == 'all_amplicons':
+                    if gparity == 0:
+                        ty = -0.1
+                        ty = -0.07
+                    else:
+                        ty = 0.20
+                        ty = 0.3
                 else:
-                    ty = 0.20
-                    ty = 0.3
+                    if gparity == 0:
+                        ty = 0
+                    else:
+                        ty = 0.37
                 if font == 'large':
                     ax3.plot([ilist.xpos(i.chrom, max(g[1].start, i.start)), ilist.xpos(i.chrom, min(g[1].end, i.end))], [ry, ry], 'r-',    linewidth=ogene_width)
                     ax3.text((ilist.xpos(i.chrom, max(g[1].start, i.start)) + ilist.xpos(i.chrom, min(g[1].end, i.end)))/2.0, ty, g[1].info['Name'], horizontalalignment='center', verticalalignment='bottom', fontsize=28, zorder=4)
