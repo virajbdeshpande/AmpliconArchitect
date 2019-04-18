@@ -31,7 +31,7 @@ import pysam
 
 import hg19util as hg
 
-GAIN = 5
+GAIN = 5.0
 CNSIZE_MIN = 100000
 
 parser = argparse.\
@@ -47,10 +47,10 @@ parser.add_argument('--bam', dest='bam',
                     action='store', type=str, default='')
 parser.add_argument('--gain', dest='gain',
                     help="OPTIONAL: CN gain threshold for interval to be considered as a seed. Default: 5",
-                    action='store', type=int, default=5)
+                    action='store', type=float, default=GAIN)
 parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
-                    action='store', type=int, default=100000)
+                    action='store', type=int, default=CNSIZE_MIN)
 args = parser.parse_args()
 
 if args.bed != '':
@@ -106,13 +106,11 @@ for a in amplicon_listl:
             if a.end > cpos:
                 uc_list.append(hg.interval(a.chrom, cpos, a.end, info = a.info))
 
-uc_list = hg.interval_list([a for a in uc_list if float(a.info[1]) * a.segdup_uniqueness() > 5.0 and a.rep_content() < 2.5])
+uc_list = hg.interval_list([a for a in uc_list if float(a.info[1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
 uc_merge = uc_list.merge_clusters(extend=300000)
-all_uc = hg.interval_list([a[0] for a in uc_merge if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN] )
 
 with open(outname,"w") as outfile:
     for a in uc_merge:
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
             outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
-
 
