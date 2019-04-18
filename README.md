@@ -3,6 +3,10 @@
 
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
+A full description of the methods and detailed characterization of copy number amplifications and ecDNA in cancer can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
+
+*Deshpande, V. et al. Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).*
+
 ## Table of contents:
 1. Quickstart
 2. The AA Algorithm
@@ -47,6 +51,7 @@ See instructions below for manual installation without docker.
 
 
 ## The AA Algorithm
+A full description of the methods and detailed characterization of copy number amplifications and ecDNA can be found in the manuscript referenced in the introduction.
 ### Definitions:
 1. Amplicon: A set of genomic intervals connected together and amplified in copy number
 2. Amplicon structure(s): Ordered list(s) of segments from the amplicon intervals present in the sample.
