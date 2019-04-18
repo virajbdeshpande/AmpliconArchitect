@@ -156,7 +156,7 @@ AA requires 2 input files:
         - CNVs from CNV caller ReadDepth with parameter file `$AA_SRC/src/read_depth_params`
         - Select CNVs with copy number > 5x and size > 100kbp and merge adjacent CNVs into a single interval using:
 
-            `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat > {outName}.bed`
+            `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
 
 ### 2) Usage:
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
