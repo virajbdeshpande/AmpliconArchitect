@@ -733,7 +733,9 @@ class bam_to_breakpoint():
         cd = 1
         for fi in range(len(meanshift)):
             f = meanshift[fi]
-            if len(f) == 0 or not f[0].intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
+            if len(f) == 0:
+                continue
+            if not hg.interval(f[0].chrom, f[0].start, f[-1].end).intersects(hg.interval(chrom, position, position), extend=self.ms_window_size):
                 continue
             for pi in range(len(f)):
                 if f[pi].start + self.ms_window_size >= position:
@@ -945,6 +947,7 @@ class bam_to_breakpoint():
             ilist = interval
         if (tuple([(i.chrom, i.start, i.end) for i in ilist]), filter_repeats, pair_support, not ms is None) in self.discordant_edge_calls:
             return self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]), filter_repeats, pair_support, not ms is None)]
+
         interval = ilist[0]
         dflist = []
         drlist = []
@@ -1335,13 +1338,13 @@ class bam_to_breakpoint():
         return edges
         
 
-    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1,    ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
-        if amplicon_name is not None and os.path.exists("%s_edges.txt" % amplicon_name):
-            return self.load_edges("%s_edges.txt" % amplicon_name)
+    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
+        if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
+            return self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
         # if amplicon_name is not None and os.path.exists("%s_edges_unfiltered.txt" % amplicon_name):
         #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
-        if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
-            eilist = self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
+        if amplicon_name is not None and os.path.exists("%s_edges.txt" % amplicon_name):
+            eilist = self.load_edges("%s_edges.txt" % amplicon_name)
         else:
             if eilist is None:
                 if adaptive_counts:
@@ -1352,7 +1355,7 @@ class bam_to_breakpoint():
             eilist.sort(key=lambda x: hg.absPos(
                         x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
             if amplicon_name is not None:
-                edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
+                edge_file = open("%s_edges.txt" % amplicon_name, 'w')
                 for e in eilist:
                     edge_file.write("%s\t%s\t%s\t%s\n" % (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
                 edge_file.close()
@@ -1401,11 +1404,12 @@ class bam_to_breakpoint():
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
+                    print "msv end not refined", str(msr[msi]), str(msr[msi + 1])
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
                         e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
 
         if amplicon_name is not None:
-            edge_file = open("%s_edges.txt" % amplicon_name, 'w')
+            edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
             for e in eilist:
                 edge_file.write("%s\t%s\t%s\t%s\n" %
                                 (str(e[0]), e[1], e[0].hom, e[0].hom_seq))
