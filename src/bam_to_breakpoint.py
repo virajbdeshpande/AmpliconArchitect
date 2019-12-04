@@ -524,6 +524,7 @@ class bam_to_breakpoint():
                         if abs(cp - c) > 3 * math.sqrt(max(cp, c) / rd_global) * h0:
                         # if abs(cp - c) > 2 * hr(c, window_size * len(segs[si])):
                             freeze |= 1
+                    # if len(segs[si]) > 1 and len(segs[si - 1]) > 1:
                     if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci - len (segs[si - 1]):ci]], equal_var=False)[1] < pvalue:
                         freeze |= 1
                 if si < len(segs) - 1:
@@ -532,6 +533,7 @@ class bam_to_breakpoint():
                         if abs(cn - c) > 3 * math.sqrt(max(cn, c) / rd_global) * h0:
                         # if abs(cn - c) > 2 * hr(c, window_size * len(segs[si])):
                             freeze |= 2
+                    # if len(segs[si]) > 1 and len(segs[si + 1]) > 1:
                     if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci + len (segs[si]):ci + len(segs[si]) + len(segs[si + 1])]], equal_var=False)[1] < pvalue:
                         freeze |= 2
                 # if freeze > 0:
@@ -581,7 +583,15 @@ class bam_to_breakpoint():
                 s3 = [shifts[shiftsi][3], shifts[shiftsi][3][1:], shifts[shiftsi][3][:-1], shifts[shiftsi][3][1:-1]]
                 s4 = [shifts[shiftsi][4], shifts[shiftsi][4][1:], shifts[shiftsi][4][:-1], shifts[shiftsi][4][1:-1]]
                 # print [[stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3] for s4i in s4]
-                if min([min([stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3]) for s4i in s4]) > pvalue:
+                min_ttest_val = 1.0
+                for s3i in s3:
+                    # if len(s3i) <= 1:
+                    #     continue
+                    for s4i in s4:
+                        # if len(s4i) <= 1:
+                        #    continue
+                        min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
+                if min_ttest_val > pvalue:
                     # print shifts[shiftsi]
                     mergelist.append(shiftsi)
             # print mergelist
@@ -996,8 +1006,8 @@ class bam_to_breakpoint():
         # identify edges with bisect and union-find algorithm
         # iii = 0
         for v in vlist:
-            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant " + str(iii) + " " + str(v[0]) + " "  + str(v[1])) 
             # iii += 1
+            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant " + str(iii) + " " + str(v[0]) + " "  + str(v[1]) + " " + str(v[3])) 
             s0 = bisect.bisect_left(v0listp, v[0] - self.max_insert + self.read_length)
             e0 = bisect.bisect_right(v0listp, v[0] + self.max_insert - self.read_length)
             s1 = bisect.bisect_left(v1listp, v[1] - self.max_insert + self.read_length)
@@ -1043,11 +1053,14 @@ class bam_to_breakpoint():
                     nlist[v2g] += nlist[v1g]
             # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant4 " + str(iii) + " " + str(v[0]) + " "  + str(v[1]))
         clist = defaultdict(lambda: [], {})
+        # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: clustered discordant5 " + str(len(plist)))
         for v in plist:
             vg = v
             while plist[vg] is not None:
                 vg = plist[vg]
-            clist[vdict[v]].append(vdict[v])
+            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: clustered discordant5.1 " + str(v) + " "  + str(vg))
+            clist[vdict[vg]].append(vdict[v])
+        # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: clustered discordant6 " + str(len(clist)))
 
         mcdflist = []
         mcdrlist = []
@@ -1072,7 +1085,7 @@ class bam_to_breakpoint():
                 mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
 
 
-        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant filter neighborhood " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant filter neighborhood " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)))
 
         dnlist0 = []
         dnlist = []
