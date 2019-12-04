@@ -1047,7 +1047,7 @@ class bam_to_breakpoint():
             vg = v
             while plist[vg] is not None:
                 vg = plist[vg]
-            clist[vg].append(vdict[v])
+            clist[vdict[v]].append(vdict[v])
 
         mcdflist = []
         mcdrlist = []
