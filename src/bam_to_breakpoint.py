@@ -964,7 +964,7 @@ class bam_to_breakpoint():
                   if not a.is_unmapped and a.is_reverse and a.is_paired
                   and not a.is_proper_pair and not a.mate_is_unmapped
                   and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff]
-        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
         # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
 
@@ -975,7 +975,14 @@ class bam_to_breakpoint():
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
 
         # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
-        vlist = [(hg.absPos(a.reference_name, a.reference_start) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a) for a in dflist + drlist]
+        vlist = []
+        vcount = 0
+        vdict = {}
+        for a in dflist + drlist:
+            vlist.append((hg.absPos(a.reference_name, a.reference_start) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a, vcount))
+            vdict[vcount] = a
+            vcount += 1
+        # vlist = [(hg.absPos(a.reference_name, a.reference_start) * (-1 if a.is_reverse else 1), hg.absPos(a.next_reference_name, a.next_reference_start) * (-1 if a.mate_is_reverse else 1), a) for a in dflist + drlist]
         v0list = copy.copy(vlist)
         v0list.sort(key=lambda x: x[0])
         v1list = copy.copy(vlist)
@@ -987,20 +994,40 @@ class bam_to_breakpoint():
         rlist = defaultdict(lambda: 0, {})
         nlist = defaultdict(lambda: 1, {})
         # identify edges with bisect and union-find algorithm
+        # iii = 0
         for v in vlist:
+            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant " + str(iii) + " " + str(v[0]) + " "  + str(v[1])) 
+            # iii += 1
             s0 = bisect.bisect_left(v0listp, v[0] - self.max_insert + self.read_length)
             e0 = bisect.bisect_right(v0listp, v[0] + self.max_insert - self.read_length)
             s1 = bisect.bisect_left(v1listp, v[1] - self.max_insert + self.read_length)
             e1 = bisect.bisect_right(v1listp, v[1] + self.max_insert - self.read_length)
-            S0 = Set([vv[2] for vv in v0list[s0:e0+1]])
-            S1 = Set([vv[2] for vv in v1list[s1:e1+1]])
-            if len(S0.intersection(S1)) >= pair_support:
+            SS0 = [vv[3] for vv in v0list[s0:e0+1] if vv[3] > v[3]]
+            SS1 = [vv[3] for vv in v1list[s1:e1+1] if vv[3] > v[3]]
+            SS0.sort()
+            SS1.sort()
+            SS_intersect = []
+            i0 = 0
+            i1 = 0
+            while True:
+                if i0 == len(SS0) or i1 == len(SS1):
+                    break
+                if SS0[i0] == SS1[i1]:
+                    SS_intersect.append(SS0[i0])
+                    i0 += 1
+                    i1 += 1
+                elif SS0[i0] < SS1[i1]:
+                    i0 += 1
+                else:
+                    i1 += 1
+            if len(SS_intersect) >= pair_support:
                 dlist.append(v[2])
-            v1 = v[2]
-            for v2 in S0.intersection(S1):
+            v1 = v[3]
+            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant2.3 " + str(iii) + " "  + str(len(SS_intersect)))
+            for v2 in SS_intersect:
                 v1g = v1
                 v2g = v2
-                while plist[v1g] is not None :
+                while plist[v1g] is not None:
                     v1g = plist[v1g]
                 while plist[v2g] is not None:
                     v2g = plist[v2g]
@@ -1014,12 +1041,13 @@ class bam_to_breakpoint():
                     plist[v1g] = v2g
                     rlist[v2g] = max(rlist[v2g], rlist[v1g] + 1)
                     nlist[v2g] += nlist[v1g]
+            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant4 " + str(iii) + " " + str(v[0]) + " "  + str(v[1]))
         clist = defaultdict(lambda: [], {})
         for v in plist:
             vg = v
             while plist[vg] is not None:
                 vg = plist[vg]
-            clist[vg].append(v)
+            clist[vg].append(vdict[v])
 
         mcdflist = []
         mcdrlist = []
