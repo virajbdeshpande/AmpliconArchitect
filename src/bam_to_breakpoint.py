@@ -583,15 +583,16 @@ class bam_to_breakpoint():
                 s3 = [shifts[shiftsi][3], shifts[shiftsi][3][1:], shifts[shiftsi][3][:-1], shifts[shiftsi][3][1:-1]]
                 s4 = [shifts[shiftsi][4], shifts[shiftsi][4][1:], shifts[shiftsi][4][:-1], shifts[shiftsi][4][1:-1]]
                 # print [[stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3] for s4i in s4]
-                min_ttest_val = 1.0
-                for s3i in s3:
-                    # if len(s3i) <= 1:
-                    #     continue
-                    for s4i in s4:
-                        # if len(s4i) <= 1:
-                        #    continue
-                        min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
-                if min_ttest_val > pvalue:
+                # min_ttest_val = 1.0
+                # for s3i in s3:
+                #     # if len(s3i) <= 1:
+                #     #     continue
+                #     for s4i in s4:
+                #         # if len(s4i) <= 1:
+                #         #    continue
+                #         min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
+                # if min_ttest_val > pvalue:
+                if min([min([stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3]) for s4i in s4]) > pvalue:
                     # print shifts[shiftsi]
                     mergelist.append(shiftsi)
             # print mergelist
