@@ -1,5 +1,7 @@
 # AmpliconArchitect (AA)
 
+###December 2019 update:
+We have now patched AA to support hg38. To enable hg38 functionality, please download the GRCh38 AA data repo patch here, and extract it in the `$AA_DATA_REPO` folder. AA can then be run with hg38 data by specifying `-r GRCh38`.
 
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
@@ -9,14 +11,13 @@ A full description of the methods and detailed characterization of copy number a
 
 ## Table of contents:
 1. Quickstart
-2. The AA Algorithm
-3. Installation
-4. Usage
+2. Installation
+3. Usage
+4. The AA Algorithm
 5. File formats
 6. Checkpointing and modular integration with other tools
 
 ## Quickstart:
-### Installation:
 #### Prerequisites:
 1. Docker:
     * Install docker: `https://docs.docker.com/install/`
@@ -47,35 +48,6 @@ A full description of the methods and detailed characterization of copy number a
 The execution script `$AA` may point to `AA=AmpliconArchitect/docker/run_aa_docker.sh`.
 
 See instructions below for manual installation without docker.
-
-
-
-## The AA Algorithm
-A full description of the methods and detailed characterization of copy number amplifications and ecDNA can be found in the manuscript referenced in the introduction.
-### Definitions:
-1. Amplicon: A set of genomic intervals connected together and amplified in copy number
-2. Amplicon structure(s): Ordered list(s) of segments from the amplicon intervals present in the sample.
-### Inputs:
-1. BAM file: WGS reads mapped to the human genome
-2. BED file: Set of seed intervals to be used for searching and reconstructing the amplicons in the sample. User should provide at least 1 seed per amplicon.
-### Algorithm:
-AA implements various steps to predict the structure of the amplicons:
-1. Interval set determination: Determine the list of intervals for each amplicon to be reconstructed.
-2. SV detection: Detect copy number changes and structural variations using coverage and discordant read pairs within each amplicon.
-3. Breakpoint graph construction: Construct a breakpoint graph consisting of sequence egdes (genomic segments), breakpoint edges (pairs of connected genomic positions) and optionally a source vertex and predict copy counts for all edges.
-4. Cycle decomposition: Decompose the breakpoint graph into simple cycles which provide a simple representation of predicted amplicon structures.
-5. Interactive cycle merging: Provide a web interface to interactively merge and modify the cycles to explore candidate structures.
-
-### Outputs:
-AA generates informative output at each step in the algorithm (details below):
-1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
-2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
-3. Graph file: For each amplicon, a text file describing the graph and predicted copy count.
-4. Cycles file: For each amplicon: a text file describing the list of simple cycles predicted.
-5. Cycle view: A web interface with operations for visualizing and modifying the simple cycles.
-
-The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
-
 
 ## Installation
 AA can be installed in 2 ways:
@@ -143,7 +115,6 @@ echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
 ```
 
-
 ## AmpliconArchitect reconstruction
 
 ### 1) Input data:
@@ -151,7 +122,7 @@ AA requires 2 input files:
 
 1. Coordinate-sorted, indexed BAM file:
     * Align reads to a reference present in the `data_repo`.
-    * AA has been tested on `bwa mem` on `hg19` reference genome.
+    * AA has been tested on `bwa mem` on `hg19` and `hg38` reference genomes.
     * Recommended depth of coverage for WGS data is 5X-10X.
     * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample`. 
     * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
@@ -159,9 +130,12 @@ AA requires 2 input files:
     * One or more intervals per amplicon in the sample
     * AA has been tested on seed intervals generated as follows:
         - CNVs from CNV caller ReadDepth with parameter file `$AA_SRC/src/read_depth_params`
-        - Select CNVs with copy number > 5x and size > 100kbp and merge adjacent CNVs into a single interval using:
+        - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
 
             `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
+
+#### PrepareAA:
+A wrapped pipeline, generating the prerequisite BAM alignments, CNV calls for seeding, and subsequent AA reconstruction of amplicons from those seeds is available at (https://github.com/jluebeck/PrepareAA). This is available to simplify the running of AA and the preceding analysis steps.
 
 ### 2) Usage:
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
@@ -170,6 +144,31 @@ The execution script `$AA` is provided within the Github source code and the exa
 1. Docker image: `AA=AmpliconArchitect/docker/run_aa_docker.sh`
 2. Github source: `AA=python2 AmpliconArchitect/src/AmpliconArchitect.py`
 
+## The AA Algorithm
+A full description of the methods and detailed characterization of copy number amplifications and ecDNA can be found in the manuscript referenced in the introduction.
+### Definitions:
+1. Amplicon: A set of genomic intervals connected together and amplified in copy number
+2. Amplicon structure(s): Ordered list(s) of segments from the amplicon intervals present in the sample.
+### Inputs:
+1. BAM file: WGS reads mapped to the human genome
+2. BED file: Set of seed intervals to be used for searching and reconstructing the amplicons in the sample. User should provide at least 1 seed per amplicon.
+### Algorithm:
+AA implements various steps to predict the structure of the amplicons:
+1. Interval set determination: Determine the list of intervals for each amplicon to be reconstructed.
+2. SV detection: Detect copy number changes and structural variations using coverage and discordant read pairs within each amplicon.
+3. Breakpoint graph construction: Construct a breakpoint graph consisting of sequence egdes (genomic segments), breakpoint edges (pairs of connected genomic positions) and optionally a source vertex and predict copy counts for all edges.
+4. Cycle decomposition: Decompose the breakpoint graph into simple cycles which provide a simple representation of predicted amplicon structures.
+5. Interactive cycle merging: Provide a web interface to interactively merge and modify the cycles to explore candidate structures.
+
+### Outputs:
+AA generates informative output at each step in the algorithm (details below):
+1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
+2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
+3. Graph file: For each amplicon, a text file describing the graph and predicted copy count.
+4. Cycles file: For each amplicon: a text file describing the list of simple cycles predicted.
+5. Cycle view: A web interface with operations for visualizing and modifying the simple cycles.
+
+The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
 
 #### Required Arguments:
 
@@ -194,7 +193,7 @@ The execution script `$AA` is provided within the Github source code and the exa
 | `--extendmode`  |STR |   Values: [`EXPLORE`/`CLUSTERED`/`UNCLUSTERED`/`VIRAL`]. This determines how the input intervals in bed file are treated.<br> - `EXPLORE` : Search for all intervals in the genome that may be connected to input seed intervals.<br> - `CLUSTERED` : Input intervals are treated as part of a single connected amplicon and no new connected itervals are added. <br> - `UNCLUSTERED` : Input intervals are treated part of a single connected amplicon and no new connected intervals are added. <br> Default: `EXPLORE`| 
 | `--sensitivems` | STR|   Values: [`True`, `False`]. Set `True` only if copy counts are expected to vary by an order of magnitude, e.g. viral integration. Default: `False`| 
 | `--plotstyle` | STR | Values: [`small`, `large`, `all_amplicons`]. `large`: large font, `all_amplicons`: display a large number of intervals in a single plot, recommeded for visualizing multiple amplicons in CLUSTERED mode. Default: `small` |
-| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `<CUSTOM>`, `None`]. Reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19` : chr1,, chr2, .. chrM etc <br> - GRCh37 : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`| 
+| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `<CUSTOM>`, `None`]. Reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`| 
 | `--downsample`  |FLOAT|  Values: [`-1`, `0`, `C`(>0)]. Decide how to downsample the bamfile during reconstruction. Reads are automatically downsampled in real time for speedup. Alternatively pre-process bam file using $AA_SRC/downsample.py. <br> - `-1` : Do not downsample bam file, use full coverage. <br> - `0` : Downsample bamfile to 10X coverage if original coverage larger then 10. <br> - `C` (>0) : Downsample bam file to coverage `C` if original coverage larger than `C`. <br> - Default: `0`| 
 | `--cbam`        |FILE| Use alternative bamfile to use for coverage calculation| 
 | `--cbed`        |FILE| Use provided bed file for coverage calculation. Bed file defines 1000 10kbp genomic windows.|

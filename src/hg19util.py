@@ -42,6 +42,7 @@ if DATA_REPO == '.' or DATA_REPO == '':
     DATA_REPO = '.'
 
 REF = global_names.REF
+print REF
 
 REF_files = defaultdict(lambda: '', {})
 try:
