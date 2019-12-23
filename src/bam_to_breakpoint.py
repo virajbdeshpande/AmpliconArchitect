@@ -81,6 +81,8 @@ class bam_to_breakpoint():
         self.sensitivems = sensitivems
         self.span_coverage = span_coverage
         self.mapping_quality_cutoff = 5
+        self.breakpoint_mapping_quality_cutoff = 20
+        self.breakpoint_entropy_cutoff = 0.5
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
@@ -172,7 +174,8 @@ class bam_to_breakpoint():
         # if clip == True or (clip == False and i.size() >= 100 * self.read_length):
         #     return len(alist) * self.read_length / float(i.size())
         if clip == True or (clip is None and e2-s2 < 1000):
-            self.interval_coverage_calls[call_args] = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
+            icc = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
+            self.interval_coverage_calls[call_args] = icc
             return self.interval_coverage_calls[call_args]
         else:
             self.interval_coverage_calls[call_args] = len(
@@ -197,12 +200,17 @@ class bam_to_breakpoint():
         dd = [abs(cc[j + 1] - cc[j]) for j in range(len(jj) - 1)]
         return (sum(cc)/len(cc), sum(dd)/len(dd))
 
-    def window_coverage(self, i, window_size=-1, gcc=False, clip=None):
+    def window_coverage(self, i, window_size=-1, gcc=False, clip=None, exact=True):
         # print str(i)
         if window_size == -1:
             window_size = self.max_insert - self.read_length
         def win_breakup(i, window_size):
-            for k in xrange(i.start, i.end, window_size):
+            if (exact):
+                (istart, iend) = (i.start, i.end)
+            else:
+                istart = window_size * int(math.ceil(i.start / window_size))
+                iend = window_size * int(math.floor(i.end / window_size))
+            for k in xrange(istart, iend, window_size):
                 yield hg.interval(i.chrom, k, k + window_size - 1)
         for k in win_breakup(i, window_size):
             yield (k, self.interval_coverage(k, gcc=gcc, clip=clip))
@@ -419,7 +427,7 @@ class bam_to_breakpoint():
             # j = range(i.start, i.end, window_size)
             jj = [hg.interval(i.chrom, k, k + window_size) for k in j]
             i2 = hg.interval(i.chrom, s2, e2)
-            cov = [c for c in self.window_coverage(i2, window_size, gcc)]
+            cov = [c for c in self.window_coverage(i2, window_size, gcc, exact=False)]
             # cov = [self.interval_coverage(k) for k in jj]
         # print window_size, len(cov), str(cov[0][0]).strip(), cov[0][1], str(cov[1][0]).strip(), cov[1][1]
         def hr(wi):
@@ -454,7 +462,7 @@ class bam_to_breakpoint():
             e2 = hgl - (hgl - i.end) % window_size
             endskip = n - (hgl - i.end) / window_size
         i2 = hg.interval(i.chrom, s2, e2)
-        cov = [c for c in self.window_coverage(i2, window_size, gcc)]
+        cov = [c for c in self.window_coverage(i2, window_size, gcc, exact=False)]
         cov = [(None, 0) for ni in range(startskip)] + cov + [(None, 0) for ni in range(endskip)]
         frozen = []
         def hr(c, wlen):
@@ -947,7 +955,25 @@ class bam_to_breakpoint():
             + " " + str(hom) + " " + str(len(dpairs[max_p[0]])) + " " + str(len(rSet)))
         return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
 
- 
+    def edge_has_high_mapq(self, read_list):
+        if max([rr[0].mapping_quality for rr in read_list]) < self.breakpoint_mapping_quality_cutoff:
+            return False
+        if max([rr[1].mapping_quality for rr in read_list]) < self.breakpoint_mapping_quality_cutoff:
+            return False
+        return True
+
+    def edge_has_high_entropy(self, read_list):
+        if max([stats.entropy(np.unique(rr[0].query_sequence, return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
+            return False
+        if max([stats.entropy(np.unique(rr[1].query_sequence, return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
+            return False
+        return True
+
+    def edge_passes_filters(self, read_list):
+        if self.edge_has_high_mapq(read_list) and self.edge_has_high_entropy(read_list):
+            return True
+        return False
+
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
         if pair_support == -1:
@@ -1213,12 +1239,14 @@ class bam_to_breakpoint():
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
                     continue
                 if bre.type() != 'concordant':
-                    dnlist0.append((bre, len(vl)))
+                    if self.edge_passes_filters(vl):
+                        dnlist0.append((bre, len(vl)))
                 if bp1c is not None and bp2c is not None:
                     brec_refine = self.refine_discordant_edge(breakpoint_edge(bp1c, bp2c))
                     brec = brec_refine[0]
                     if brec.type() != 'concordant' and brec.v1.pos != brec.v2.pos:
-                        dnlist0.append((brec, len([(v[1], v[0]) for v in vl])))
+                        if self.edge_passes_filters(vl):
+                            dnlist0.append((brec, len([(v[1], v[0]) for v in vl])))
 
         # remove local edges with no complementary edges and add warning if any found
         for bb1 in dnlist0:
@@ -1340,7 +1368,8 @@ class bam_to_breakpoint():
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
                 if bre.type() != 'concordant':
-                    dnlist.append((bre, len(vl)))
+                    if self.edge_passes_filters(vl):
+                        dnlist.append((bre, len(vl)))
             # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 2" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
         dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
@@ -1488,7 +1517,7 @@ class bam_to_breakpoint():
     # Methods to find all intervals in amplicon                 
     def interval_neighbors(self, i, ilist=[], rdlist=[], t=0, gcc=False):
         i2 = self.interval_extend(i)
-        # i2 = i2
+        # i2 = i
         # i2 = self.interval_extend(i, ilist, rdlist)
         ms_window_size0 = 10000
         ms_window_size1 = 300
@@ -1512,10 +1541,16 @@ class bam_to_breakpoint():
                     break
             if covered:
                 continue
-            if edges[ei][0].v2.strand < 0:
-                n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, edges[ei][0].v2.pos, min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
-            else:
-                n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), edges[ei][0].v2.pos))
+            found_neighbor = False
+            for i3 in rdlist:
+                if i3.chrom == edges[ei][0].v2.chrom and edges[ei][0].v2.pos >= i3.start and edges[ei][0].v2.pos <= i3.end:
+                    n = i3
+                    n = hg.interval(i3.chrom, i3.start, i3.end)
+            if not found_neighbor:
+                if edges[ei][0].v2.strand < 0:
+                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, edges[ei][0].v2.pos, min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
+                else:
+                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), edges[ei][0].v2.pos))
             if n.size() > self.max_insert + 2:
                 n.info = edges[ei][1]
                 neighbors.append(n)
@@ -1560,7 +1595,7 @@ class bam_to_breakpoint():
                 continue
             logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: search new " + str(i) + " " + str(ic))
             print "Interval hops", str(ic)
-            icn = self.interval_neighbors(ic, clist, gcc=gcc)
+            icn = self.interval_neighbors(ic, clist, rdlist=rdlist, gcc=gcc)
             logging.debug("#TIME " + '%.3f\t'%clock() + " interval_hops: neighbors " + str(i) + " " + str(ic) + " " + str(len(icn)))
             for ic2 in icn:
                 contained = False
@@ -1571,7 +1606,10 @@ class bam_to_breakpoint():
                     continue
                 if ic2.size() < 2 * ms_window_size0 and len(self.interval_discordant_edges(ic2)) < 2:
                     continue
-                if explore or len(hg.interval_list([ic]).intersection(i2list)) > 0:
+                in_rdlist = False
+                if len(hg.interval_list(icn).intersection(rdlist)) > 0:
+                    is_in_rdlist = True
+                if not in_rdlist and (explore or len(hg.interval_list([ic]).intersection(i2list)) > 0):
                     heapq.heappush(unseen_list, (-ic2.info, ic2))
                 clist.append(ic2)
             seen_list.append(ic)
@@ -1593,7 +1631,7 @@ class bam_to_breakpoint():
         num_high = 0
         if filter_small and i.size() < 2 * ms_window_size and len(self.interval_discordant_edges(i)) < 2:
             return False 
-        wc = self.window_coverage(i, ms_window_size)
+        wc = self.window_coverage(i, ms_window_size, exact=False)
         mc = self.median_coverage()
         if self.span_coverage:
             arm_coverage = self.median_coverage(refi=i)
@@ -1614,14 +1652,16 @@ class bam_to_breakpoint():
                     num_high += 1
         # wc_high = len([w for w in wc if w[1] > mc[1] + 3 * mc[2]])
         if num_high > num_w / 5:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_amplified True " + str(i))
             return True
         elif filter_small == False and i.size() < 2 * ms_window_size and len(self.interval_discordant_edges(i)) >= 2:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_amplified True " + str(i))
             return True
         else:
+            logging.debug("#TIME " + '%.3f\t'%clock() + " interval_amplified False " + str(i))
             return False
 
     def interval_extend(self, i, strand=0, i0=None):
-        print "Interval extend start:", str(i), strand
         ms_window_size = 10000
         extend_size = max(i.size() / ms_window_size, 1)
         max_window_size = 300000000
@@ -2172,9 +2212,9 @@ class bam_to_breakpoint():
 
         for i in ilist:
             if i.size() > 1000000:
-                wc_i = [w for w in self.window_coverage(i, 10000)]
+                wc_i = [w for w in self.window_coverage(i, 10000, exact=False)]
             else:
-                wc_i = [w for w in self.window_coverage(i, 100)]
+                wc_i = [w for w in self.window_coverage(i, 100, exact=False)]
             cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
             wc += wc_i
 

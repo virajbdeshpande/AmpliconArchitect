@@ -191,7 +191,7 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Exploring interval: " + str(ird))
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
-        ilist = bamFileb2b.interval_hops(ird)
+        ilist = bamFileb2b.interval_hops(ird, rdList)
         irdhops.append((ird, ilist))
         for i in ilist:
             irddict[i] = ird
