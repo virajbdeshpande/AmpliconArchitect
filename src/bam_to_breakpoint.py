@@ -174,12 +174,12 @@ class bam_to_breakpoint():
         # if clip == True or (clip == False and i.size() >= 100 * self.read_length):
         #     return len(alist) * self.read_length / float(i.size())
         if clip == True or (clip is None and e2-s2 < 1000):
-            icc = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / float(e2-s2)
+            icc = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / max(1.0, float(e2-s2 + 1))
             self.interval_coverage_calls[call_args] = icc
             return self.interval_coverage_calls[call_args]
         else:
             self.interval_coverage_calls[call_args] = len(
-                [a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / float(e2 - s2)
+                [a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / max(1.0, float(e2 - s2 + 1))
             return self.interval_coverage_calls[call_args]
         for a in alist:
             ai = hg.interval(a, bamfile=self.bamfile).intersection(i)
@@ -532,9 +532,9 @@ class bam_to_breakpoint():
                         if abs(cp - c) > 3 * math.sqrt(max(cp, c) / rd_global) * h0:
                         # if abs(cp - c) > 2 * hr(c, window_size * len(segs[si])):
                             freeze |= 1
-                    # if len(segs[si]) > 1 and len(segs[si - 1]) > 1:
-                    if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci - len (segs[si - 1]):ci]], equal_var=False)[1] < pvalue:
-                        freeze |= 1
+                    if len(segs[si]) > 1 and len(segs[si - 1]) > 1:
+                        if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci - len (segs[si - 1]):ci]], equal_var=False)[1] < pvalue:
+                            freeze |= 1
                 if si < len(segs) - 1:
                     if (len(segs[si]) < 15 or len(segs[si + 1]) < 15):
                         cn = cov2[ci + len(segs[si])][1]
@@ -590,21 +590,17 @@ class bam_to_breakpoint():
             for shiftsi in range(len(shifts)):
                 s3 = [shifts[shiftsi][3], shifts[shiftsi][3][1:], shifts[shiftsi][3][:-1], shifts[shiftsi][3][1:-1]]
                 s4 = [shifts[shiftsi][4], shifts[shiftsi][4][1:], shifts[shiftsi][4][:-1], shifts[shiftsi][4][1:-1]]
-                # print [[stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3] for s4i in s4]
-                # min_ttest_val = 1.0
-                # for s3i in s3:
-                #     # if len(s3i) <= 1:
-                #     #     continue
-                #     for s4i in s4:
-                #         # if len(s4i) <= 1:
-                #         #    continue
-                #         min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
-                # if min_ttest_val > pvalue:
-                if min([min([stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3]) for s4i in s4]) > pvalue:
-                    # print shifts[shiftsi]
-                    mergelist.append(shiftsi)
-            # print mergelist
-            # exit()
+                min_ttest_val = 1.0
+                for s3i in s3:
+                    if len(s3i) <= 1:
+                        continue
+                    for s4i in s4:
+                        if len(s4i) <= 1:
+                           continue
+                        min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
+                if min_ttest_val > pvalue:
+                    if min([min([stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3]) for s4i in s4]) > pvalue:
+                        mergelist.append(shiftsi)
             if len(mergelist) > 0:
                 merge = True
                 plist = []
@@ -963,9 +959,9 @@ class bam_to_breakpoint():
         return True
 
     def edge_has_high_entropy(self, read_list):
-        if max([stats.entropy(np.unique(rr[0].query_sequence, return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
+        if max([stats.entropy(np.unique(list(rr[0].query_sequence), return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
             return False
-        if max([stats.entropy(np.unique(rr[1].query_sequence, return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
+        if max([stats.entropy(np.unique(list(rr[1].query_sequence), return_counts=True)[1]) for rr in read_list]) < self.breakpoint_entropy_cutoff:
             return False
         return True
 
