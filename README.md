@@ -147,7 +147,7 @@ tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
 `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
-Available annotations:
+Available annotations (`$ref`):
 * hg19: `hg19.tar.gz`
 * GRCh37: `GRCh37.tar.gz`
 * GRCh38: (coming soon)
