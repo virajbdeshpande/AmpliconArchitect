@@ -134,15 +134,23 @@ source ~/.bashrc
 ```
 
 #### Data repositories:
-Download AA data repositories and set environment variable AA_DATA_REPO:
-* Download from `https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k`
-* Uncompress set enviroment variable AA_DATA_REPO pointing to the data_repo directory:
+Set annotations directory and environment variable AA_DATA_REPO:
 ```bash
-tar zxf data_repo.tar.gz
+mkdir -p data_repo
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
 ```
-
+Download and uncompress AA annotations matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
+```
+cd $AA_DATA_REPO
+tar zxf $ref.tar.gz
+```
+The annotations may be downloaded here:
+`https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+Available annotations:
+* hg19: `hg19.tar.gz`
+* GRCh37: `GRCh37.tar.gz`
+* GRCh38: (coming soon)
 
 ## AmpliconArchitect reconstruction
 
