@@ -209,8 +209,8 @@ class bam_to_breakpoint():
             if (exact):
                 (istart, iend) = (i.start, i.end)
             else:
-                istart = window_size * int(math.ceil(i.start / window_size))
-                iend = window_size * int(math.floor(i.end / window_size))
+                istart = window_size * round(float(i.start) / window_size)
+                iend = window_size * round(float(i.end) / window_size)
             for k in xrange(istart, iend, window_size):
                 yield hg.interval(i.chrom, k, k + window_size - 1)
         for k in win_breakup(i, window_size):
