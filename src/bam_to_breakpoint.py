@@ -442,6 +442,21 @@ class bam_to_breakpoint():
         #[(interval,ms)]
         return dfi
 
+    
+    def meanshift_pval(self, s1, s2):
+        if len(s1) <= 1 and len(s2) <= 1:
+           return 1.0
+        if len(s1) > 1 and len(s2) > 1:
+            return stats.ttest_ind(s1, s2, equal_var=False)[1]
+        elif len(s1) == 1:
+            zscore = abs(s1[0] - np.average(s1 + s2)) / np.std(s1 + s2)
+            return stats.norm.sf(zscore)
+        elif len(s2) == 1:
+            zscore = abs(s2[0] - np.average(s1 + s2)) / np.std(s1 + s2)
+            return stats.norm.sf(zscore)
+        return 1.0
+ 
+
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
         if window_size == -1:
             window_size = 10000
@@ -534,7 +549,7 @@ class bam_to_breakpoint():
                         # if abs(cp - c) > 2 * hr(c, window_size * len(segs[si])):
                             freeze |= 1
                     if len(segs[si]) > 1 and len(segs[si - 1]) > 1:
-                        if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci - len (segs[si - 1]):ci]], equal_var=False)[1] < pvalue:
+                        if self.meanshift_pval([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci - len (segs[si - 1]):ci]]) < pvalue:
                             freeze |= 1
                 if si < len(segs) - 1:
                     if (len(segs[si]) < 15 or len(segs[si + 1]) < 15):
@@ -542,9 +557,8 @@ class bam_to_breakpoint():
                         if abs(cn - c) > 3 * math.sqrt(max(cn, c) / rd_global) * h0:
                         # if abs(cn - c) > 2 * hr(c, window_size * len(segs[si])):
                             freeze |= 2
-                    if len(segs[si]) > 1 and len(segs[si + 1]) > 1:
-                        if stats.ttest_ind([cc[1] for cc in cov[ci:ci + len(segs[si])]], [cs[1] for cs in cov[ci + len (segs[si]):ci + len(segs[si]) + len(segs[si + 1])]], equal_var=False)[1] < pvalue:
-                            freeze |= 2
+                    if self.meanshift_pval([cc[1] for cc in cov[ci: ci + len(segs[si])]], [cs[1] for cs in cov[ci + len(segs[si]):ci + len(segs[si]) + len(segs[si + 1])]]) < pvalue:
+                        freeze |= 2
                 # if freeze > 0:
                 frozen.append((segs[si], freeze, c, cov2[cpi:ci+len(segs[si])], cov[cpi:ci+len(segs[si])]))
                 ci += len(segs[si])
@@ -593,14 +607,10 @@ class bam_to_breakpoint():
                 s4 = [shifts[shiftsi][4], shifts[shiftsi][4][1:], shifts[shiftsi][4][:-1], shifts[shiftsi][4][1:-1]]
                 min_ttest_val = 1.0
                 for s3i in s3:
-                    if len(s3i) <= 1:
-                        continue
                     for s4i in s4:
-                        if len(s4i) <= 1:
-                           continue
-                        min_ttest_val = min(min_ttest_val, stats.ttest_ind(s3i, s4i, equal_var=False)[1])
+                        p = self.meanshift_pval(s3i, s4i)
+                        min_ttest_val = min(min_ttest_val, p)
                 if min_ttest_val > pvalue:
-                # if min([min([stats.ttest_ind(s3i, s4i, equal_var=False)[1] for s3i in s3]) for s4i in s4]) > pvalue:
                     mergelist.append(shiftsi)
             if len(mergelist) > 0:
                 merge = True
