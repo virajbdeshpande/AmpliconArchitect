@@ -209,8 +209,8 @@ class bam_to_breakpoint():
             if (exact):
                 (istart, iend) = (i.start, i.end)
             else:
-                istart = window_size * round(float(i.start) / window_size)
-                iend = window_size * round(float(i.end) / window_size)
+                istart = window_size * int(round(float(i.start) / window_size))
+                iend = window_size * int(round(float(i.end) / window_size))
             for k in xrange(istart, iend, window_size):
                 yield hg.interval(i.chrom, k, k + window_size - 1)
         for k in win_breakup(i, window_size):
@@ -460,6 +460,7 @@ class bam_to_breakpoint():
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
         if window_size == -1:
             window_size = 10000
+        i = hg.interval(i.chrom, window_size * int(round(float(i.start) / window_size)), window_size * int(round(float(i.end) / window_size)))
         mc = self.median_coverage(window_size, gcc)
         rd_global = mc[0]
         h0 = mc[2]
@@ -2195,9 +2196,7 @@ class bam_to_breakpoint():
                     covl += [c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end]
                     scale_max_cov = max(scale_max_cov, avg_cov)
                     scale_max_ms = max(scale_max_ms, seg.info['cn'])
-                ax2.plot((ilist.xpos(seg.chrom, seg.start), ilist.xpos(seg.chrom, seg.end)), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
-        
-        print scale_max_cov, scale_max_ms
+                ax2.plot((ilist.xpos(seg.chrom, max(i.start, seg.start)), ilist.xpos(seg.chrom, min(i.end, seg.end))), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         covl.sort()
         if len(covl) > 0:
             m95cov = covl[-(len(covl)/20)]
