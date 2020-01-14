@@ -82,7 +82,7 @@ class bam_to_breakpoint():
         self.span_coverage = span_coverage
         self.mapping_quality_cutoff = 5
         self.breakpoint_mapping_quality_cutoff = 20
-        self.breakpoint_entropy_cutoff = 0.5
+        self.breakpoint_entropy_cutoff = 0.75
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
