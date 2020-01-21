@@ -731,11 +731,11 @@ class bam_to_breakpoint():
             if strand == -1:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and a.is_reverse
-                        and (a.mate_is_unmapped or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
+                        and (a.mate_is_unmapped or a.next_reference_name is not None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
             else:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and not a.is_reverse 
-                        and (a.mate_is_unmapped or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
+                        and (a.mate_is_unmapped or a.next_reference_name is not None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
 
 
     # Methods to find breakpoint edges in amplicon
@@ -974,8 +974,8 @@ class bam_to_breakpoint():
         return True
 
     def edge_has_high_entropy(self, read_list):
-        bp1_entropy = max([stats.entropy(np.unique(list(rr[0].query_sequence), return_counts=True)[1]) for rr in read_list])
-        bp2_entropy = max([stats.entropy(np.unique(list(rr[1].query_sequence), return_counts=True)[1]) for rr in read_list])
+        bp1_entropy = max([stats.entropy(np.unique(list(rr[0].get_reference_sequence()), return_counts=True)[1]) for rr in read_list])
+        bp2_entropy = max([stats.entropy(np.unique(list(rr[1].get_reference_sequence()), return_counts=True)[1]) for rr in read_list])
         logging.debug("#TIME %.3f\tbreakpoint_entropy: %.3f %.3f" % (clock(), bp1_entropy, bp2_entropy))
         if bp1_entropy < self.breakpoint_entropy_cutoff:
             return False

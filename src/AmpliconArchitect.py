@@ -34,6 +34,7 @@ import sys
 import os
 import numpy as np
 import matplotlib
+import copy
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
@@ -180,8 +181,7 @@ if args.extendmode == 'VIRAL':
     iout.close()
     sys.stdout = old_stdout
 
-
-
+all_ilist = copy.copy(rdList)
 irdhops = []
 irddict = {}
 irdSets = Set([Set([ird]) for ird in rdList])
@@ -191,7 +191,7 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Exploring interval: " + str(ird))
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
-        ilist = bamFileb2b.interval_hops(ird, rdlist=rdList)
+        ilist = bamFileb2b.interval_hops(ird, rdlist=all_ilist)
         irdhops.append((ird, ilist))
         for i in ilist:
             irddict[i] = ird
@@ -199,6 +199,8 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         iout.write(mystdout.getvalue())
         iout.close()
         sys.stdout = old_stdout
+        all_ilist += ilist
+        all_ilist.sort()
 
     allhops = hg.interval_list(reduce(lambda x, y: x + y, [irdh[1] for irdh in irdhops], []))
     allhops.sort()
