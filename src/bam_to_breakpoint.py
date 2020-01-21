@@ -731,11 +731,11 @@ class bam_to_breakpoint():
             if strand == -1:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and a.is_reverse
-                        and (a.mate_is_unmapped or a.next_reference_name is not None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
+                        and (a.mate_is_unmapped or a.next_reference_name is None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
             else:
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and not a.is_reverse 
-                        and (a.mate_is_unmapped or a.next_reference_name is not None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
+                        and (a.mate_is_unmapped or a.next_reference_name is None or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
 
 
     # Methods to find breakpoint edges in amplicon
