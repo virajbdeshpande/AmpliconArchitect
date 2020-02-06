@@ -1,6 +1,6 @@
 # AmpliconArchitect (AA)
 
-###December 2019 update:
+### December 2019 update:
 We have now patched AA to support hg38. To enable hg38 functionality, please download the GRCh38 AA data repo patch [here](https://drive.google.com/open?id=1MlIRwrjQ4UzECc_VIGqOMb0eBmYoxMRR), and extract it in the `$AA_DATA_REPO` folder. AA can then be run with hg38 data by specifying `-r GRCh38`.
 
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
@@ -106,14 +106,24 @@ source ~/.bashrc
 ```
 
 #### Data repositories:
-Download AA data repositories and set environment variable AA_DATA_REPO:
-* Download from `https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k`
-* Uncompress set enviroment variable AA_DATA_REPO pointing to the data_repo directory:
+Set annotations directory and environment variable AA_DATA_REPO:
 ```bash
-tar zxf data_repo.tar.gz
+mkdir -p data_repo
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
 ```
+
+Download and uncompress AA annotations matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
+```
+cd $AA_DATA_REPO
+tar zxf $ref.tar.gz
+```
+The annotations may be downloaded here:
+`https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+Available annotations (`$ref`):
+* hg19: `hg19.tar.gz`
+* GRCh37: `GRCh37.tar.gz`
+* GRCh38: `GRCh38.tar.gz`
 
 ## AmpliconArchitect reconstruction
 
@@ -190,7 +200,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | ---------- | ---- | ----------- |
 | `-h`, `--help`    |    |   show this help message and exit|
 | `--runmode`     | STR|   Values: [`FULL`/`BPGRAPH`/`CYCLES`/`SVVIE`W]. This option determines which stages of AA will be run. <br> - `FULL`: Run the full reconstruction including breakpoint graph, cycles as well as SV visualization. <br> - `BPGRAPH`: Only reconstruct the breakpoint graph and estimate copy counts, but do not reconstruct the amplicon cycles. <br> - `CYCLES`: Only reconstruct the breakpoint graph and cycles, but do not create the output for SV visualization. <br> - `SVVIEW`: Only create the SV visualization, but do not reconstruct the breakpoint graph or cycles. <br> Default: `FULL`| 
-| `--extendmode`  |STR |   Values: [`EXPLORE`/`CLUSTERED`/`UNCLUSTERED`/`VIRAL`]. This determines how the input intervals in bed file are treated.<br> - `EXPLORE` : Search for all intervals in the genome that may be connected to input seed intervals.<br> - `CLUSTERED` : Input intervals are treated as part of a single connected amplicon and no new connected itervals are added. <br> - `UNCLUSTERED` : Input intervals are treated part of a single connected amplicon and no new connected intervals are added. <br> Default: `EXPLORE`| 
+| `--extendmode`  |STR |   Values: [`EXPLORE`/`CLUSTERED`/`UNCLUSTERED`/`VIRAL`]. This determines how the input intervals in bed file are treated.<br> - `EXPLORE` : Search for all intervals in the genome that may be connected to input seed intervals.<br> - `CLUSTERED` : Input intervals are treated as part of a single connected amplicon and no new connected itervals are added. <br> - `UNCLUSTERED` : Each input interval is treated as a distinct single interval amplicon and no new intervals are added.<br> Default: `EXPLORE`| 
 | `--sensitivems` | STR|   Values: [`True`, `False`]. Set `True` only if copy counts are expected to vary by an order of magnitude, e.g. viral integration. Default: `False`| 
 | `--plotstyle` | STR | Values: [`small`, `large`, `all_amplicons`]. `large`: large font, `all_amplicons`: display a large number of intervals in a single plot, recommeded for visualizing multiple amplicons in CLUSTERED mode. Default: `small` |
 | `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `<CUSTOM>`, `None`]. Reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`| 
