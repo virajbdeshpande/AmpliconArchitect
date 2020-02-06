@@ -30,6 +30,7 @@ import os
 import pysam
 import global_names
 
+
 GAIN = 5.0
 CNSIZE_MIN = 100000
 
@@ -51,7 +52,7 @@ parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
                     action='store', type=int, default=CNSIZE_MIN)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default), \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default) & \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
 args = parser.parse_args()
 

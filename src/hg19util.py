@@ -137,13 +137,13 @@ def reverse_complement(seq):
 
 class interval(object):
     def __init__(self, line, start=-1, end=-1, strand=1,
-        file_format='', bamfile=None, info=''):
+        file_format='', bamfile=None, info='', exclude_info_string=False):
         self.info = ""
         self.file_format = file_format
         if type(line) == pysam.AlignedRead or type(line) == pysam.AlignedSegment:
             self.load_pysamread(line, bamfile)
         elif start == -1:
-            self.load_line(line, file_format)
+            self.load_line(line, file_format, exclude_info_string=exclude_info_string)
         elif end == -1:
             self.load_pos(line, start, start, strand)
         else:
@@ -151,7 +151,7 @@ class interval(object):
         if len(info) > 0:
             self.info = info
 
-    def load_line(self, line, file_format):
+    def load_line(self, line, file_format, exclude_info_string=False):
         if file_format == '':
             if len(line.strip().split()) == 1:
                 self.chrom = line.split(':')[0]
@@ -175,9 +175,10 @@ class interval(object):
                 self.strand = 1
             else:
                 self.strand = -1
-            self.info = {r[0: r.find('=')]: r[r.find('=') + 1: ]
+            if not exclude_info_string:
+                self.info = {r[0: r.find('=')]: r[r.find('=') + 1: ]
                          for r in ll[8].strip().strip(';').split(';')}
-            self.info['Variant'] = ll[5]
+                self.info['Variant'] = ll[5]
         elif file_format == 'bed':        
             ll = line.strip().split()
             self.chrom = ll[0]
@@ -186,7 +187,8 @@ class interval(object):
                 self.strand = 1
             else:
                 self.strand = -1
-            self.info = ll[3:]
+            if not exclude_info_string:
+                self.info = ll[3:]
         else:
             raise(Exception("Invalid interval format" + str(line)))
 
@@ -402,23 +404,23 @@ class interval(object):
 
 
 class interval_list(list, object):
-    def __init__(self, ilist=None, file_format=None, sort=True):
+    def __init__(self, ilist=None, file_format=None, sort=True, exclude_info_string=False):
         if ilist == None:
             ilist = []
         self.file_format = file_format
         if file_format in ['bed', 'gff']:
-            self.bed_to_list(ilist)
+            self.bed_to_list(ilist, exclude_info_string=exclude_info_string)
         if file_format is None:
             list.__init__(self,ilist)
         if sort:
             self.sort()
         self.offset = None
 
-    def bed_to_list(self, file_name):
+    def bed_to_list(self, file_name, exclude_info_string=False):
         if file_name is not None:
             try:
                 f = open(file_name)
-                list.__init__(self, [interval(l, file_format=self.file_format)
+                list.__init__(self, [interval(l, file_format=self.file_format, exclude_info_string=exclude_info_string)
                               for l in f if len(l.strip().split()) > 2
                               and l.strip()[0] != '#'])
                 f.close()
