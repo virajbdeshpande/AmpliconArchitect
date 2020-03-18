@@ -40,6 +40,7 @@ import matplotlib.ticker as ticker
 from matplotlib import gridspec
 from cStringIO import StringIO
 import random
+import re
 # import JobNotifier
 
 from breakpoint_graph import *
@@ -835,7 +836,8 @@ class bam_to_breakpoint():
         return len(dlist)
 
 
-    def refine_discordant_edge(self, e):        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
+    def refine_discordant_edge(self, e):
+        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
         v1min = max(0, (e.v1.pos - self.max_insert + self.read_length if e.v1.strand == 1 else e.v1.pos) - 1)
         v2min = max(0, (e.v2.pos - self.max_insert + self.read_length if e.v2.strand == 1 else e.v2.pos) - 1)
         v1max = min(e.v1.pos + self.max_insert - self.read_length if e.v1.strand == -1 else e.v1.pos, hg.chrLen[hg.chrNum(e.v1.chrom)]) - 1
@@ -928,7 +930,11 @@ class bam_to_breakpoint():
             else:
                 p1 = a1.reference_end - 1 if e.v1.strand == 1 else a1.reference_start
                 p2 = a2.reference_end - 1 if e.v2.strand == 1 else a2.reference_start
-            dpairs[(hom, p1, p2)].append((a1, a2, r1, r2))
+            if ((e.v1.chrom, e.v1.pos, e.v1.strand) != (e.v2.chrom, e.v2.pos, e.v2.strand)):
+                dpairs[(hom, p1, p2)].append((a1, a2, r1, r2))
+            elif (p1 >= p2):
+                dpairs[(hom, p1, p2)].append((a1, a2, r1, r2))
+
 
         if len(dpairs) == 0:
             return (e, 0, [], None)
@@ -988,6 +994,38 @@ class bam_to_breakpoint():
         if self.edge_has_high_mapq(read_list) and self.edge_has_high_entropy(read_list):
             return True
         return False
+
+    def sa_tag_overlaps_primary(self, a):
+        if not a.has_tag('SA'):
+            return False
+        t = a.get_tag('SA').split(',')
+        if t[0] != a.reference_name:
+            return False
+        if (t[2] == '+') != a.is_reverse:
+            return False
+        if min(abs(int(t[1]) - a.reference_start), abs(int(t[1]) - a.reference_end)) > self.read_length:
+            return False
+        return True   
+
+    def sa_tag_mismatch_breakpoint(self, a, bp):
+        if not a.has_tag('SA'):
+            return False
+        t = a.get_tag('SA').split(',')
+        if t[0] != a.reference_name:
+            return True
+        if (t[2] == '+') != a.is_reverse:
+            return True
+        if bp.strand == -1 and (a.reference_start != bp.pos or int(t[1]) != bp.pos):
+            return True
+        if bp.strand == 1:
+            if abs(a.reference_end - bp.pos) > 10:
+                return True
+            cigar_counts = [int(i) for i in re.findall(r'\d+', t[3])]
+            cigar_op = [i for i in re.findall(r'\D', t[3])]
+            sa_ref_len = sum([i[0] for i in zip(cigar_counts, cigar_op) if i[1] in 'MDNX'])
+            if abs(int(t[1]) + sa_ref_len - bp.pos) > 10:
+                return True
+        return False     
 
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
@@ -1180,18 +1218,44 @@ class bam_to_breakpoint():
                 num_inverted = 0
                 bp1c = None
                 bp2c = None
-                if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
+                vl2 = []
+                if bp1.chrom == bp2.chrom and bp1.strand == bp2.strand and abs(bp1.pos - bp2.pos) <= self.read_length:
+                    non_inverted_reads = Set([])
+                    multiple_non_inverted = False
                     if bp1.strand == 1:
                         for v in vl:
                             if v[0].reference_start == v[1].reference_start:
                                 num_inverted += 1
+                            elif self.sa_tag_overlaps_primary(v[0]):
+                                num_inverted += 1
+                            elif self.sa_tag_overlaps_primary(v[1]):
+                                num_inverted += 1
+                            else:
+                                vl2.append(v)
+                                if not multiple_non_inverted:
+                                    non_inverted_reads.add(v[0].query_name)
+                                    if len(non_inverted_reads) >= ps:
+                                        multiple_non_inverted = True
                     else:
                         for v in vl:
                             if v[0].reference_end == v[1].reference_end:
                                 num_inverted += 1
-                    if len(vl) - num_inverted < ps:
+                            elif self.sa_tag_overlaps_primary(v[0]):
+                                num_inverted += 1
+                            elif self.sa_tag_overlaps_primary(v[1]):
+                                num_inverted += 1    
+                            else:
+                                vl2.append(v)
+                                if not multiple_non_inverted:
+                                    non_inverted_reads.add(v[0].query_name)
+                                    if len(non_inverted_reads) >= ps:
+                                        multiple_non_inverted = True
+                    logging.debug("checking foldback2: " + str(bp1) + str(bp2) + " %s %s %d %d %d" % (bp1.strand, bp2.strand, len(vl), num_inverted, ps))
+
+                    if len(vl2) < ps or (not multiple_non_inverted):
                         logging.debug("FOLDBACK: " + str(bp1) + str(bp2))
                         continue
+                    vl = vl2
                     vl.sort(lambda x, y: x[0].reference_start - y[0].reference_start)
                     if bp1.strand == 1:
                         maxp = vl[0][0].reference_end - 1
@@ -1225,6 +1289,27 @@ class bam_to_breakpoint():
                             bp2c = bp1
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
+
+                if bp1.chrom == bp2.chrom and bp1.strand == bp2.strand and abs(bp1.pos - bp2.pos) <= self.read_length:
+                    qname_exclude = set([])
+                    for v in vl:
+                        if (bp1.strand == 1 and max(v[0].reference_start, v[1].reference_start) > bre.v1.pos) or (bp1.strand == -1 and max(v[0].reference_end, v[1].reference_end) < bre.v1.pos):
+                            qname_exclude.add(v[0].query_name)
+                            continue
+                        if (self.sa_tag_mismatch_breakpoint(v[0], bre.v1) or self.sa_tag_mismatch_breakpoint(v[0], bre.v1) or self.sa_tag_overlaps_primary(v[0]) or self.sa_tag_overlaps_primary(v[1])):
+                            qname_exclude.add(v[0].query_name)
+                            continue
+                        if (bp1.strand == 1 and bre.v1.pos - v[0].reference_start + bre.v2.pos - v[1].reference_start > self.max_insert):
+                            qname_exclude.add(v[0].query_name)
+                            continue
+                        if (bp2.strand == 1 and v[0].reference_end - bre.v1.pos + v[1].reference_end - bre.v2.pos > self.max_insert):
+                            qname_exclude.add(v[0].query_name)
+                            continue
+                    vl = [v for v in vl if v[0].query_name not in qname_exclude]
+                    if len(vl) < ps:
+                        continue
+
+
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
                     continue
                 if bre.type() != 'concordant':
@@ -1336,16 +1421,26 @@ class bam_to_breakpoint():
                 if len(vl) < ps or len(vl1Set) < pair_support or len(vl2Set) < pair_support:
                     continue
                 num_inverted = 0
+                non_inverted_reads = Set([])
+                multiple_non_inverted = False
                 if bp1.chrom == bp2.chrom and bp1.pos == bp2.pos and bp1.strand == bp2.strand:
                     if bp1.strand == 1:
                         for v in vl:
                             if v[0].reference_start == v[1].reference_start:
                                 num_inverted += 1
+                            elif not multiple_non_inverted:
+                                non_inverted_reads.add(v[0].query_name)
+                                if len(non_inverted_reads) >= ps:
+                                    multiple_non_inverted = True
                     else:
                         for v in vl:
                             if v[0].reference_end == v[1].reference_end:
                                 num_inverted += 1
-                if len(vl) - num_inverted < ps:
+                            elif not multiple_non_inverted:
+                                non_inverted_reads.add(v[0].query_name)
+                                if len(non_inverted_reads) >= ps:
+                                    multiple_non_inverted = True
+                if len(vl) - num_inverted < ps or (not multiple_non_inverted):
                     continue
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
