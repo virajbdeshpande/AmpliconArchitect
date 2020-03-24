@@ -2468,4 +2468,4 @@ class bam_to_breakpoint():
         fig.subplots_adjust(hspace=0)
         fig.savefig(amplicon_name + '.png', dpi=dpi)
         fig.savefig(amplicon_name + '.pdf', dpi=dpi)
-
+        plt.close()
