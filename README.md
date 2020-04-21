@@ -1,7 +1,8 @@
 # AmpliconArchitect (AA)
 
-### February 2020 update:
-We have now patched AA to support hg38. To enable hg38 functionality, please download the GRCh38 AA data repo patch [here](https://drive.google.com/open?id=1MlIRwrjQ4UzECc_VIGqOMb0eBmYoxMRR), and extract it in the `$AA_DATA_REPO` folder. AA can then be run with hg38 data by specifying `-r GRCh38`.
+### Recent updates:
+#### April 2020 update:
+We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu). 
 
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
@@ -27,7 +28,7 @@ A full description of the methods and detailed characterization of copy number a
     * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k`
+    * Download from `https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         tar zxf data_repo.tar.gz
