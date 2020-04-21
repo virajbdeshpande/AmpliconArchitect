@@ -37,10 +37,10 @@ A full description of the methods and detailed characterization of copy number a
         ```
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
-    * `docker pull virajbdeshpande/ampliconarchitect`
+    * `docker pull jluebeck/ampliconarchitect`
 
 2. Clone run script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 #### Usage:
 
@@ -65,7 +65,7 @@ AA can be installed in 2 ways:
     * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/uc?export=download&confirm=V4Wy&id=0ByYcg0axX7udUDRxcTdZZkg0X1k`
+    * Download from `https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         tar zxf data_repo.tar.gz
@@ -74,15 +74,20 @@ AA can be installed in 2 ways:
         ```
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
-    * `docker pull virajbdeshpande/ampliconarchitect`
+    * `docker pull jluebeck/ampliconarchitect`
 
 2. Pull script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 ### Option 2: Github source code:
 `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
 
 **Note: In the rest of this document, we will refer to the path of the parent directory `AmpliconArchitect/src` as `$AA_SRC`**
+
+```
+cd AmpliconArchitect
+echo export AA_SRC=$PWD/src >> ~/.bashrc
+```
 
 #### Prerequisites:
 1. Python 2.7
@@ -120,11 +125,11 @@ cd $AA_DATA_REPO
 tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
-`https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+`https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
 Available annotations (`$ref`):
-* hg19: `hg19.tar.gz`
-* GRCh37: `GRCh37.tar.gz`
-* GRCh38: `GRCh38.tar.gz`
+* hg19
+* GRCh37
+* GRCh38
 
 ## AmpliconArchitect reconstruction
 
