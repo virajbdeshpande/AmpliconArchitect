@@ -51,4 +51,4 @@ for i in "$@"; do
     fi
 done
 
-docker run --rm -e AA_DATA_REPO=/home/data_repo -e argstring="$argstring" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output -v $MOSEKLM_LICENSE_FILE:/home/programs/mosek/8/licenses jluebeck/ampliconarchitect bash /home/run_aa_script.sh
+docker run --rm -e AA_DATA_REPO=/home/data_repo -e argstring="$argstring" -v $AA_DATA_REPO:/home/data_repo -v $BAM_DIR:/home/bam_dir -v $BED_DIR:/home/bed_dir -v $OUT_DIR:/home/output -v $MOSEKLM_LICENSE_FILE:/home/programs/mosek/8/licenses jluebeck/ampliconarchitect:v1 bash /home/run_aa_script.sh
