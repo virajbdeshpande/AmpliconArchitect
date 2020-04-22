@@ -151,10 +151,18 @@ coverage_windows=None
 if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')
     coverage_windows.sort()
+
+#if cstats is None and cbam is not None:
+#    cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows)
+#    cstats = cbam2b.basic_stats
+#bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
+
 if cstats is None and cbam is not None:
     cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = cbam2b.basic_stats
-bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
+
+bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None))
+
 
 
 
