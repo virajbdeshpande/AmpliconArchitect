@@ -21,6 +21,7 @@ RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
 # ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
 
 RUN mkdir -p /home/output/
+RUN chmod 777 /home/output/
 RUN mkdir -p /home/input/
 RUN mkdir -p /home/programs/mosek/8/licenses/
 ADD run_aa_script.sh /home/
