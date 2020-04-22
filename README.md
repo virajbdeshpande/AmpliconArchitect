@@ -1,9 +1,11 @@
 # AmpliconArchitect (AA)
 
 ### Recent updates:
-#### April 2020 update:
+### April 2020 update:
 We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu). 
 
+
+## Introduction
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
 A full description of the methods and detailed characterization of copy number amplifications and ecDNA in cancer can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
