@@ -16,8 +16,10 @@
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
 
+import sys
+if (sys.version_info < (3, 0)):
+    from sets import Set
 
-from sets import Set
 from collections import defaultdict
 import heapq
 import logging
@@ -409,7 +411,7 @@ class breakpoint_graph(abstract_graph):
                     seenSet.add(v3)
                     heapq.heappush(a, (-1 * hdict[v3][0], v3))
             if len(a) == 0 and not completed:
-                print "NOT COMPLETED", hce[1].v1
+                print("NOT COMPLETED", hce[1].v1)
             s2Set = Set([])
             tc = hdict[hce[1].v1][1]
             v2 = hdict[hce[1].v1][2]
@@ -417,9 +419,9 @@ class breakpoint_graph(abstract_graph):
                 # print hce[1].v1, v2, s2Set
                 s2Set.add(v2)
                 if v2 not in hdict:
-                    print str(v2), str(hce[1].v1), str(tc)
+                    print(str(v2), str(hce[1].v1), str(tc))
                     for ee in hce[1].v1.elist:
-                        print str(ee), wehc[ee]
+                        print(str(ee), wehc[ee])
                 tc = hdict[v2][1] + tc
                 v2 = hdict[v2][2]
                 s2Set.add(v2)
@@ -458,7 +460,7 @@ class breakpoint_graph(abstract_graph):
                     continue
                 tc, tcw = thickest_cycle(we[wei], w2)
                 if len(tc) < 2:
-                    print str(tc[0])
+                    print(str(tc[0]))
                     exit()
                 if tcw > tcwmax:
                     tcmax = tc
@@ -521,9 +523,9 @@ class breakpoint_graph(abstract_graph):
                 tc = tc[ci:] + tc[: ci]
                     
             if tcw == 0:
-                print "tcw is 0"
+                print("tcw is 0")
                 break
-            print "Cycle ", cycle_number, ": Copy count = ",tcw, tc
+            print("Cycle ", cycle_number, ": Copy count = ",tcw, tc)
             cycle_edge_list = []
             ci = 1
             v0 = None
@@ -538,7 +540,7 @@ class breakpoint_graph(abstract_graph):
                 v0 = v1
                 v0c = v2
             elif v1.pos == -1 or v2.pos == -1:
-                print v1, "->", v2
+                print(v1, "->", v2)
                 cycle_edge_list.append((v1,v2))
             v1 = v2
             while ci < len(tc):
@@ -548,9 +550,9 @@ class breakpoint_graph(abstract_graph):
                     v2 = tc[ci].v1
                 if v1.pos == -1 or v2.pos == -1:
                     if v0 is not None:
-                        print v0, "->", v0c
+                        print(v0, "->", v0c)
                         cycle_edge_list.append((v0,v0c))
-                    print v1, "->", v2
+                    print(v1, "->", v2)
                     cycle_edge_list.append((v1,v2))
                     v0 = None
                     v0c = None
@@ -562,14 +564,14 @@ class breakpoint_graph(abstract_graph):
                         v0c = v2
                 elif tc[ci].type() != 'concordant':
                     if v0 is not None:
-                        print v0, "->", v0c
+                        print(v0, "->", v0c)
                         cycle_edge_list.append((v0,v0c))
                         v0 = None
                         v0c = None
                 v1 = v2
                 ci += 1
             if v0 is not None:
-                print v0, "->", v0c
+                print(v0, "->", v0c)
                 cycle_edge_list.append((v0,v0c))
             if amplicon_content_covered <= 0.9 * total_amplicon_content or (tcw > 0.2 * cycle_list[0][1]):
                 cycle_list.append([cycle_number, tcw, tc, cycle_edge_list])
@@ -835,7 +837,7 @@ class graph_decomposition(object):
         if cycle_list is None:
             ccnlist = [(c[1], c[0]) for c in self.cycle_dict.values()]
             ccnlist.sort(reverse=True)
-            print ccnlist
+            print(ccnlist)
             cycle_list = [c[1] for c in ccnlist]
         fseq = ''
         if outfasta is not None:

@@ -18,10 +18,11 @@
 #Contact: virajbdeshpande@gmail.com
 
 
-##This is a suite to load hg19 genome, genes, exons, repeat content and perform operations on this genome, compare variants
+##This is a suite to load genome, genes, exons, repeat content and perform operations on this genome, compare variants
+## it handles annotations from a database and is not restricted to solely hg19 if global_names.REF is not hg19.
 
+import sys
 from bisect import bisect_left
-from sets import Set
 from collections import defaultdict
 from time import clock
 import pysam
@@ -29,6 +30,9 @@ import heapq
 import copy
 import os
 import logging
+
+if (sys.version_info < (3, 0)):
+    from sets import Set
 
 import global_names
 
@@ -42,7 +46,7 @@ if DATA_REPO == '.' or DATA_REPO == '':
     DATA_REPO = '.'
 
 REF = global_names.REF
-print REF
+print("Global ref name is " + REF)
 
 REF_files = defaultdict(lambda: '', {})
 try:
@@ -102,8 +106,7 @@ chrOffset = {}
 def absPos(chrname, pos=0):
     cnum = chrNum(chrname)
     if chrNum(chrname) not in chrOffset:
-        chrkeys = chrName.keys()
-        chrkeys.sort()
+        chrkeys = sorted(chrName.keys())
         sumlen = sum([chrLen[c] for c in chrLen if c in chrOffset])
         for i in range(len(chrkeys)):
             if chrkeys[i] not in chrOffset:
@@ -458,7 +461,7 @@ class interval_list(list, object):
     def repeats(self, count=1):
         activeq = []
         if activeq is None:
-            print "h1"
+            print("h1")
             exit()
         jinterval = None
         ilist = []
@@ -466,12 +469,12 @@ class interval_list(list, object):
             while len(activeq) > 0 and not a.intersects(activeq[0][1]):
                 heapq.heappop(activeq)
                 if activeq is None:
-                    print "h2"
+                    print("h2")
                     exit()
             if len(activeq) < count and jinterval is not None:
                 ilist.append((jinterval, copy.copy(aq)))
                 if activeq is None:
-                    print "h3"
+                    print("h3")
                     exit()
                 jinterval = None
             heapq.heappush(activeq, (-1 * a.start, a))
@@ -562,7 +565,7 @@ class interval_list(list, object):
     def get_repeat_content(self):
         try:
             duke35_file = open(duke35_filename)
-            print "counting repeats", clock()
+            print("counting repeats", clock())
             self.sort()
             sum_duke = [0.0 for i in self]
             len_duke = [0.0 for i in self]
@@ -673,7 +676,7 @@ class interval_list(list, object):
                 continue
             if i in hlist and iprev.chrom == i.chrom:
                 breaks.append((offset[i][0] - hscale * hgap / 2, ':', i.chrom))
-                print str(i), str(iprev), i in hlist, iprev.chrom == i.chrom
+                print(str(i), str(iprev), i in hlist, iprev.chrom == i.chrom)
             elif i in hlist and iprev.chrom != i.chrom:
                 breaks.append((offset[i][0] - hscale * hgap / 2, '--', i.chrom))
             elif i in vlist and iprev in hlist:
