@@ -2,7 +2,7 @@
 
 ### Recent updates:
 ### April 2020 update:
-We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu). 
+We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu?usp=sharing). 
 
 
 ## Introduction
