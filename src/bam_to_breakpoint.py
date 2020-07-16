@@ -40,6 +40,7 @@ import matplotlib.ticker as ticker
 from matplotlib import gridspec
 from cStringIO import StringIO
 import random
+import re
 # import JobNotifier
 
 from breakpoint_graph import *
@@ -64,7 +65,7 @@ class bam_to_breakpoint():
     def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300,
         window_size=10000, min_coverage=30, pair_support=-1, downsample=-1,
         secondary_index=None, coverage_stats=None, coverage_windows=None,
-        sensitivems=False, span_coverage=True):
+        sensitivems=False, span_coverage=True, tstart=0):
         self.bamfile = bamfile
         self.sample_name = sample_name
         self.window_size = window_size
@@ -808,7 +809,8 @@ class bam_to_breakpoint():
         return len(dlist)
 
 
-    def refine_discordant_edge(self, e):        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
+    def refine_discordant_edge(self, e):
+        # logging.debug("#TIME " + '%.3f\t'%clock() + " refine discordant edge " + str(e))
         v1min = max(0, (e.v1.pos - self.max_insert + self.read_length if e.v1.strand == 1 else e.v1.pos) - 1)
         v2min = max(0, (e.v2.pos - self.max_insert + self.read_length if e.v2.strand == 1 else e.v2.pos) - 1)
         v1max = min(e.v1.pos + self.max_insert - self.read_length if e.v1.strand == -1 else e.v1.pos, hg.chrLen[hg.chrNum(e.v1.chrom)]) - 1
@@ -952,18 +954,14 @@ class bam_to_breakpoint():
         dflist = []
         drlist = []
         for i in ilist:
-            dflist += [a for a in self.fetch(i.chrom,
-                                                max(1, i.start),
-                                                i.end)
-                  if not a.is_unmapped and not a.is_reverse and a.is_paired
-                  and not a.is_proper_pair and not a.mate_is_unmapped
-                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff]
-            drlist += [a for a in self.fetch(i.chrom,
-                                                max(1, i.start),
-                                                i.end)
-                  if not a.is_unmapped and a.is_reverse and a.is_paired
-                  and not a.is_proper_pair and not a.mate_is_unmapped
-                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff]
+            dflist += [a for a in self.fetch(i.chrom, max(1, i.start), i.end)
+                  if not a.is_unmapped and not a.is_reverse and a.is_paired and not a.is_proper_pair
+                       and not a.mate_is_unmapped and not a.is_secondary and a.reference_end is not None
+                       and a.mapping_quality > self.mapping_quality_cutoff]
+            drlist += [a for a in self.fetch(i.chrom, max(1, i.start), i.end)
+                  if not a.is_unmapped and a.is_reverse and a.is_paired and not a.is_proper_pair
+                       and not a.mate_is_unmapped and not a.is_secondary and a.reference_end is not None
+                       and a.mapping_quality > self.mapping_quality_cutoff]
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
         # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
@@ -1044,43 +1042,23 @@ class bam_to_breakpoint():
                 mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
 
 
-        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant filter neighborhood " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
 
         dnlist0 = []
         dnlist = []
         clist = hg.interval_list([c[0] for c in mcdflist + mcdrlist])
         clist.sort()
-        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: merge and sort discordant " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)))
         ci = 0
         for c1 in mcdflist + mcdrlist:
             ci += 1
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local cluster " + str(interval) + " " + str(c1[0]) + " " + str(len(c1[1]))) 
             neighbor_hglist = hg.interval_list([])
             for a1 in c1[1]:
-                # if hgddict[a1].next_reference_name == hgddict[a1].reference_name:
                 neighbor_hglist.append(hg.interval(hgddict[a1].next_reference_name, hgddict[a1].next_reference_start, hgddict[a1].next_reference_start))
             neighbor_hglist.sort()
-            # print str(c1[0]), len(neighbor_hglist)
             neighbor_hglist = hg.interval_list([a2[0] for a2 in neighbor_hglist.merge_clusters(extend=self.max_insert - self.read_length) if len(a2[1]) >= pair_support])
-            # print [str(a2) for a2 in neighbor_hglist]
-            # mcdlist = hg.interval_list([a[0] for a in mcdflist + mcdrlist])
-            # mcdlist.sort()
-            # print str(c1[0]), [str(n) for n in neighbor_hglist]
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: local cluster " + str(interval) + " " + str(c1[0]) + " " + str(len(mcdlist.intersection(neighbor_hglist, extend=self.max_insert))))
             for c2 in mcdflist + mcdrlist:
                 if len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)) == 0:
                     continue
-                # print str(c1[0]), str(c2[0])
-                # continue
-                # print ci, str(c1[0]), str(c2[0]), len(c1[1]), len(c2[1]), len(hg.interval_list([c2[0]]).intersection(neighbor_hglist, extend=self.max_insert)), len(Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]])))
-                # if len(Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]]))) == 11:
-                #     qset = Set([hgddict[a1].query_name for a1 in c1[1]]).intersection(Set([hgddict[a2].query_name for a2 in c2[1]]))
-                #     for a1 in c1[1]:
-                #         if hgddict[a1].query_name in qset:
-                #             print str(hgddict[a1])
-                #     for a2 in c2[1]:
-                #         if hgddict[a2].query_name in qset:
-                #             print str(hgddict[a2])
                 vl = []
                 vlSet = Set([])
                 vl1Set = Set([])
@@ -1863,7 +1841,8 @@ class bam_to_breakpoint():
             e = e0[0]
             if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and e.v1.pos >= e.v2.pos:
                 ne = new_graph.add_edge(e)
-                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge e = " + str(e) + " " + str(ne) + " " + ne.edge_type)
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge e = " + str(e))
+                logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne = " + str(ne) + " " + ne.edge_type)
                 logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne, v1.elist = " + str(ne.v1) + " " + ','.join(map(str, ne.v1.elist)))
                 logging.debug("#TIME " + '%.3f\t'%clock() + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
                 if ne is None:
@@ -1981,9 +1960,8 @@ class bam_to_breakpoint():
         task.solutionsummary(mosek.streamtype.log)
         task.getsolutionslice(mosek.soltype.itr, mosek.solitem.xx, 0, numvar, res)
         print ( "Solution is: %s" % res )
+        
         wehc = {}
-
-
         for msv_ilist in zip(all_msv, ilist):
             slist = hg.interval_list([hg.interval('\t'.join(map(str, [sq[0].v1.chrom, sq[0].v1.pos, sq[0].v2.pos, sq[1]]))) for sq in zip(seqlist, res)])
             slist.sort()
@@ -2327,4 +2305,4 @@ class bam_to_breakpoint():
         fig.subplots_adjust(hspace=0)
         fig.savefig(amplicon_name + '.png', dpi=dpi)
         fig.savefig(amplicon_name + '.pdf', dpi=dpi)
-
+        plt.close()
