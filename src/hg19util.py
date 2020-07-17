@@ -79,7 +79,6 @@ duke35 = []
 duke35_exists = [True]
 
 # Handling chromosome names, lengths, sorting, positions and addition of new chromosomes
-
 chr_id = {}
 chrName = {}
 def chrNum(chrname, mode='append'):

@@ -48,12 +48,14 @@ import hg19util as hg
 
 from mycolors import *
 
-
 # matplotlib.rcParams.update({'font.size': 28})
 
 summary_logger = logging.getLogger('summary')
 graph_logger = logging.getLogger('graph')
 cycle_logger = logging.getLogger('cycle')
+
+# supress some specific warnings
+np.seterr(divide='ignore', invalid='ignore')
 
 
 class breakpoint_cluster:
