@@ -1186,7 +1186,6 @@ class bam_to_breakpoint():
             if filter_repeats:
                 if len(hg.interval_list([c[0]]).intersection(hg.conserved_regions)) > 0:
                     continue
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges -1 " + str(c[0]) + " " + str(len(c[1])))
             rep_content_time = 0
             intersection_time = 0
             nr_calls = 0
@@ -1201,7 +1200,6 @@ class bam_to_breakpoint():
                 nmatelist = [a for a in nmatelist if len(hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(ilist)) == 0]
                 intersection_time += clock() - ict
                 nlist += nmatelist
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 0" + str(c[0]) + " " + str(rep_content_time) + " " + str(nr_calls))
             nflist = [n for n in nlist if not n.is_reverse]
             nrlist = [n for n in nlist if n.is_reverse]
             hgndict = {hg.interval(a, bamfile=self.bamfile):a for a in nflist + nrlist}
@@ -1214,7 +1212,6 @@ class bam_to_breakpoint():
             mcnflist = [m for m in mcnflist if len(m[1]) >= pair_support] 
             mcnrlist = [m for m in mcnrlist if len(m[1]) >= pair_support] 
             mcnlist = mcnflist + mcnrlist
-            # logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: global edges 1" + str(c[0]) + " " + str(len(mcnflist)) + " " + str(len(mcnrlist)) + " " + str(self.get_mates_time) + " " + str(self.get_mates_num_calls))
             for cn in mcnlist:
                 vl = []
                 vlSet = Set([])
@@ -1238,7 +1235,6 @@ class bam_to_breakpoint():
                             vlSet.add((a.reference_start, a.reference_end, hgndict[hgm].reference_start, hgndict[hgm].reference_end))
                             vl1Set.add((a.reference_start, a.reference_end))
                             vl2Set.add((hgndict[hgm].reference_start, hgndict[hgm].reference_end))
-                            # print "#FFF", (a.query_alignment_start, a.query_alignment_end, hgndict[hgm].query_alignment_start, hgndict[hgm].query_alignment_end)
                             break
                 if len(vl) == 0 or len([v for v in vl if v[1].reference_start*v[0].reference_start > 0]) == 0:
                     continue
@@ -1288,12 +1284,6 @@ class bam_to_breakpoint():
             #         print '##', a[0].query_name, a[0].is_reverse, str(hg.interval(a[0], bamfile=self.bamfile)), '##', a[1].query_name, a[1].is_reverse, str(hg.interval(a[1], bamfile=self.bamfile)), hg.interval(a[0], bamfile=self.bamfile).rep_content()
         self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
                                     filter_repeats, pair_support, not ms is None)] = dnlist
-        # for e in dnlist:
-        #     print '#DDD', e[0], len(e[1]), e[0].type(), self.concordant_edge(e[0].v1)[0], + len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()
-        #     for a in e[1]:
-        #         print '#DDD', hg.interval(a[0], bamfile=self.bamfile).size(), hg.interval(a[0], bamfile=self.bamfile).rep_content(), hg.interval(a[1], bamfile=self.bamfile).size(), hg.interval(a[1], bamfile=self.bamfile).rep_content()
-        #         print '#DD', a[0].query_name, a[0].mapping_quality, a[0].query_alignment_sequence, a[0].reference_start, a[0].reference_end
-        #         print '#DD', a[1].query_name, a[1].mapping_quality, a[1].query_alignment_sequence, a[1].reference_start, a[1].reference_end
         return dnlist
 
     def load_edges(self, edge_file):
@@ -1319,8 +1309,6 @@ class bam_to_breakpoint():
     def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
         if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
             return self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
-        # if amplicon_name is not None and os.path.exists("%s_edges_unfiltered.txt" % amplicon_name):
-        #     edges = self.load_edges("%s_edges.txt" % amplicon_name)
         if amplicon_name is not None and os.path.exists("%s_edges.txt" % amplicon_name):
             eilist = self.load_edges("%s_edges.txt" % amplicon_name)
         else:

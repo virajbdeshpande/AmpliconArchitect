@@ -207,10 +207,15 @@ class interval(object):
 
     def load_pysamread(self, line, bamfile):
         if bamfile is None:
-            raise "Interval of pysam AlignedRead without bamfile"
+            raise Exception("Interval of pysam AlignedRead without bamfile")
         self.chrom = line.reference_name
         self.start = line.reference_start
-        self.end = line.reference_end
+        if line.reference_end is not None:
+            self.end = line.reference_end
+        else:
+            logging.warning("Reference_end for " + str(self) + " was NoneType. Setting to 0.")
+            self.end = 0
+
         if line.is_reverse:
             self.strand = -1
         else:
