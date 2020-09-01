@@ -1937,9 +1937,9 @@ class bam_to_breakpoint():
 
         if mosek_major_version >= 9:
             for j in range(numvar):
-                task.putvarbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
+                task.putvarbound(j, bkx[j], blx[j], bux[j])
             for i in range(numcon):
-                task.putconbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
+                task.putconbound(i, bkc[i], blc[i], buc[i])
 
         else:
             for j in range(numvar):
