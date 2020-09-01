@@ -54,8 +54,11 @@ summary_logger = logging.getLogger('summary')
 graph_logger = logging.getLogger('graph')
 cycle_logger = logging.getLogger('cycle')
 
-# supress some specific warnings
-np.seterr(divide='ignore', invalid='ignore')
+# suppress some specific harmless numpy warnings during AA
+np.seterr(divide='ignore', invalid='ignore', )
+
+# check mosek version
+mosek_major_version = mosek.Env.getversion()[0]
 
 
 class breakpoint_cluster:
@@ -1931,10 +1934,19 @@ class bam_to_breakpoint():
         task.set_Stream (mosek.streamtype.log, streamprinter)
         task.appendcons(numcon)
         task.appendvars(numvar)
-        for j in range(numvar):
-            task.putbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
-        for i in range(numcon):
-            task.putbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
+
+        if mosek_major_version >= 9:
+            for j in range(numvar):
+                task.putvarbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
+            for i in range(numcon):
+                task.putconbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
+
+        else:
+            for j in range(numvar):
+                task.putbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
+            for i in range(numcon):
+                task.putbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
+
         for i in range(numcon):
             task.putarow(i, asub[i], aval[i])
         # for i in qsubi:
