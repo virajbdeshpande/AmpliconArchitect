@@ -2,7 +2,7 @@
 
 ### Recent updates:
 ### April 2020 update:
-We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu?usp=sharing). 
+We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
 ## Introduction
@@ -30,7 +30,7 @@ A full description of the methods and detailed characterization of copy number a
     * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
+    * Download from `https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         tar zxf data_repo.tar.gz
@@ -67,7 +67,7 @@ AA can be installed in 2 ways:
     * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
+    * Download from `https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         tar zxf data_repo.tar.gz
@@ -121,13 +121,13 @@ echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Download and uncompress AA annotations matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
+Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
 ```
 cd $AA_DATA_REPO
 tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
-`https://drive.google.com/open?id=1aptbKrELgC-GSk3A0lA4-mUITcoUJpAu`
+`https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
 Available annotations (`$ref`):
 * hg19
 * GRCh37
