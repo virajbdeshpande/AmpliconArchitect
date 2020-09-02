@@ -59,7 +59,9 @@ np.seterr(divide='ignore', invalid='ignore', )
 
 # check mosek version
 mosek_major_version = mosek.Env.getversion()[0]
-
+if mosek_major_version > 8:
+    logging.warning("Mosek version is " + '.'.join([str(x) for x in mosek.Env.getversion()]) +
+                    " AA requires version 8\n")
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):

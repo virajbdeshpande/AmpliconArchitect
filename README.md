@@ -97,7 +97,7 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 `sudo apt-get install build-essential python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools`
 3. Pysam verion 0.9.0 or higher and Flask (optional)(https://github.com/pysam-developers/pysam):
 `sudo pip install pysam Flask`
-4. Mosek optimization tool (https://www.mosek.com/):
+4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 tar xf mosektoolslinux64x86.tar.bz2
