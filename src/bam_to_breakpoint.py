@@ -16,6 +16,7 @@
 
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
+#Maintainer: Jens Luebeck, jluebeck@ucsd.edu
 
 import itertools
 from time import clock
@@ -49,6 +50,10 @@ import hg19util as hg
 from mycolors import *
 
 # matplotlib.rcParams.update({'font.size': 28})
+
+# use Arial font if you have it. will fall back to default if not available.
+matplotlib.rcParams['font.family'] = 'sans-serif'
+matplotlib.rcParams['font.sans-serif'] = ['Arial']
 
 summary_logger = logging.getLogger('summary')
 graph_logger = logging.getLogger('graph')
@@ -2307,6 +2312,10 @@ class bam_to_breakpoint():
         # ax3.xaxis.set_visible(False)
 
         fig.subplots_adjust(hspace=0)
-        fig.savefig(amplicon_name + '.png', dpi=dpi)
-        fig.savefig(amplicon_name + '.pdf', dpi=dpi)
+        try:
+            fig.savefig(amplicon_name + '.png', dpi=dpi)
+            fig.savefig(amplicon_name + '.pdf', dpi=dpi)
+        except np.linalg.linalg.LinAlgError:
+            logging.error("Numpy error when forming amplicon plot! Cannot save " + amplicon_name + " image\n")
+
         plt.close()

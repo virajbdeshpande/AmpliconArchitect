@@ -112,6 +112,12 @@ sudo python setup.py install #(--user)
 cd -
 source ~/.bashrc
 ```
+- Arial font for matplotlib (optional installation):
+
+To get the Microsoft fonts on Ubuntu
+```
+sudo apt-get install ttf-mscorefonts-installer
+```
 
 #### Data repositories:
 Set annotations directory and environment variable AA_DATA_REPO:
