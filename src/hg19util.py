@@ -195,7 +195,7 @@ class interval(object):
                     if self.chrom in {"M", "X", "Y"}:
                         self.chrom = 'chr' + self.chrom
                     else:
-                        logging.warning("Chromosome name " + self.chrom + " may be incompatible\n")
+                        logging.warning("Chromosome name " + self.chrom + " may be incompatible")
 
             self.start, self.end = sorted([int(float(ll[1])), int(float(ll[2]))])
             if int(float(ll[2])) >= int(float(ll[1])):
@@ -203,12 +203,12 @@ class interval(object):
             else:
                 self.strand = -1
             if not exclude_info_string:
-                if len(ll) < 4:
-                    logging.error("Attempted to get info field in bed file but it did not exist\n")
-                    self.info = []
-
-                else:
-                    self.info = ll[3:]
+                # if len(ll) < 4:
+                #     logging.error("Attempted to get info field in bed file but it did not exist\n")
+                #     self.info = []
+                #
+                # else:
+                self.info = ll[3:]
 
         else:
             raise(Exception("Invalid interval format" + str(line)))
