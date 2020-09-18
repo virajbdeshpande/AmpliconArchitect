@@ -256,7 +256,7 @@ class bam_to_breakpoint():
             cp = hg.chrPos(chroffset)
             if cp is None:
                 logging.warning("Unable to locate reference position: " + str(chroffset) + " " + str(sumchrLen))
-                
+
             else:
                 ii = hg.interval(cp[0], cp[1], cp[1] + sumchrLen)
                 unconserved_len = sumchrLen - sum([i[0].intersection(i[1]).size() for i in hg.interval_list([ii]).intersection(hg.conserved_regions)])
@@ -2139,7 +2139,9 @@ class bam_to_breakpoint():
                 if len(scale_list) == 0 or len(hg.interval_list([i]).intersection(scale_list)) > 0:
                     covl += [c[1] for c in cx0 if c[0][0] == seg.chrom and c[0][1] >= seg.start and c[0][1] <= seg.end]
                     scale_max_cov = max(scale_max_cov, avg_cov)
-                    scale_max_ms = max(scale_max_ms, seg.info['cn'])
+                    if seg.info['cn'] != float('inf'):
+                        scale_max_ms = max(scale_max_ms, seg.info['cn'])
+                        
                 ax2.plot((ilist.xpos(seg.chrom, seg.start), ilist.xpos(seg.chrom, seg.end)), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         
         print scale_max_cov, scale_max_ms
@@ -2157,16 +2159,16 @@ class bam_to_breakpoint():
         if font == 'all_amplicons':
             y_scale = 2.5
         if scale_max_cov > 0:
-            ax.set_ylim(0, y_scale * scale_max_cov)
+            ax.set_ylim(0.1, y_scale * scale_max_cov)
         else:
             (ymin, ymax) = ax.get_ylim()
             ax.set_ylim(ymin, y_scale * ymax)
         if scale_max_ms > 0:
-            (ymin, ymax) = (0, scale_max_ms)
-            ax2.set_ylim(0, y_scale * ymax)
+            (ymin, ymax) = (0.1, scale_max_ms)
+            ax2.set_ylim(0.1, y_scale * ymax)
         else:
             (ymin, ymax) = ax2.get_ylim()
-            ax2.set_ylim(0, y_scale * ymax)
+            ax2.set_ylim(0.1, y_scale * ymax)
 
         for i in ilist:
             for el in elist_dict[i]:
@@ -2321,6 +2323,6 @@ class bam_to_breakpoint():
             fig.savefig(amplicon_name + '.png', dpi=dpi)
             fig.savefig(amplicon_name + '.pdf', dpi=dpi)
         except np.linalg.linalg.LinAlgError:
-            logging.error("Numpy error when forming amplicon plot! Cannot save " + amplicon_name + " image\n")
+            logging.error("Numpy LinAlgError when forming amplicon plot! Cannot save " + amplicon_name + " image\n")
 
         plt.close()
