@@ -78,7 +78,7 @@ if rdList0:
         _ = float(rdList0[0].info[-1])
 
     except ValueError:
-        sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.")
+        sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.\n")
         sys.exit(1)
 
 rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN ])
