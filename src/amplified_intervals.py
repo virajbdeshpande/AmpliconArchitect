@@ -73,12 +73,15 @@ else:
 GAIN,CNSIZE_MIN = args.gain,args.cnsize_min
 
 rdList0 = hg.interval_list(rdAlts, 'bed')
-gain_ind = 1
 if rdList0:
-    if len(rdList0[0].info) == 1:
-        gain_ind = 0
+    try:
+        _ = float(rdList0[0].info[-1])
 
-rdList = hg.interval_list([r for r in rdList0 if float(r.info[gain_ind]) > GAIN ])
+    except ValueError:
+        sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.")
+        sys.exit(1)
+
+rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN ])
 
 if args.bam != "":
     import bam_to_breakpoint as b2b

@@ -190,7 +190,12 @@ class interval(object):
             else:
                 self.strand = -1
             if not exclude_info_string:
-                self.info = ll[3:]
+                if len(ll) < 4:
+                    logging.error("Attempted to get info field in bed file but it did not exist\n")
+                    self.info = []
+
+                else:
+                    self.info = ll[3:]
 
         else:
             raise(Exception("Invalid interval format" + str(line)))
