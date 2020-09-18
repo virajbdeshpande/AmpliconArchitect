@@ -42,7 +42,6 @@ from matplotlib import gridspec
 from cStringIO import StringIO
 import random
 import re
-# import JobNotifier
 
 from breakpoint_graph import *
 import hg19util as hg
@@ -254,10 +253,16 @@ class bam_to_breakpoint():
                     chroffset = hg.absPos(refi.chrom, 1)
         # if hg.chrPos(chroffset) is None:
         if refi != -1:
-            ii = hg.interval(hg.chrPos(chroffset)[0], hg.chrPos(chroffset)[1], hg.chrPos(chroffset)[1] + sumchrLen)
-            unconserved_len = sumchrLen - sum([i[0].intersection(i[1]).size() for i in hg.interval_list([ii]).intersection(hg.conserved_regions)])
-            if (sumchrLen < 1000000 or (refi != -1 and unconserved_len < 1000000)) and window_size == -1:
-                return self.downsample_stats
+            cp = hg.chrPos(chroffset)
+            if cp is None:
+                logging.warning("Unable to locate reference position: " + str(chroffset) + " " + str(sumchrLen))
+                
+            else:
+                ii = hg.interval(cp[0], cp[1], cp[1] + sumchrLen)
+                unconserved_len = sumchrLen - sum([i[0].intersection(i[1]).size() for i in hg.interval_list([ii]).intersection(hg.conserved_regions)])
+                if (sumchrLen < 1000000 or (refi != -1 and unconserved_len < 1000000)) and window_size == -1:
+                    return self.downsample_stats
+
         elif (sumchrLen < 1000000) and window_size == -1:
             return self.downsample_stats
 
