@@ -287,7 +287,8 @@ class bam_to_breakpoint():
                         continue
                     newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
                 if hg.chrPos(newpos) is None:
-                    logging.debug("Unable to locate reference position: " + str(newpos) + " " + str(sumchrLen))
+                    logging.debug("Unable to locate reference position: " + refi.chrom + " " + str(refi.start) + " "
+                                 + str(refi.end) + " " + str(newpos) + " " + str(sumchrLen))
                     iteri+=1
                     continue
                 (c,p) = hg.chrPos(newpos)
@@ -326,7 +327,8 @@ class bam_to_breakpoint():
                         continue
                     newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
                 if hg.chrPos(newpos) is None:
-                    logging.warning("Unable to locate reference position: " + str(newpos) + " " + str(sumchrLen))
+                    logging.warning("Unable to locate reference position: " + refi.chrom + " " + str(refi.start) + " "
+                                 + str(refi.end) + " " + str(newpos) + " " + str(sumchrLen))
                     iteri+=1
                     continue
                 (c,p) = hg.chrPos(newpos)
