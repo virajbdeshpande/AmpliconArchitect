@@ -102,7 +102,7 @@ if args.bam != "":
             cstats = tuple(map(float, ll[1:]))
     coverage_stats_file.close()
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
-    rdList = hg.interval_list([r for r in rdList if float(r.info[1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2])
+    rdList = hg.interval_list([r for r in rdList if float(r.info[-1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2])
 
 genome_features = hg.oncogene_list
 amplicon_listl = rdList
@@ -125,11 +125,11 @@ for a in amplicon_listl:
             if a.end > cpos:
                 uc_list.append(hg.interval(a.chrom, cpos, a.end, info = a.info))
 
-uc_list = hg.interval_list([a for a in uc_list if float(a.info[1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
+uc_list = hg.interval_list([a for a in uc_list if float(a.info[-1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
 uc_merge = uc_list.merge_clusters(extend=300000)
 
 with open(outname,"w") as outfile:
     for a in uc_merge:
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
-            outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
+            outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[-1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
 
