@@ -75,6 +75,9 @@ GAIN,CNSIZE_MIN = args.gain,args.cnsize_min
 rdList0 = hg.interval_list(rdAlts, 'bed')
 if rdList0:
     try:
+        if not rdList0[0].info:
+            sys.stderr.write("ERROR: CNV estimate bed file had too few columns.\n"
+                             "Must contain: chr  pos1  pos2  cnv_estimate\n")
         _ = float(rdList0[0].info[-1])
 
     except ValueError:
