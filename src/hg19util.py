@@ -184,6 +184,19 @@ class interval(object):
         elif file_format == 'bed':        
             ll = line.strip().split()
             self.chrom = ll[0]
+            if (REF == "hg19" or REF == "GRCh38") and 0 < len(self.chrom) < 3:
+                try:
+                    ci = int(self.chrom)
+                    if 1 < ci < 23:
+                        self.chrom = 'chr' + self.chrom
+                        logging.info("Corrected chromosome name (appended 'chr') " + self.chrom + " \n")
+
+                except ValueError:
+                    if self.chrom in {"M", "X", "Y"}:
+                        self.chrom = 'chr' + self.chrom
+                    else:
+                        logging.warning("Chromosome name " + self.chrom + " may be incompatible\n")
+
             self.start, self.end = sorted([int(float(ll[1])), int(float(ll[2]))])
             if int(float(ll[2])) >= int(float(ll[1])):
                 self.strand = 1
