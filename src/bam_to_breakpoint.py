@@ -254,15 +254,15 @@ class bam_to_breakpoint():
         # if hg.chrPos(chroffset) is None:
         if refi != -1:
             cp = hg.chrPos(chroffset)
-            if cp is None:
-                logging.warning("Unable to locate reference position: " + refi.chrom + " " + refi.start + " "
-                                + refi.end + " " + str(chroffset) + " " + str(sumchrLen))
-
-            else:
-                ii = hg.interval(cp[0], cp[1], cp[1] + sumchrLen)
-                unconserved_len = sumchrLen - sum([i[0].intersection(i[1]).size() for i in hg.interval_list([ii]).intersection(hg.conserved_regions)])
-                if (sumchrLen < 1000000 or (refi != -1 and unconserved_len < 1000000)) and window_size == -1:
-                    return self.downsample_stats
+            # if cp is None:
+            #     logging.warning("Unable to locate reference position: " + refi.chrom + " " + str(refi.start) + " "
+            #                     + str(refi.end) + " " + str(chroffset) + " " + str(sumchrLen))
+            # 
+            # else:
+            ii = hg.interval(cp[0], cp[1], cp[1] + sumchrLen)
+            unconserved_len = sumchrLen - sum([i[0].intersection(i[1]).size() for i in hg.interval_list([ii]).intersection(hg.conserved_regions)])
+            if (sumchrLen < 1000000 or (refi != -1 and unconserved_len < 1000000)) and window_size == -1:
+                return self.downsample_stats
 
         elif (sumchrLen < 1000000) and window_size == -1:
             return self.downsample_stats
