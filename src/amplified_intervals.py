@@ -78,6 +78,7 @@ if rdList0:
         if len(rdList0[0].info) == 0:
             sys.stderr.write("ERROR: CNV estimate bed file had too few columns.\n"
                              "Must contain: chr  pos1  pos2  cnv_estimate\n")
+            sys.exit(1)
         _ = float(rdList0[0].info[-1])
 
     except ValueError:
