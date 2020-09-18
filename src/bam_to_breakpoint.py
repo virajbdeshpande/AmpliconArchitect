@@ -255,7 +255,8 @@ class bam_to_breakpoint():
         if refi != -1:
             cp = hg.chrPos(chroffset)
             if cp is None:
-                logging.warning("Unable to locate reference position: " + str(chroffset) + " " + str(sumchrLen))
+                logging.warning("Unable to locate reference position: " + refi.chrom + " " + refi.start + " "
+                                + refi.end + " " + str(chroffset) + " " + str(sumchrLen))
 
             else:
                 ii = hg.interval(cp[0], cp[1], cp[1] + sumchrLen)

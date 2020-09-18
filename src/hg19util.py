@@ -187,7 +187,7 @@ class interval(object):
             if (REF == "hg19" or REF == "GRCh38") and 0 < len(self.chrom) < 3:
                 try:
                     ci = int(self.chrom)
-                    if 1 < ci < 23:
+                    if 0 < ci < 23:
                         self.chrom = 'chr' + self.chrom
                         logging.info("Corrected chromosome name (appended 'chr') " + self.chrom + " \n")
 
