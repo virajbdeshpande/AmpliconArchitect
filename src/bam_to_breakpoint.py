@@ -2141,7 +2141,10 @@ class bam_to_breakpoint():
                     scale_max_cov = max(scale_max_cov, avg_cov)
                     if seg.info['cn'] != float('inf'):
                         scale_max_ms = max(scale_max_ms, seg.info['cn'])
-                        
+
+                    else:
+                        scale_max_ms = max(scale_max_ms, 2000)
+
                 ax2.plot((ilist.xpos(seg.chrom, seg.start), ilist.xpos(seg.chrom, seg.end)), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         
         print scale_max_cov, scale_max_ms
