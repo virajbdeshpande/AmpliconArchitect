@@ -287,7 +287,8 @@ class bam_to_breakpoint():
                         continue
                     newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
                 if hg.chrPos(newpos) is None:
-                    # logging.debug("Unable to locate reference position: " + str(newpos) + " " + str(sumchrLen))
+                    logging.debug("Unable to locate reference position: " + str(newpos) + " " + str(sumchrLen))
+                    iteri+=1
                     continue
                 (c,p) = hg.chrPos(newpos)
                 if c not in self.bamfile.references or p < 10000 or hg.chrLen[hg.chrNum(c)] < p + 10000 or len(hg.interval_list([hg.interval(c, p, p+10000)]).intersection(hg.conserved_regions, extend=10000)) > 0 or len(hg.interval_list([hg.interval(c, p, p+10000)]).intersection(hg.centromere_list, extend=10000)) > 0:
@@ -326,6 +327,7 @@ class bam_to_breakpoint():
                     newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
                 if hg.chrPos(newpos) is None:
                     logging.warning("Unable to locate reference position: " + str(newpos) + " " + str(sumchrLen))
+                    iteri+=1
                     continue
                 (c,p) = hg.chrPos(newpos)
                 if c not in self.bamfile.references or p < ws or hg.chrLen[hg.chrNum(c)] < p + ws or len(hg.interval_list([hg.interval(c, p, p+ws)]).intersection(hg.conserved_regions, extend=ws)) > 0 or len(hg.interval_list([hg.interval(c, p, p+ws)]).intersection(hg.centromere_list, extend=ws)) > 0:
