@@ -1431,7 +1431,7 @@ class bam_to_breakpoint():
                     ps = pair_support
                 else:
                     ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
-                logging.debug(str(c[0]) + ": created breakpoints" + str(bp1) + " " + str(bp2) + " " str(ps))
+                logging.debug(str(c[0]) + ": created breakpoints" + str(bp1) + " " + str(bp2) + " " + str(ps))
 
                 if len(vl) < ps or len(vl1Set) < pair_support or len(vl2Set) < pair_support:
                     continue
@@ -1455,9 +1455,9 @@ class bam_to_breakpoint():
                                 non_inverted_reads.add(v[0].query_name)
                                 if len(non_inverted_reads) >= ps:
                                     multiple_non_inverted = True
-                logging.debug(str(c[0]) + ": num interved" + str(num_inverted) + " " + str(multiple_non_inverted))
-                if len(vl) - num_inverted < ps or (not multiple_non_inverted):
-                    continue
+                    logging.debug(str(c[0]) + ": num interved" + str(num_inverted) + " " + str(multiple_non_inverted))
+                    if len(vl) - num_inverted < ps or (not multiple_non_inverted):
+                        continue
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
                 bre = bre_refine[0]
                 if bre.type() != 'concordant':
