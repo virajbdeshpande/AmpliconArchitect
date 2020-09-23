@@ -1047,18 +1047,24 @@ class bam_to_breakpoint():
                                                 i.end)
                   if not a.is_unmapped and not a.is_reverse and a.is_paired
                   and not a.is_proper_pair and not a.mate_is_unmapped
-                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff]
+                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff
+                  and not(a.reference_name == a.next_reference_name
+                          and a.mate_is_reverse
+                          and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
             drlist += [a for a in self.fetch(i.chrom,
                                                 max(1, i.start),
                                                 i.end)
                   if not a.is_unmapped and a.is_reverse and a.is_paired
                   and not a.is_proper_pair and not a.mate_is_unmapped
-                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff]
+                  and not a.is_secondary and a.mapping_quality > self.mapping_quality_cutoff
+                  and not(a.reference_name == a.next_reference_name
+                          and not a.mate_is_reverse
+                          and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
         # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
 
-        dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
-        drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
+        # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
+        # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
 
 
         logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval) , len(dflist), len(drlist)))
@@ -1346,6 +1352,7 @@ class bam_to_breakpoint():
         self.get_mates_time = 0
         self.get_mates_num_calls = 0
         for c in mcdflist + mcdrlist:
+            logging.debug(str(c[0]) + ": Getting edges")
             nlist = []
             if filter_repeats:
                 if len(hg.interval_list([c[0]]).intersection(hg.conserved_regions)) > 0:
@@ -1353,6 +1360,7 @@ class bam_to_breakpoint():
             rep_content_time = 0
             intersection_time = 0
             nr_calls = 0
+            logging.debug(str(c[0]) + ": Getting nlist")
             for hga in c[1]:
                 nmatelist = self.get_mates(hgddict[hga])
                 if filter_repeats:
@@ -1364,6 +1372,7 @@ class bam_to_breakpoint():
                 nmatelist = [a for a in nmatelist if len(hg.interval_list([hg.interval(a, bamfile=self.bamfile)]).intersection(ilist)) == 0]
                 intersection_time += clock() - ict
                 nlist += nmatelist
+            logging.debug(str(c[0]) + ": nlist size" + str(len(nlist)))
             nflist = [n for n in nlist if not n.is_reverse]
             nrlist = [n for n in nlist if n.is_reverse]
             hgndict = {hg.interval(a, bamfile=self.bamfile):a for a in nflist + nrlist}
@@ -1376,15 +1385,18 @@ class bam_to_breakpoint():
             mcnflist = [m for m in mcnflist if len(m[1]) >= pair_support] 
             mcnrlist = [m for m in mcnrlist if len(m[1]) >= pair_support] 
             mcnlist = mcnflist + mcnrlist
+            logging.debug(str(c[0]) + ": mcnlist size" + str(len(mcnlist)))
             for cn in mcnlist:
                 vl = []
                 vlSet = Set([])
                 vl1Set = Set([])
                 vl2Set = Set([])
+                logging.debug(str(c[0]) + ": check cluster" + str(cn[0]))
                 if filter_repeats:
                     if len(hg.interval_list([cn[0]]).intersection(hg.conserved_regions)) > 0:
                         continue
                 hgmi = 0
+                logging.debug(str(c[0]) + ": add alignments " + str(cn[0]))
                 for hgm in cn[1]:
                     hgmi += 1
                     if filter_repeats:
@@ -1400,6 +1412,7 @@ class bam_to_breakpoint():
                             vl1Set.add((a.reference_start, a.reference_end))
                             vl2Set.add((hgndict[hgm].reference_start, hgndict[hgm].reference_end))
                             break
+                logging.debug(str(c[0]) + ": found alignments" + str(len(vl)))
                 if len(vl) == 0 or len([v for v in vl if v[1].reference_start*v[0].reference_start > 0]) == 0:
                     continue
                 if not vl[0][0].is_reverse:
@@ -1418,6 +1431,8 @@ class bam_to_breakpoint():
                     ps = pair_support
                 else:
                     ps = self.pair_support_count(bp1.chrom, bp1.pos, bp1.strand, ms)
+                logging.debug(str(c[0]) + ": created breakpoints" + str(bp1) + " " + str(bp2) + " " str(ps))
+
                 if len(vl) < ps or len(vl1Set) < pair_support or len(vl2Set) < pair_support:
                     continue
                 num_inverted = 0
@@ -1440,6 +1455,7 @@ class bam_to_breakpoint():
                                 non_inverted_reads.add(v[0].query_name)
                                 if len(non_inverted_reads) >= ps:
                                     multiple_non_inverted = True
+                logging.debug(str(c[0]) + ": num interved" + str(num_inverted) + " " + str(multiple_non_inverted))
                 if len(vl) - num_inverted < ps or (not multiple_non_inverted):
                     continue
                 bre_refine = self.refine_discordant_edge(breakpoint_edge(bp1, bp2))
