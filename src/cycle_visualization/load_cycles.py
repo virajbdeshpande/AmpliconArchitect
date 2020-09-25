@@ -17,7 +17,8 @@ from matplotlib.patches import Ellipse
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
-#sys.path.insert(1, os.path.join(sys.path[0], '/nucleus/pedigree/projects/extrachromosome/src/'))
+# adds path used by UCSD devs
+sys.path.insert(1, os.path.join(sys.path[0], '/nucleus/pedigree/projects/extrachromosome/src/'))
 import hg19util as hg
 
 

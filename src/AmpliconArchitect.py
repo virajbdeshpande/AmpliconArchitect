@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
@@ -28,7 +28,6 @@ import pysam
 import argparse
 import math
 from collections import defaultdict
-from sets import Set
 from cStringIO import StringIO
 import sys
 import os
@@ -39,12 +38,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import logging
-# import JobNotifier
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
+if (sys.version_info < (3, 0)):
+    from sets import Set
+
 import global_names
 
+__version__ = "1.1"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -52,7 +54,7 @@ parser.add_argument('--bed', dest='rdAlts',
                     help="Bed file with putative list of amplified intervals", metavar='FILE',
                     action='store', type=str)
 parser.add_argument('--bam', dest='bam',
-                    help="Coordinate sorted BAM file with index mapped to hg19 or hg38 reference", metavar='FILE',
+                    help="Coordinate sorted BAM file with index mapped to hg19 or hg38 reference genome", metavar='FILE',
                     action='store', type=str)
 parser.add_argument('--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
@@ -81,6 +83,8 @@ parser.add_argument('--cbam', dest='cbam',
 parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
+parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
+
 args = parser.parse_args()
 
 global_names.REF = args.ref
@@ -106,6 +110,7 @@ class PrefixAdapter(logging.LoggerAdapter):
         return '[%s] %s' % (self.extra['prefix'], msg), kwargs
 
 
+logging.info("AmpliconArchitect version " + __version__ + "\n")
 rdAlts = args.rdAlts
 if os.path.splitext(args.bam)[-1] == '.cram':
     bamFile = pysam.Samfile(args.bam, 'rc')
@@ -151,18 +156,10 @@ coverage_windows=None
 if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')
     coverage_windows.sort()
-
-#if cstats is None and cbam is not None:
-#    cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows)
-#    cstats = cbam2b.basic_stats
-#bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
-
 if cstats is None and cbam is not None:
     cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = cbam2b.basic_stats
-
-bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None))
-
+bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
 
 
 

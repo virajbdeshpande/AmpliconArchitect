@@ -1,12 +1,18 @@
 # AmpliconArchitect (AA)
 
 ### Recent updates:
+
+### September 2020 update: 
+Version 1.1 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
+
 ### April 2020 update:
-We have revised the hg38 data repository and created docker support for this fork. A seperate data repo patch will no longer be available. Instead a data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
+We have revised the hg38 data repository and updated docker support for this fork. The new data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
 ## Introduction
-Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others. Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. ecDNA originating from distinct genomic regions may recombine to form larger ecDNA elements bringing together multiple oncogenes for simultaneous amplification. Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into tumor progression as well as response to treatment. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
+Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others.
+Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. 
+Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into cancer biology. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
 A full description of the methods and detailed characterization of copy number amplifications and ecDNA in cancer can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
 
@@ -22,7 +28,7 @@ A full description of the methods and detailed characterization of copy number a
 
 ## Quickstart:
 #### Prerequisites:
-1. Docker:
+1. Docker (only if intending to use docker image):
     * Install docker: `https://docs.docker.com/install/`
     * (Optional): Add user to the docker group and relogin:
         `sudo usermod -a -G docker $USER`
@@ -31,19 +37,7 @@ A full description of the methods and detailed characterization of copy number a
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * Download from `https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
-    * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
-        ```bash
-        tar zxf data_repo.tar.gz
-        echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
-        source ~/.bashrc
-        ```
-#### Obtain AmpliconArchitect image and execution script:
-1. Pull docker image:
-    * `docker pull jluebeck/ampliconarchitect`
-
-2. Clone run script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
-
+    
 #### Usage:
 
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
@@ -78,7 +72,7 @@ AA can be installed in 2 ways:
 1. Pull docker image:
     * `docker pull jluebeck/ampliconarchitect`
 
-2. Pull script `run_aa_docker.sh` from Github:
+2. Clone script `run_aa_docker.sh` from Github:
     * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 ### Option 2: Github source code:
@@ -137,9 +131,14 @@ The annotations may be downloaded here:
 Available annotations (`$ref`):
 * hg19
 * GRCh37
-* GRCh38
+* GRCh38 (hg38)
 
-## AmpliconArchitect reconstruction
+## Running AmpliconArchitect
+
+#### PrepareAA:
+We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/PrepareAA. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
+PrepareAA can directly invoke AA if installed. 
+
 
 ### 1) Input data:
 AA requires 2 input files:
@@ -153,13 +152,11 @@ AA requires 2 input files:
 2. BED file with seed intervals:
     * One or more intervals per amplicon in the sample
     * AA has been tested on seed intervals generated as follows:
-        - CNVs from CNV caller ReadDepth with parameter file `$AA_SRC/src/read_depth_params`
+        - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`) or CNVkit
         - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
 
             `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
-
-#### PrepareAA:
-A wrapped pipeline, generating the prerequisite BAM alignments, CNV calls for seeding, and subsequent AA reconstruction of amplicons from those seeds is available at (https://github.com/jluebeck/PrepareAA). This is available to simplify the running of AA and the preceding analysis steps.
+        - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. 
 
 ### 2) Usage:
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
@@ -197,7 +194,8 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 
 | Argument | Type | Description |
 | ---------- | ---- | ----------- |
-| `-h`, `--help`    |    |   show this help message and exit|
+| `-h`, `--help`    |    |   Show this help message and exit|
+| `-v`, `--version` |    | Print program version and exit.|
 | `--runmode`     | STR|   Values: [`FULL`/`BPGRAPH`/`CYCLES`/`SVVIE`W]. This option determines which stages of AA will be run. <br> - `FULL`: Run the full reconstruction including breakpoint graph, cycles as well as SV visualization. <br> - `BPGRAPH`: Only reconstruct the breakpoint graph and estimate copy counts, but do not reconstruct the amplicon cycles. <br> - `CYCLES`: Only reconstruct the breakpoint graph and cycles, but do not create the output for SV visualization. <br> - `SVVIEW`: Only create the SV visualization, but do not reconstruct the breakpoint graph or cycles. <br> Default: `FULL`| 
 | `--extendmode`  |STR |   Values: [`EXPLORE`/`CLUSTERED`/`UNCLUSTERED`/`VIRAL`]. This determines how the input intervals in bed file are treated.<br> - `EXPLORE` : Search for all intervals in the genome that may be connected to input seed intervals.<br> - `CLUSTERED` : Input intervals are treated as part of a single connected amplicon and no new connected itervals are added. <br> - `UNCLUSTERED` : Each input interval is treated as a distinct single interval amplicon and no new intervals are added.<br> Default: `EXPLORE`| 
 | `--sensitivems` | STR|   Values: [`True`, `False`]. Set `True` only if copy counts are expected to vary by an order of magnitude, e.g. viral integration. Default: `False`| 
@@ -218,10 +216,15 @@ The software generates 4 types of output files. 1 summary file and 3 files per a
 | `{out}_amplicon{id}_cycle.txt` | A text file for each amplicon listing the simple cycles and their copy counts.|
 | `{out}_amplicon{id}.png/pdf` | A PNG/PDF image file displaying the SV view of AA.|
 
-### 4) Visualizing reconstruction:
-The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to genomequery.ucsd.edu:8800 to visualize and interactively modify the cycle.
+### 4) Interpreting the output
+A common question after running AA is, **"How do I know if these reconstructions represent ecDNA?"**
 
-Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
+To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/jluebeck/AmpliconClassifier).
+
+### 5) Visualizing reconstruction:
+- We developed a python program called [CycleViz](https://github.com/jluebeck/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
+
+- An interactive web interface for course-grained visualization of the AA decompositions is also available. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
 ```bash
 export FLASK_APP=$AA_SRC/cycle_visualization/web_app.py
 flask run --host=0.0.0.0 --port=8000

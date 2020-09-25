@@ -18,7 +18,7 @@
 #Contact: virajbdeshpande@gmail.com
 
 
-##This is a suite to load genome, genes, exons, repeat content and perform operations on this genome, compare variants
+##This is a suite to load reference genome (not just hg19, as filename implies), genes, exons, repeat content and perform operations on this genome, compare variants
 ## it handles annotations from a database and is not restricted to solely hg19 if global_names.REF is not hg19.
 
 import sys
@@ -203,11 +203,6 @@ class interval(object):
             else:
                 self.strand = -1
             if not exclude_info_string:
-                # if len(ll) < 4:
-                #     logging.error("Attempted to get info field in bed file but it did not exist\n")
-                #     self.info = []
-                #
-                # else:
                 self.info = ll[3:]
 
         else:
