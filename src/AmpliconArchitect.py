@@ -23,7 +23,7 @@
 
 
 from time import clock, time
-TSTART = time()
+TSTART = clock()
 import pysam
 import argparse
 import math
@@ -34,6 +34,7 @@ import sys
 import os
 import numpy as np
 import matplotlib
+import copy
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
@@ -121,20 +122,20 @@ cbed = args.cbed
 try:
     DATA_REPO = os.environ["AA_DATA_REPO"]
 except:
-    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "unable to set AA_DATA_REPO variable. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(clock() - TSTART) + "unable to set AA_DATA_REPO variable. Setting to working directory")
     DATA_REPO = '.'
 if DATA_REPO == '.' or DATA_REPO == '':
-    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "AA_DATA_REPO not set or empy. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(clock() - TSTART) + "AA_DATA_REPO not set or empy. Setting to working directory")
     DATA_REPO = '.'
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
+logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
 import hg19util as hg
 import bam_to_breakpoint as b2b
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
-rdList0 = hg.interval_list(rdAlts, 'bed')
+logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
+rdList0 = hg.interval_list(rdAlts, 'bed', exclude_info_string=True)
 rdList = hg.interval_list([r for r in rdList0])
 coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
 cstats = None
@@ -153,7 +154,7 @@ if cbed is not None:
 if cstats is None and cbam is not None:
     cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = cbam2b.basic_stats
-bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None))
+bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
 
 
 
@@ -166,7 +167,7 @@ segments = []
 
 
 if args.extendmode == 'VIRAL':
-    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Finding integration sites: " + str(rdList[0]))
+    logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Finding integration sites: " + str(rdList[0]))
     de = bamFileb2b.interval_discordant_edges(rdList)
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
@@ -180,18 +181,17 @@ if args.extendmode == 'VIRAL':
     iout.close()
     sys.stdout = old_stdout
 
-
-
+all_ilist = copy.copy(rdList)
 irdhops = []
 irddict = {}
 irdSets = Set([Set([ird]) for ird in rdList])
 irdgroupdict = {ird:Set([ird]) for ird in rdList}
 if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
     for ird in rdList:
-        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Exploring interval: " + str(ird))
+        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Exploring interval: " + str(ird))
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
-        ilist = bamFileb2b.interval_hops(ird)
+        ilist = bamFileb2b.interval_hops(ird, rdlist=all_ilist)
         irdhops.append((ird, ilist))
         for i in ilist:
             irddict[i] = ird
@@ -199,6 +199,8 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         iout.write(mystdout.getvalue())
         iout.close()
         sys.stdout = old_stdout
+        all_ilist += ilist
+        all_ilist.sort()
 
     allhops = hg.interval_list(reduce(lambda x, y: x + y, [irdh[1] for irdh in irdhops], []))
     allhops.sort()
@@ -226,7 +228,7 @@ else:
     irdgroups = [hg.interval_list([r]) for r in rdList]
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Interval sets for amplicons determined: ")
+logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Interval sets for amplicons determined: ")
 for il in enumerate(irdgroups):
     logging.info("[amplicon" + str(il[0] + 1) + ']\t' + ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in il[1]]))
 
@@ -256,7 +258,7 @@ for ig in irdgroups:
     summary_logger.info("OncogenesAmplified = " + str(oncolist))
     amplicon_name = outName + '_amplicon' + str(amplicon_id)
     if args.runmode in ['FULL', 'CYCLES', 'BPGRAPH']:
-        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
+        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
         graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
@@ -265,7 +267,7 @@ for ig in irdgroups:
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
     if args.runmode in ['FULL', 'SVVIEW']:
-        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
+        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
             ilist, amplicon_name, segments=segments, font=args.plotstyle)
     summary_logger.info(
@@ -283,9 +285,9 @@ if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL
     for i in irdgroups[0]:
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
-        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting viral view for interval " + str(i))
+        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Plotting viral view for interval " + str(i))
         bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]), font='large')
         amplicon_id += 1
 
 
-logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Total Runtime")  
+logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Total Runtime")  
