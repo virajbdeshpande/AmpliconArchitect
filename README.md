@@ -121,7 +121,7 @@ AA can be installed in 2 ways:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 tar xf mosektoolslinux64x86.tar.bz2
-echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/8/licenses
+echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $PWD/mosek/8/licenses
 echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
 export MOSEKPLATFORM=linux64x86
 echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
