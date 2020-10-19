@@ -4,7 +4,6 @@ import os
 
 from draw_episome import EpisomeDrawer
 from breakpoint_graph import graph_decomposition
-import hg19util as hg
 
 
 
