@@ -4,7 +4,8 @@ import re
 import sys, getopt
 
 from graphic_elements import Rectangle, HorizontalLine, VerticalLine, Arrow, Text, CycleSection
-import hg19util as hg
+#import hg19util as hg
+import global_names
 
 class Segment():
     def __init__(self, start, end, viral, segment_name, chr_name):
@@ -18,8 +19,8 @@ class Segment():
 class EpisomeDrawer():
 
 
-    def __init__(self, image_output=True, min_copy_number_to_show=0):
-        self.BASE_URL = 'https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&lastVirtModeType=default&lastVirtModeExtraState=&virtModeType=default&virtMode=0&nonVirtPosition=&position=%s:%s-%s&hgsid=569969581_amo4eiY8UIG9UO5nhpNMBPEzqa3h'
+    def __init__(self, image_output=True, min_copy_number_to_show=0, ref="hg19"):
+        self.BASE_URL = 'https://genome.ucsc.edu/cgi-bin/hgTracks?db=' + ref + '&lastVirtModeType=default&lastVirtModeExtraState=&virtModeType=default&virtMode=0&nonVirtPosition=&position=%s:%s-%s&hgsid=569969581_amo4eiY8UIG9UO5nhpNMBPEzqa3h'
         self.image_output = image_output
         self.file_names = []
         self.min_copy_number_to_show = min_copy_number_to_show
@@ -595,7 +596,7 @@ if __name__ == '__main__':
     output_file = None
     auto_scale = 0
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "h:i:o:s", ["help", "ifile=", "ofile=", "autoscale"])
+        opts, args = getopt.getopt(sys.argv[1:], "h:i:o:s:r", ["help", "ifile=", "ofile=", "autoscale","ref="])
     except getopt.GetoptError:
         print ('draw_episome.py -i <inputfile> -o <outputfile>')
         sys.exit(2)
@@ -609,6 +610,9 @@ if __name__ == '__main__':
             output_file = arg
         elif opt in ("-s", "--autoscale"):
             auto_scale = 1
+        elif opt in ("-r", "--ref"):
+            ref = arg
+   
     if len(inputs) == 0:
         if len(sys.argv) < 2:
             print ('Error: Please specify an input file')
@@ -616,7 +620,15 @@ if __name__ == '__main__':
             sys.exit()
         inputs = [sys.argv[-1]]
 
+    if ref == "GRCh38":
+        ref = "hg38"
+
+    if ref != "hg19" and ref != "hg38" and ref != "GRCh37":
+        sys.stderr.write("Ref must be one of hg19, GRCh37 or hg38")
+
+    global_names.REF = ref
+    import hg19util as hg
     if output_file == None:
         output_file = inputs[0] + '.png'
-    ed = EpisomeDrawer()
+    ed = EpisomeDrawer(ref=ref)
     ed.draw_episome(input_files=inputs, output_file=output_file, auto_scale=auto_scale)

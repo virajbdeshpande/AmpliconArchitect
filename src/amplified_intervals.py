@@ -1,3 +1,5 @@
+#!/usr/bin/python2
+
 # This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
 # Office of Innovation and Commercialization
@@ -52,7 +54,7 @@ parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
                     action='store', type=int, default=CNSIZE_MIN)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, None]. \"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default) & \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
 args = parser.parse_args()
 
@@ -70,10 +72,20 @@ else:
 
 GAIN,CNSIZE_MIN = args.gain,args.cnsize_min
 
-
-
 rdList0 = hg.interval_list(rdAlts, 'bed')
-rdList = hg.interval_list([r for r in rdList0 if float(r.info[1]) > GAIN ])
+if rdList0:
+    try:
+        if len(rdList0[0].info) == 0:
+            sys.stderr.write("ERROR: CNV estimate bed file had too few columns.\n"
+                             "Must contain: chr  pos1  pos2  cnv_estimate\n")
+            sys.exit(1)
+        _ = float(rdList0[0].info[-1])
+
+    except ValueError:
+        sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.\n")
+        sys.exit(1)
+
+rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN ])
 
 if args.bam != "":
     import bam_to_breakpoint as b2b
@@ -90,7 +102,9 @@ if args.bam != "":
             cstats = tuple(map(float, ll[1:]))
     coverage_stats_file.close()
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
-    rdList = hg.interval_list([r for r in rdList if float(r.info[1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2])
+    rdList = hg.interval_list([r for r in rdList if float(r.info[-1]) >
+                               GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2
+                               and bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0] > 0])
 
 genome_features = hg.oncogene_list
 amplicon_listl = rdList
@@ -113,11 +127,11 @@ for a in amplicon_listl:
             if a.end > cpos:
                 uc_list.append(hg.interval(a.chrom, cpos, a.end, info = a.info))
 
-uc_list = hg.interval_list([a for a in uc_list if float(a.info[1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
+uc_list = hg.interval_list([a for a in uc_list if float(a.info[-1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
 uc_merge = uc_list.merge_clusters(extend=300000)
 
 with open(outname,"w") as outfile:
     for a in uc_merge:
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
-            outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
+            outfile.write('\t'.join([str(a[0]), str(sum([ai.size() * float(ai.info[-1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])), rdAlts]) + '\n')
 

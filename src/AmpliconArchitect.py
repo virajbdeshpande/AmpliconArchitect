@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 
 # This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
@@ -28,7 +28,6 @@ import pysam
 import argparse
 import math
 from collections import defaultdict
-from sets import Set
 from cStringIO import StringIO
 import sys
 import os
@@ -39,12 +38,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import logging
-# import JobNotifier
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
+if (sys.version_info < (3, 0)):
+    from sets import Set
+
 import global_names
 
+__version__ = "1.2"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -52,7 +54,7 @@ parser.add_argument('--bed', dest='rdAlts',
                     help="Bed file with putative list of amplified intervals", metavar='FILE',
                     action='store', type=str)
 parser.add_argument('--bam', dest='bam',
-                    help="Coordinate sorted BAM file with index mapped to hg19 reference sequence", metavar='FILE',
+                    help="Coordinate sorted BAM file with index mapped to hg19 or hg38 reference genome", metavar='FILE',
                     action='store', type=str)
 parser.add_argument('--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
@@ -70,7 +72,7 @@ parser.add_argument('--plotstyle', dest='plotstyle',
                     help="Values: [small large, all_amplicons]. \"small\": small font, \"all_amplicons\": display a large number of intervals in a single plot, recommeded for visualizing multiple amplicons in CLUSTERED mode. Default: \"large\"", metavar='STR',
                     action='store', type=str, default="small")
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, None]. \"hg19\"(default) : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default), \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
                     action='store', type=str, default='hg19')
 parser.add_argument('--downsample', dest='downsample',
                     help="Values: [-1, 0, C(>0)]. Decide how to downsample the bamfile during reconstruction. Reads are automatically downsampled in real time for speedup. Alternatively pre-process bam file using $AA_SRC/downsample.py. -1 : Do not downsample bam file, use full coverage. 0 (default): Downsample bamfile to 10X coverage if original coverage larger then 10. C (>0) : Downsample bam file to coverage C if original coverage larger than C", metavar='FLOAT',
@@ -81,6 +83,8 @@ parser.add_argument('--cbam', dest='cbam',
 parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
+parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
+
 args = parser.parse_args()
 
 global_names.REF = args.ref
@@ -106,6 +110,17 @@ class PrefixAdapter(logging.LoggerAdapter):
         return '[%s] %s' % (self.extra['prefix'], msg), kwargs
 
 
+commandstring = 'Commandline: ';
+
+for arg in sys.argv:
+    if ' ' in arg:
+        commandstring += '"{}"  '.format(arg);
+    else:
+        commandstring+="{}  ".format(arg);
+
+logging.info(commandstring);
+
+logging.info("AmpliconArchitect version " + __version__ + "\n")
 rdAlts = args.rdAlts
 if os.path.splitext(args.bam)[-1] == '.cram':
     bamFile = pysam.Samfile(args.bam, 'rc')
