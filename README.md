@@ -33,7 +33,7 @@ A full description of the methods and detailed characterization of copy number a
     * (Optional): Add user to the docker group and relogin:
         `sudo usermod -a -G docker $USER`
 2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
+    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
@@ -58,7 +58,7 @@ AA can be installed in 2 ways:
     * (Optional): Add user to the docker group and relogin:
         `sudo usermod -a -G docker $USER`
 2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
+    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
@@ -95,7 +95,7 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 tar xf mosektoolslinux64x86.tar.bz2
-echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/8/licenses
+echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $PWD/mosek/8/licenses
 echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
 export MOSEKPLATFORM=linux64x86
 echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
