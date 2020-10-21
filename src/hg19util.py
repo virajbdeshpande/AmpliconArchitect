@@ -18,10 +18,11 @@
 #Contact: virajbdeshpande@gmail.com
 
 
-##This is a suite to load hg19 genome, genes, exons, repeat content and perform operations on this genome, compare variants
+##This is a suite to load reference genome (not just hg19, as filename implies), genes, exons, repeat content and perform operations on this genome, compare variants
+## it handles annotations from a database and is not restricted to solely hg19 if global_names.REF is not hg19.
 
+import sys
 from bisect import bisect_left
-from sets import Set
 from collections import defaultdict
 from time import clock
 import pysam
@@ -29,6 +30,9 @@ import heapq
 import copy
 import os
 import logging
+
+if (sys.version_info < (3, 0)):
+    from sets import Set
 
 import global_names
 
@@ -42,6 +46,7 @@ if DATA_REPO == '.' or DATA_REPO == '':
     DATA_REPO = '.'
 
 REF = global_names.REF
+print("Global ref name is " + REF)
 
 REF_files = defaultdict(lambda: '', {})
 try:
@@ -74,7 +79,6 @@ duke35 = []
 duke35_exists = [True]
 
 # Handling chromosome names, lengths, sorting, positions and addition of new chromosomes
-
 chr_id = {}
 chrName = {}
 def chrNum(chrname, mode='append'):
@@ -101,8 +105,7 @@ chrOffset = {}
 def absPos(chrname, pos=0):
     cnum = chrNum(chrname)
     if chrNum(chrname) not in chrOffset:
-        chrkeys = chrName.keys()
-        chrkeys.sort()
+        chrkeys = sorted(chrName.keys())
         sumlen = sum([chrLen[c] for c in chrLen if c in chrOffset])
         for i in range(len(chrkeys)):
             if chrkeys[i] not in chrOffset:
@@ -136,13 +139,13 @@ def reverse_complement(seq):
 
 class interval(object):
     def __init__(self, line, start=-1, end=-1, strand=1,
-        file_format='', bamfile=None, info=''):
+        file_format='', bamfile=None, info='', exclude_info_string=False):
         self.info = ""
         self.file_format = file_format
         if type(line) == pysam.AlignedRead or type(line) == pysam.AlignedSegment:
             self.load_pysamread(line, bamfile)
         elif start == -1:
-            self.load_line(line, file_format)
+            self.load_line(line, file_format, exclude_info_string=exclude_info_string)
         elif end == -1:
             self.load_pos(line, start, start, strand)
         else:
@@ -150,7 +153,7 @@ class interval(object):
         if len(info) > 0:
             self.info = info
 
-    def load_line(self, line, file_format):
+    def load_line(self, line, file_format, exclude_info_string=False):
         if file_format == '':
             if len(line.strip().split()) == 1:
                 self.chrom = line.split(':')[0]
@@ -174,18 +177,33 @@ class interval(object):
                 self.strand = 1
             else:
                 self.strand = -1
-            self.info = {r[0: r.find('=')]: r[r.find('=') + 1: ]
+            if not exclude_info_string:
+                self.info = {r[0: r.find('=')]: r[r.find('=') + 1: ]
                          for r in ll[8].strip().strip(';').split(';')}
-            self.info['Variant'] = ll[5]
+                self.info['Variant'] = ll[5]
         elif file_format == 'bed':        
             ll = line.strip().split()
             self.chrom = ll[0]
+            if (REF == "hg19" or REF == "GRCh38") and 0 < len(self.chrom) < 3:
+                try:
+                    ci = int(self.chrom)
+                    if 0 < ci < 23:
+                        self.chrom = 'chr' + self.chrom
+                        logging.info("Corrected chromosome name (appended 'chr') " + self.chrom + " \n")
+
+                except ValueError:
+                    if self.chrom in {"M", "X", "Y"}:
+                        self.chrom = 'chr' + self.chrom
+                    else:
+                        logging.warning("Chromosome name " + self.chrom + " may be incompatible")
+
             self.start, self.end = sorted([int(float(ll[1])), int(float(ll[2]))])
             if int(float(ll[2])) >= int(float(ll[1])):
                 self.strand = 1
             else:
                 self.strand = -1
-            self.info = ll[3:]
+            if not exclude_info_string:
+                self.info = ll[3:]
         else:
             raise(Exception("Invalid interval format" + str(line)))
 
@@ -201,10 +219,15 @@ class interval(object):
 
     def load_pysamread(self, line, bamfile):
         if bamfile is None:
-            raise "Interval of pysam AlignedRead without bamfile"
+            raise Exception("Interval of pysam AlignedRead without bamfile")
         self.chrom = line.reference_name
         self.start = line.reference_start
-        self.end = line.reference_end
+        self.end = 0
+        if line.reference_end is not None:
+            self.end = line.reference_end
+        else:
+            logging.warning("Reference_end for " + str(self) + " was NoneType. Setting to 0.")
+
         if line.is_reverse:
             self.strand = -1
         else:
@@ -401,23 +424,23 @@ class interval(object):
 
 
 class interval_list(list, object):
-    def __init__(self, ilist=None, file_format=None, sort=True):
+    def __init__(self, ilist=None, file_format=None, sort=True, exclude_info_string=False):
         if ilist == None:
             ilist = []
         self.file_format = file_format
         if file_format in ['bed', 'gff']:
-            self.bed_to_list(ilist)
+            self.bed_to_list(ilist, exclude_info_string=exclude_info_string)
         if file_format is None:
             list.__init__(self,ilist)
         if sort:
             self.sort()
         self.offset = None
 
-    def bed_to_list(self, file_name):
+    def bed_to_list(self, file_name, exclude_info_string=False):
         if file_name is not None:
             try:
                 f = open(file_name)
-                list.__init__(self, [interval(l, file_format=self.file_format)
+                list.__init__(self, [interval(l, file_format=self.file_format, exclude_info_string=exclude_info_string)
                               for l in f if len(l.strip().split()) > 2
                               and l.strip()[0] != '#'])
                 f.close()
@@ -455,7 +478,7 @@ class interval_list(list, object):
     def repeats(self, count=1):
         activeq = []
         if activeq is None:
-            print "h1"
+            print("h1")
             exit()
         jinterval = None
         ilist = []
@@ -463,12 +486,12 @@ class interval_list(list, object):
             while len(activeq) > 0 and not a.intersects(activeq[0][1]):
                 heapq.heappop(activeq)
                 if activeq is None:
-                    print "h2"
+                    print("h2")
                     exit()
             if len(activeq) < count and jinterval is not None:
                 ilist.append((jinterval, copy.copy(aq)))
                 if activeq is None:
-                    print "h3"
+                    print("h3")
                     exit()
                 jinterval = None
             heapq.heappush(activeq, (-1 * a.start, a))
@@ -559,7 +582,7 @@ class interval_list(list, object):
     def get_repeat_content(self):
         try:
             duke35_file = open(duke35_filename)
-            print "counting repeats", clock()
+            print("counting repeats", clock())
             self.sort()
             sum_duke = [0.0 for i in self]
             len_duke = [0.0 for i in self]
@@ -670,7 +693,7 @@ class interval_list(list, object):
                 continue
             if i in hlist and iprev.chrom == i.chrom:
                 breaks.append((offset[i][0] - hscale * hgap / 2, ':', i.chrom))
-                print str(i), str(iprev), i in hlist, iprev.chrom == i.chrom
+                print(str(i), str(iprev), i in hlist, iprev.chrom == i.chrom)
             elif i in hlist and iprev.chrom != i.chrom:
                 breaks.append((offset[i][0] - hscale * hgap / 2, '--', i.chrom))
             elif i in vlist and iprev in hlist:

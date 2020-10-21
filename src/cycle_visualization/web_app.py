@@ -4,7 +4,6 @@ import os
 
 from draw_episome import EpisomeDrawer
 from breakpoint_graph import graph_decomposition
-import hg19util as hg
 
 
 
@@ -57,17 +56,17 @@ def main():
             return render_template('episome_template.html', upload_error=True)
         if request.files['reconstructed_structure'].filename == '' and request.files['true_structure'].filename == '':
             return render_template('episome_template.html', upload_error=True)
-        if request.files['true_structure'].filename != '':
+        if 'true_structure' in request.files and request.files['true_structure'].filename != '':
             f = request.files['true_structure']
             true_structure_name = f.filename
             content = f.read().decode()
             true_structure = (true_structure_name, content)
-        if request.files['reconstructed_structure'].filename != '':
+        if 'reconstructed_structure' in request.files and request.files['reconstructed_structure'].filename != '':
             f = request.files['reconstructed_structure']
             reconstructed_structure_name = f.filename
             content = str(f.read().decode())
             reconstructed_structure = [(reconstructed_structure_name, content)]
-        if request.files['coverage_image'].filename != '':
+        if 'coverage_image' in request.files and request.files['coverage_image'].filename != '':
             f = request.files['coverage_image']
             coverage_image = f.filename.strip()
             f.save(os.path.join(app.config['UPLOAD_FOLDER'], coverage_image))
