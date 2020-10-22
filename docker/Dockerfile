@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM ubuntu
+FROM ubuntu:20.04
 
 # Build in non-interactive mode for online continuous building
 ARG DEBIAN_FRONTEND=noninteractive
@@ -14,14 +14,15 @@ RUN mkdir -p /home/programs
 RUN apt-get update && apt-get install -y
 RUN apt-get install software-properties-common -y
 RUN apt-get update && apt-get install -y
-RUN add-apt-repository universe
-RUN apt-get install libbz2-dev liblzma-dev python2 gfortran zlib1g-dev samtools wget unzip curl -y
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
-RUN update-alternatives --config python
-RUN curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py
+RUN add-apt-repository universe -y
+RUN apt-get install -y python2
+ADD https://bootstrap.pypa.io/get-pip.py /home/
 RUN python2 get-pip.py
-RUN pip2 install Cython numpy scipy matplotlib
-RUN pip2 install pysam Flask
+RUN apt-get install libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
+#RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
+#RUN update-alternatives --config python
+RUN pip2 install Cython
+RUN pip2 install numpy scipy matplotlib pysam Flask
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
