@@ -40,7 +40,7 @@ RUN export MOSEKPLATFORM=linux64x86
 RUN echo export PATH=$PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 RUN echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 RUN echo export MOSEKLM_LICENSE_FILE=/home/programs/mosek/8/licenses >> ~/.bashrc
-RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python setup.py install
+RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python2 setup.py install
 RUN echo export AA_DATA_REPO=/home/data_repo >> ~/.bashrc
 ADD https://github.com/jluebeck/AmpliconArchitect/archive/master.zip /home/programs
 RUN cd /home/programs && unzip master.zip
