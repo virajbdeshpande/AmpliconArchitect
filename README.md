@@ -5,7 +5,6 @@
 ### October 2020 update: 
 Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
-### Oct 2020 update:
 We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo used for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
