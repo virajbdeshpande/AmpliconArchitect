@@ -45,7 +45,7 @@ if sys.version_info >= (3,0):
     sys.stderr.write("AA must be run with python2. Python3 support is under development.\n")
     sys.exit(1)
 
-else sys.version_info < (3, 0):
+else:
     from sets import Set
 
 import global_names
