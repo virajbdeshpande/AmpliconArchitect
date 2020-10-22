@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM ubuntu
+FROM ubuntu:20.04
 
 # Build in non-interactive mode for online continuous building
 ARG DEBIAN_FRONTEND=noninteractive
@@ -11,10 +11,18 @@ WORKDIR /home/
 RUN mkdir -p /home/programs
 
 #Download libraries for AA
+RUN apt-get update
+RUN apt-get install software-properties-common -y
+RUN add-apt-repository universe -y
+RUN apt-get install -y python2
+ADD https://bootstrap.pypa.io/get-pip.py /home/
+RUN python2 get-pip.py
 RUN apt-get update && apt-get install -y
-RUN apt-get install libbz2-dev liblzma-dev python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools wget unzip -y
-RUN pip install Cython
-RUN pip install pysam Flask
+RUN apt-get install libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
+#RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
+#RUN update-alternatives --config python
+RUN pip2 install Cython
+RUN pip2 install numpy scipy matplotlib pysam Flask
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
@@ -32,7 +40,7 @@ RUN export MOSEKPLATFORM=linux64x86
 RUN echo export PATH=$PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 RUN echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 RUN echo export MOSEKLM_LICENSE_FILE=/home/programs/mosek/8/licenses >> ~/.bashrc
-RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python setup.py install
+RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python2 setup.py install
 RUN echo export AA_DATA_REPO=/home/data_repo >> ~/.bashrc
-ADD https://github.com/virajbdeshpande/AmpliconArchitect/archive/master.zip /home/programs
+ADD https://github.com/jluebeck/AmpliconArchitect/archive/master.zip /home/programs
 RUN cd /home/programs && unzip master.zip

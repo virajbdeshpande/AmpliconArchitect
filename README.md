@@ -2,11 +2,10 @@
 
 ### Recent updates:
 
-### September 2020 update: 
+### October 2020 update: 
 Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
-### Oct 2020 update:
-We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). 
+We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo used for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
 ## Introduction
@@ -88,9 +87,16 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 #### Prerequisites:
 1. Python 2.7
 2. Ubuntu libraries and tools:
-`sudo apt-get install build-essential python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools`
-3. Pysam verion 0.9.0 or higher and Flask (optional)(https://github.com/pysam-developers/pysam):
-`sudo pip install pysam Flask`
+```bash
+sudo apt-get install software-properties-common -y
+sudo add-apt-repository universe -y
+sudo apt-get update && sudo apt-get install -y
+sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools python2 wget -y
+wget https://bootstrap.pypa.io/get-pip.py
+sudo python2 get-pip.py
+```
+3. Pysam verion 0.9.0 or higher and Flask (https://github.com/pysam-developers/pysam):
+`sudo pip2 install pysam Flask Cython numpy scipy matplotlib`
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
@@ -102,7 +108,7 @@ echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bash
 echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
 cd $PWD/mosek/8/tools/platform/linux64x86/python/2/
-sudo python setup.py install #(--user)
+sudo python2 setup.py install #(--user)
 cd -
 source ~/.bashrc
 ```
@@ -136,7 +142,7 @@ Available annotations (`$ref`):
 
 #### PrepareAA:
 We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/PrepareAA. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
-PrepareAA can directly invoke AA if installed. 
+PrepareAA can directly invoked AA if installed. 
 
 
 ### 1) Input data:
@@ -154,8 +160,9 @@ AA requires 2 input files:
         - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
         - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
 
-            `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
+            `python2 $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
         - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. 
+        - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
 ### 2) Usage:
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`

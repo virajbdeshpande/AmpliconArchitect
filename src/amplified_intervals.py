@@ -32,6 +32,9 @@ import os
 import pysam
 import global_names
 
+if sys.version_info >= (3,0):
+    sys.stderr.write("AA must be run with python2. Python3 support is under development.\n")
+    sys.exit(1)
 
 GAIN = 5.0
 CNSIZE_MIN = 100000
