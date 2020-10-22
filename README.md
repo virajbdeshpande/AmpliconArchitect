@@ -69,13 +69,13 @@ AA can be installed in 2 ways:
         ```
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
-    * `docker pull virajbdeshpande/ampliconarchitect`
+    * `docker pull jluebeck/ampliconarchitect`
 
 2. Clone script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 ### Option 2: Github source code:
-`git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+`git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 **Note: In the rest of this document, we will refer to the path of the parent directory `AmpliconArchitect/src` as `$AA_SRC`**
 
