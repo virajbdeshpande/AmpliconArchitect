@@ -2,11 +2,10 @@
 
 ### Recent updates:
 
-### September 2020 update: 
+### October 2020 update: 
 Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
-### Oct 2020 update:
-We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). 
+We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo used for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
 ## Introduction
@@ -70,13 +69,13 @@ AA can be installed in 2 ways:
         ```
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
-    * `docker pull virajbdeshpande/ampliconarchitect`
+    * `docker pull jluebeck/ampliconarchitect`
 
 2. Clone script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 ### Option 2: Github source code:
-`git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
+`git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 **Note: In the rest of this document, we will refer to the path of the parent directory `AmpliconArchitect/src` as `$AA_SRC`**
 
