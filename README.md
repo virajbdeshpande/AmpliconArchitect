@@ -3,10 +3,10 @@
 ### Recent updates:
 
 ### September 2020 update: 
-Version 1.1 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
+Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
-### April 2020 update:
-We have revised the hg38 data repository and updated docker support for this fork. The new data repo for all supported reference genomes is available together [here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
+### Oct 2020 update:
+We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). 
 
 
 ## Introduction
@@ -33,10 +33,10 @@ A full description of the methods and detailed characterization of copy number a
     * (Optional): Add user to the docker group and relogin:
         `sudo usermod -a -G docker $USER`
 2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
+    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
+    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
     
 #### Usage:
 
@@ -58,10 +58,10 @@ AA can be installed in 2 ways:
     * (Optional): Add user to the docker group and relogin:
         `sudo usermod -a -G docker $USER`
 2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://mosek.com/resources/academic-license` or `https://mosek.com/resources/trial-license`)
+    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
+    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         tar zxf data_repo.tar.gz
@@ -70,10 +70,10 @@ AA can be installed in 2 ways:
         ```
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
-    * `docker pull jluebeck/ampliconarchitect`
+    * `docker pull virajbdeshpande/ampliconarchitect`
 
 2. Clone script `run_aa_docker.sh` from Github:
-    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
+    * `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
 
 ### Option 2: Github source code:
 `git clone https://github.com/virajbdeshpande/AmpliconArchitect.git`
@@ -95,7 +95,7 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 tar xf mosektoolslinux64x86.tar.bz2
-echo Please obtain license from https://mosek.com/resources/academic-license or https://mosek.com/resources/trial-license and place in $PWD/mosek/8/licenses
+echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $PWD/mosek/8/licenses
 echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
 export MOSEKPLATFORM=linux64x86
 echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
@@ -120,14 +120,13 @@ mkdir -p data_repo
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 source ~/.bashrc
 ```
-
 Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
 ```
 cd $AA_DATA_REPO
 tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
-`https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu`
+`https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
 Available annotations (`$ref`):
 * hg19
 * GRCh37
@@ -145,14 +144,14 @@ AA requires 2 input files:
 
 1. Coordinate-sorted, indexed BAM file:
     * Align reads to a reference present in the `data_repo`.
-    * AA has been tested on `bwa mem` on `hg19` and `hg38` reference genomes.
+    * AA has been tested on `bwa mem` on `hg19` and `GRCh38` reference genomes.
     * Recommended depth of coverage for WGS data is 5X-10X.
     * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample`. 
     * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
 2. BED file with seed intervals:
     * One or more intervals per amplicon in the sample
     * AA has been tested on seed intervals generated as follows:
-        - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`) or CNVkit
+        - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
         - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
 
             `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
@@ -222,13 +221,17 @@ A common question after running AA is, **"How do I know if these reconstructions
 To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/jluebeck/AmpliconClassifier).
 
 ### 5) Visualizing reconstruction:
-- We developed a python program called [CycleViz](https://github.com/jluebeck/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
-
-- An interactive web interface for course-grained visualization of the AA decompositions is also available. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
+The outputs can be visualized in 3 different formats:
+- SVVIEW: This corresponds to the output file `{out}_amplicon{id}.png/pdf` and roughly shows, the discordant edges, copy number segments and genomic coverage.
+- CYCLEVIEW: This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
 ```bash
 export FLASK_APP=$AA_SRC/cycle_visualization/web_app.py
 flask run --host=0.0.0.0 --port=8000
 ```
+This format of visualization makes it easy to discern the segments in the structure in the context of their genomic position and copy number segments as well as identify multiple copies of the segments within the same structure.
+
+- CYCLEVIZ: We developed a python program called [CycleViz](https://github.com/jluebeck/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
+
 ### Instructions for web interface:
 - Choose and upload a cycles files generated by AA.
 - Optional but recommended: Upload corresponding png file generated AA.

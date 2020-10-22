@@ -46,7 +46,7 @@ if (sys.version_info < (3, 0)):
 
 import global_names
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -109,6 +109,16 @@ class PrefixAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         return '[%s] %s' % (self.extra['prefix'], msg), kwargs
 
+
+commandstring = 'Commandline: ';
+
+for arg in sys.argv:
+    if ' ' in arg:
+        commandstring += '"{}"  '.format(arg);
+    else:
+        commandstring+="{}  ".format(arg);
+
+logging.info(commandstring);
 
 logging.info("AmpliconArchitect version " + __version__ + "\n")
 rdAlts = args.rdAlts

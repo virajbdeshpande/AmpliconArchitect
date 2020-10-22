@@ -1111,7 +1111,6 @@ class bam_to_breakpoint():
         # iii = 0
         for v in vlist:
             # iii += 1
-            # logging.debug("#TIME " +  '%.3f\t'%clock() + " discordant edges: cluster discordant " + str(iii) + " " + str(v[0]) + " "  + str(v[1]) + " " + str(v[3]))
             s0 = bisect.bisect_left(v0listp, v[0] - self.max_insert + self.read_length)
             e0 = bisect.bisect_right(v0listp, v[0] + self.max_insert - self.read_length)
             s1 = bisect.bisect_left(v1listp, v[1] - self.max_insert + self.read_length)
@@ -1822,7 +1821,6 @@ class bam_to_breakpoint():
                     ic.start = max(ic.start - 2 * ms_window_size, 0)
                     break
         # if ic.size() > ms_window_size:
-
         logging.debug('#TIME %.3f\t interval_extend: %s, %s, %s' % (clock(), str(i), strand, str(ic)))
         return ic
 
@@ -2331,7 +2329,7 @@ class bam_to_breakpoint():
                     else:
                         scale_max_ms = max(scale_max_ms, 2000)
 
-                ax2.plot((ilist.xpos(seg.chrom, seg.start), ilist.xpos(seg.chrom, seg.end)), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
+                ax2.plot((ilist.xpos(seg.chrom, max(i.start, seg.start)), ilist.xpos(seg.chrom, min(i.end, seg.end))), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         
         logging.debug("Max cov, max ms scales set to: " + str(scale_max_cov) + " " + str(scale_max_ms))
         covl.sort()

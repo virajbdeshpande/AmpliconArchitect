@@ -333,7 +333,7 @@ class breakpoint_graph(abstract_graph):
                 if (en_seq, en_seqstrand) in path and not (en_seq == e1 and e1 == e2 and en_seqstrand == v1.strand):
                     continue
                 if (en_seq, -1 * en_seqstrand) in path:
-                    min_c = min(self.copy_count[en_seq] / 2, min_c)
+                    min_c = min(self.copy_count[en_seq] / 2.0, min_c)
                     if min_c < min_count:
                         continue
                 if en_seq == e2 and v2.strand == en_seqstrand:

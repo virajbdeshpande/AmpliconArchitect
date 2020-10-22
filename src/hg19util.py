@@ -204,7 +204,6 @@ class interval(object):
                 self.strand = -1
             if not exclude_info_string:
                 self.info = ll[3:]
-
         else:
             raise(Exception("Invalid interval format" + str(line)))
 
