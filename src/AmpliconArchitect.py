@@ -41,7 +41,11 @@ import logging
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
-if (sys.version_info < (3, 0)):
+if sys.version_info >= (3,0):
+    sys.stderr.write("AA must be run with python2. Python3 support is under development.\n")
+    sys.exit(1)
+
+else sys.version_info < (3, 0):
     from sets import Set
 
 import global_names
