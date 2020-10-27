@@ -142,7 +142,7 @@ Available annotations (`$ref`):
 
 #### PrepareAA:
 We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/PrepareAA. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
-PrepareAA can directly invoked AA if installed. 
+PrepareAA can directly invoke AA if installed. 
 
 
 ### 1) Input data:
