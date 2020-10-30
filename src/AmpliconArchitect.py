@@ -156,16 +156,17 @@ import bam_to_breakpoint as b2b
 logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
 rdList0 = hg.interval_list(rdAlts, 'bed', exclude_info_string=True)
 rdList = hg.interval_list([r for r in rdList0])
-coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
-cstats = None
 cb = bamFile
 if cbam is not None:
     cb = cbam
-for l in coverage_stats_file:
-    ll = l.strip().split()
-    if ll[0] == os.path.abspath(cb.filename):
-        cstats = tuple(map(float, ll[1:]))
-coverage_stats_file.close()
+cstats = None
+if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
+    coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
+    for l in coverage_stats_file:
+        ll = l.strip().split()
+        if ll[0] == os.path.abspath(cb.filename):
+            cstats = tuple(map(float, ll[1:]))
+    coverage_stats_file.close()
 coverage_windows=None
 if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')

@@ -96,14 +96,15 @@ if args.bam != "":
         bamFile = pysam.Samfile(args.bam, 'rc')
     else:
         bamFile = pysam.Samfile(args.bam, 'rb')
-    coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
     cstats = None
     cb = bamFile
-    for l in coverage_stats_file:
-        ll = l.strip().split()
-        if ll[0] == os.path.abspath(cb.filename):
-            cstats = tuple(map(float, ll[1:]))
-    coverage_stats_file.close()
+    if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
+        coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
+        for l in coverage_stats_file:
+            ll = l.strip().split()
+            if ll[0] == os.path.abspath(cb.filename):
+                cstats = tuple(map(float, ll[1:]))
+        coverage_stats_file.close()
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
     rdList = hg.interval_list([r for r in rdList if float(r.info[-1]) >
                                GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2
