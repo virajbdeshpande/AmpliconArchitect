@@ -5,13 +5,15 @@
 ### October 2020 update: 
 Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
-We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo used for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
+We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo with latest updates for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
 
 ## Introduction
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others.
 Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. 
 Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into cancer biology. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
+
+Please check out the **detailed guide** on running AA [available here](https://github.com/jluebeck/PrepareAA/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
 
 A full description of the methods and detailed characterization of copy number amplifications and ecDNA in cancer can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
 
@@ -87,9 +89,16 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 #### Prerequisites:
 1. Python 2.7
 2. Ubuntu libraries and tools:
-`sudo apt-get install build-essential python-dev gfortran python-numpy python-scipy python-matplotlib python-pip zlib1g-dev samtools`
-3. Pysam verion 0.9.0 or higher and Flask (optional)(https://github.com/pysam-developers/pysam):
-`sudo pip install pysam Flask`
+```bash
+sudo apt-get install software-properties-common -y
+sudo add-apt-repository universe -y
+sudo apt-get update && sudo apt-get install -y
+sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools python2 wget -y
+wget https://bootstrap.pypa.io/get-pip.py
+sudo python2 get-pip.py
+```
+3. Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam) or higher and Flask (Flask is optional):
+`sudo pip2 install pysam Cython numpy scipy matplotlib Flask`
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
