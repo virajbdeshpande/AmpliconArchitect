@@ -35,7 +35,7 @@ A full description of the methods and detailed characterization of copy number a
     * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk?resourcekey=0-WW7hTVXmgiBIsiwMP14ERA`
     
 #### Usage:
 
