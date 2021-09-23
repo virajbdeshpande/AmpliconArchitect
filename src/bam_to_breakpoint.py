@@ -73,7 +73,7 @@ class breakpoint_cluster:
 
 class bam_to_breakpoint():
     def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300, num_sdevs=3,
-        window_size=10000, min_coverage=30, pair_support=-1, downsample=-1,
+        window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1,
         secondary_index=None, coverage_stats=None, coverage_windows=None,
         sensitivems=False, span_coverage=True, tstart=0):
         self.bamfile = bamfile
@@ -95,6 +95,7 @@ class bam_to_breakpoint():
         self.mapping_quality_cutoff = 5
         self.breakpoint_mapping_quality_cutoff = 20
         self.breakpoint_entropy_cutoff = 0.75
+        self.pair_support_min=pair_support_min
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
@@ -360,7 +361,7 @@ class bam_to_breakpoint():
         
         (wc_10000_median, wc_10000_avg, wc_10000_std) = (wc_median[0], wc_avg[0], wc_std[0])
         (wc_300_median, wc_300_avg, wc_300_std) = (wc_median[1], wc_avg[1], wc_std[1])
-        self.pair_support = max((wc_300_avg / 10.0)  * ((self.insert_size - self.read_length) / 2 / self.read_length)*percent_proper, 2)
+        self.pair_support = max((wc_300_avg / 10.0)  * ((self.insert_size - self.read_length) / 2 / self.read_length)*percent_proper, self.pair_support_min)
         rstats = (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length, self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support, self.percent_proper)
         if refi == -1:
             self.basic_stats = rstats

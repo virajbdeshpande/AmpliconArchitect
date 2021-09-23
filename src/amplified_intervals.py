@@ -115,7 +115,7 @@ if args.bam != "":
             if float(r.info[-1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2 and \
                     bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0] > 0:
                 pre_int_list.append(r)
-                
+
         except ZeroDivisionError:
             continue
 

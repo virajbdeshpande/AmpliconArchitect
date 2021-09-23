@@ -90,6 +90,9 @@ parser.add_argument('--cbed', dest='cbed',
 parser.add_argument('--insert_sdevs', dest='insert_sdevs',
                     help="Number of standard deviations around the insert size. May need to increase for sequencing runs with high variance after insert size selection step. (default 3.0)", metavar='FLOAT',
                     action='store', type=float, default=3)
+parser.add_argument('--pair_support_min', dest='pair_support_min',
+                    help="Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due to coverage-scaled cutoffs)", metavar='INT',
+                    action='store', type=int, default=2)
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
@@ -175,9 +178,9 @@ if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')
     coverage_windows.sort()
 if cstats is None and cbam is not None:
-    cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, num_sdevs=args.insert_sdevs, coverage_stats=cstats, coverage_windows=coverage_windows)
+    cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = cbam2b.basic_stats
-bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.insert_sdevs, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
+bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
 
 
 
