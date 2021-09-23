@@ -171,7 +171,9 @@ if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
     for l in coverage_stats_file:
         ll = l.strip().split()
         if ll[0] == os.path.abspath(cb.filename):
-            cstats = tuple(map(float, ll[1:]))
+            if int(cstats[-2]) == args.pair_support_min:
+                cstats = tuple(map(float, ll[1:]))
+
     coverage_stats_file.close()
 coverage_windows=None
 if cbed is not None:
