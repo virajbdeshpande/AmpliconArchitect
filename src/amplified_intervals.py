@@ -62,6 +62,11 @@ parser.add_argument('--ref', dest='ref',
                     help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default) & \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19",
                     metavar='STR',
                     action='store', type=str, default='hg19')
+parser.add_argument('--insert_sdevs', dest='insert_sdevs',
+                    help="Number of standard deviations around the insert size. May need to increase for sequencing runs with high variance after insert size selection step. (default 3.0)",
+                    metavar='FLOAT',
+                    action='store', type=float, default=3)
+
 args = parser.parse_args()
 
 global_names.REF = args.ref
@@ -108,7 +113,7 @@ if args.bam != "":
             if ll[0] == os.path.abspath(cb.filename):
                 cstats = tuple(map(float, ll[1:]))
         coverage_stats_file.close()
-    bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
+    bamFileb2b = b2b.bam_to_breakpoint(bamFile, insert_size=args.insert_sdevs, coverage_stats=cstats)
     pre_int_list = []
     for r in rdList:
         try:
