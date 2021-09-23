@@ -134,7 +134,7 @@ for a in bamFile.fetch():
         b2.write(a)
 b2.close()
 pysam.index(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam')
-print ("Downsampling:", args.bam[0], float(cstats[0]), final, ratio)
+print("Downsampling:", args.bam[0], float(cstats[0]), final, ratio)
 
 # if args.cbam is not None and not os.path.exists(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam'):
 #     c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)
