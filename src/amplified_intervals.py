@@ -64,7 +64,7 @@ parser.add_argument('--ref', dest='ref',
                     action='store', type=str, default='hg19')
 parser.add_argument('--no_cstats', dest='no_cstats',
                     help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min", metavar='FLAG',
-                    action='store_true', type=bool, default=False)
+                    action='store_true', default=False)
 
 args = parser.parse_args()
 
