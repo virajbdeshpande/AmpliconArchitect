@@ -62,10 +62,9 @@ parser.add_argument('--ref', dest='ref',
                     help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default) & \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19",
                     metavar='STR',
                     action='store', type=str, default='hg19')
-parser.add_argument('--insert_sdevs', dest='insert_sdevs',
-                    help="Number of standard deviations around the insert size. May need to increase for sequencing runs with high variance after insert size selection step. (default 3.0)",
-                    metavar='FLOAT',
-                    action='store', type=float, default=3)
+parser.add_argument('--no_cstats', dest='no_cstats',
+                    help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min", metavar='FLAG',
+                    action='store_true', type=bool, default=False)
 
 args = parser.parse_args()
 
@@ -99,21 +98,23 @@ rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN])
 
 if args.bam != "":
     import bam_to_breakpoint as b2b
-
     if os.path.splitext(args.bam)[-1] == '.cram':
         bamFile = pysam.Samfile(args.bam, 'rc')
     else:
         bamFile = pysam.Samfile(args.bam, 'rb')
+
     cstats = None
     cb = bamFile
-    if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
+    if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_cstats:
         coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
         for l in coverage_stats_file:
             ll = l.strip().split()
             if ll[0] == os.path.abspath(cb.filename):
                 cstats = tuple(map(float, ll[1:]))
+
         coverage_stats_file.close()
-    bamFileb2b = b2b.bam_to_breakpoint(bamFile, insert_size=args.insert_sdevs, coverage_stats=cstats)
+
+    bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
     pre_int_list = []
     for r in rdList:
         try:

@@ -93,6 +93,9 @@ parser.add_argument('--insert_sdevs', dest='insert_sdevs',
 parser.add_argument('--pair_support_min', dest='pair_support_min',
                     help="Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due to coverage-scaled cutoffs)", metavar='INT',
                     action='store', type=int, default=2)
+parser.add_argument('--no_cstats', dest='no_cstats',
+                    help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min", metavar='FLAG',
+                    action='store_true', type=bool, default=False)
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
@@ -167,7 +170,7 @@ if cbam is not None:
     cb = cbam
 
 cstats = None
-if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
+if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_cstats:
     coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
     for l in coverage_stats_file:
         ll = l.strip().split()
@@ -177,7 +180,7 @@ if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")):
                     cstats = None
 
     coverage_stats_file.close()
-    
+
 coverage_windows=None
 if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')
