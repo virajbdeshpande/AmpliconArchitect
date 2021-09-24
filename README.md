@@ -2,6 +2,10 @@
 
 ### Recent updates:
 
+### October 2021 update:
+Version 1.2_r2 released with additional flags for manual control over insert size and read-pair support cutoffs, and minor improvements to logging. 
+No changes to output or performance when run with default arguments. Users are now required to also specify `--ref` when running AA.
+
 ### October 2020 update: 
 Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
@@ -190,6 +194,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | `--bed`         |FILE|   Bed file with putative list of amplified intervals| 
 | `--bam`         |FILE|   Coordinate sorted BAM file with index mapped to provided reference genome| 
 | `--out`         |PATH|   Prefix for output files| 
+| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`|
 
 **NOTE1:** Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
@@ -207,10 +212,12 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | `--extendmode`  |STR |   Values: [`EXPLORE`/`CLUSTERED`/`UNCLUSTERED`/`VIRAL`]. This determines how the input intervals in bed file are treated.<br> - `EXPLORE` : Search for all intervals in the genome that may be connected to input seed intervals.<br> - `CLUSTERED` : Input intervals are treated as part of a single connected amplicon and no new connected itervals are added. <br> - `UNCLUSTERED` : Each input interval is treated as a distinct single interval amplicon and no new intervals are added.<br> Default: `EXPLORE`| 
 | `--sensitivems` | STR|   Values: [`True`, `False`]. Set `True` only if copy counts are expected to vary by an order of magnitude, e.g. viral integration. Default: `False`| 
 | `--plotstyle` | STR | Values: [`small`, `large`, `all_amplicons`]. `large`: large font, `all_amplicons`: display a large number of intervals in a single plot, recommeded for visualizing multiple amplicons in CLUSTERED mode. Default: `small` |
-| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `<CUSTOM>`, `None`]. Reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`| 
 | `--downsample`  |FLOAT|  Values: [`-1`, `0`, `C`(>0)]. Decide how to downsample the bamfile during reconstruction. Reads are automatically downsampled in real time for speedup. Alternatively pre-process bam file using $AA_SRC/downsample.py. <br> - `-1` : Do not downsample bam file, use full coverage. <br> - `0` : Downsample bamfile to 10X coverage if original coverage larger then 10. <br> - `C` (>0) : Downsample bam file to coverage `C` if original coverage larger than `C`. <br> - Default: `0`| 
 | `--cbam`        |FILE| Use alternative bamfile to use for coverage calculation| 
 | `--cbed`        |FILE| Use provided bed file for coverage calculation. Bed file defines 1000 10kbp genomic windows.|
+| `--insert_sdevs`|FLOAT| Values: `> 0`  Number of standard deviations around the insert size. May need to increase for sequencing runs with high variance after insert size selection step. (default 3.0)|
+| `--pair_support_min`|INT| Values: `> 1`  Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due to coverage-scaled cutoffs). (default 2)|
+| `--no_cstats`   |FLAG| Values: `--no_cstats`  Do not re-use coverage statistics from `$AA_DATA_REPO/coverage.stats` file. Set this if trying multiple different values of `--insert_sdevs` or `--pair_support_min`. (default not set)|
 
 
 ### 3) Output description
