@@ -94,7 +94,7 @@ parser.add_argument('--pair_support_min', dest='pair_support_min',
                     help="Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due to coverage-scaled cutoffs)", metavar='INT',
                     action='store', type=int, default=2)
 parser.add_argument('--no_cstats', dest='no_cstats',
-                    help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min", metavar='FLAG',
+                    help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min",
                     action='store_true', default=False)
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
