@@ -19,7 +19,7 @@ ADD https://bootstrap.pypa.io/pip/2.7/get-pip.py /home/programs
 RUN python2 /home/programs/get-pip.py
 RUN pip2 --version
 RUN apt-get update && apt-get install -y
-RUN apt-get install libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
+RUN apt-get install curl libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
 #RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
 #RUN update-alternatives --config python
 RUN pip2 install Cython
