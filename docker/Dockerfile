@@ -19,11 +19,11 @@ ADD https://bootstrap.pypa.io/pip/2.7/get-pip.py /home/programs
 RUN python2 /home/programs/get-pip.py
 RUN pip2 --version
 RUN apt-get update && apt-get install -y
-RUN apt-get install libcurl4-gnutls-dev python-dev libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
+RUN apt-get install libcurl4-gnutls-dev libssl-dev python-dev libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
 #RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
 #RUN update-alternatives --config python
 RUN pip2 install Cython
-RUN pip2 install numpy scipy matplotlib pysam Flask
+RUN pip2 install numpy scipy matplotlib pysam==0.15.2 Flask
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
