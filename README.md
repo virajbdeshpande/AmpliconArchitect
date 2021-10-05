@@ -102,7 +102,9 @@ wget https://bootstrap.pypa.io/get-pip.py
 sudo python2 get-pip.py
 ```
 3. Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam) or higher and Flask (Flask is optional):
-`sudo pip2 install pysam Cython numpy scipy matplotlib Flask`
+`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask`
+
+Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
