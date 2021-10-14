@@ -1055,7 +1055,7 @@ class bam_to_breakpoint():
         return False
 
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
-        logging.debug("#TIME " + '%.3f\t'%clock() + " discordant edges " + str(interval))
+        logging.debug("#TIME " + '%.3f\t'%clock() + " searching discordant edges in " + str(interval))
         if pair_support == -1:
             pair_support = self.pair_support
         if type(interval) != hg.interval_list:
@@ -1343,7 +1343,8 @@ class bam_to_breakpoint():
                         continue
 
 
-                if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) <= 30:
+                if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) < self.max_insert:
+                    logging.debug("skipping everted edge " + str(bp1) + str(bp2))
                     continue
                 if bre.type() != 'concordant':
                     if self.edge_passes_filters(vl, bre):

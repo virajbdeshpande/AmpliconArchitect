@@ -116,7 +116,7 @@ echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bash
 echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
 cd $PWD/mosek/8/tools/platform/linux64x86/python/2/
-sudo python setup.py install #(--user)
+sudo python setup.py install #(--user) [can also build locally with "pip2 install -e ."]
 cd -
 source ~/.bashrc
 ```
