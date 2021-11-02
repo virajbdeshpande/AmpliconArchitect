@@ -98,7 +98,7 @@ sudo apt-get install software-properties-common -y
 sudo add-apt-repository universe -y
 sudo apt-get update && sudo apt-get install -y
 sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools python2 wget -y
-wget https://bootstrap.pypa.io/get-pip.py
+wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
 sudo python2 get-pip.py
 ```
 3. Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam) or higher and Flask (Flask is optional):
