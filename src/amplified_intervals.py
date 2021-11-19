@@ -59,9 +59,8 @@ parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
                     action='store', type=int, default=CNSIZE_MIN)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default) & \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19",
-                    metavar='STR',
-                    action='store', type=str, default='hg19')
+                    help="Values: [hg19, GRCh37, GRCh38, mm10, GRCm38]. \"hg19\", \"GRCh38\", \"mm10\" : chr1, .. chrM etc / \"GRCh37\", \"GRCm38\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
+                    action='store', type=str, choices=["hg19", "GRCh37", "GRCh38", "mm10", "GRCm38"], required=True)
 parser.add_argument('--no_cstats', dest='no_cstats',
                     help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min",
                     action='store_true', default=False)
