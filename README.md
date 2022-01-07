@@ -2,6 +2,12 @@
 
 ### Recent updates:
 
+### January 2022 update:
+We have released a testing version of the mm10 mouse genome data repo [here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz). 
+To use with an existing installation please extract and place the mm10 directory with the other reference build directories in your AA data repo.
+Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
+argument. 
+
 ### October 2021 update:
 Version 1.2_r2 released with additional flags for manual control over insert size and read-pair support cutoffs, and minor improvements to logging. 
 No changes to output or performance when run with default arguments. Users are now required to also specify `--ref` when running AA.
@@ -141,10 +147,11 @@ tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
 `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
-Available annotations (`$ref`):
+Available annotations:
 * hg19
 * GRCh37
 * GRCh38 (hg38)
+* mm10 ([available here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz))
 
 ## Running AmpliconArchitect
 
@@ -191,12 +198,12 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 
 #### Required Arguments:
 
-| Argument | Type | Description |
-| ---------- | ---- | ----------- |
-| `--bed`         |FILE|   Bed file with putative list of amplified intervals| 
-| `--bam`         |FILE|   Coordinate sorted BAM file with index mapped to provided reference genome| 
-| `--out`         |PATH|   Prefix for output files| 
-| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19`|
+| Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------- | ---- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--bed`         |FILE| Bed file with putative list of amplified intervals                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 
+| `--bam`         |FILE| Coordinate sorted BAM file with index mapped to provided reference genome                                                                                                                                                                                                                                                                                                                                                                                                                                           | 
+| `--out`         |PATH| Prefix for output files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 
+| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `mm10`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19` |
 
 **NOTE1:** Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
