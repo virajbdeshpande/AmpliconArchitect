@@ -1,10 +1,8 @@
 import pysam
 import argparse
 import math
-from time import clock
+from time import time
 from collections import defaultdict
-from sets import Set
-from cStringIO import StringIO
 import sys
 import os
 import numpy as np
@@ -19,7 +17,7 @@ from matplotlib.patches import Ellipse
 
 # adds path used by UCSD devs
 sys.path.insert(1, os.path.join(sys.path[0], '/nucleus/pedigree/projects/extrachromosome/src/'))
-import hg19util as hg
+import ref_util as hg
 
 
 parser = argparse.\
@@ -58,10 +56,10 @@ viral_intervals = [i[0] for i in segments_merge if i[1][0].info[1] == 'Viral']
 viral_segments = hg.interval_list([s for s in segments if s.info[1] == 'Viral'])
 all_intervals = hg.interval_list([i[0] for i in segments_merge])
 
-print str(all_intervals)
-print [str(i) for i in human_intervals], [str(i) for i in viral_intervals]
-print {i:str(segment_id_dict[i]) for i in segment_id_dict}
-print cycle_id_dict
+print(str(all_intervals))
+print([str(i) for i in human_intervals], [str(i) for i in viral_intervals])
+print({i:str(segment_id_dict[i]) for i in segment_id_dict})
+print(cycle_id_dict)
 
 
 

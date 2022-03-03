@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
@@ -20,15 +20,15 @@
 
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
+# Maintained by Jens Luebeck jluebeck@ucsd.edu
 
 
-from time import clock, time
-TSTART = clock()
+from time import time
+TSTART = time()
 import pysam
 import argparse
 import math
 from collections import defaultdict
-from cStringIO import StringIO
 import sys
 import os
 import numpy as np
@@ -38,19 +38,19 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import logging
+from functools import reduce
 #plt.rc('text', usetex=True)
 #plt.rc('font', family='serif')
 
-if sys.version_info >= (3,0):
-    sys.stderr.write("AA must be run with python2. Python3 support is under development.\n")
-    sys.exit(1)
-
+if sys.version_info >= (3, 0):
+    from io import StringIO
 else:
-    from sets import Set
+    from cStringIO import StringIO
+
 
 import global_names
 
-__version__ = "1.2_r2"
+__version__ = "1.3_r1"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -60,7 +60,7 @@ parser.add_argument('--bed', dest='rdAlts',
 parser.add_argument('--bam', dest='bam',
                     help="Coordinate sorted BAM file with index.", metavar='FILE',
                     action='store', type=str, required=True)
-parser.add_argument('--out', dest='outName',
+parser.add_argument('-o', '--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
                     action='store', type=str, nargs=1, required=True)
 parser.add_argument('--runmode', dest='runmode',
@@ -99,7 +99,6 @@ parser.add_argument('--no_cstats', dest='no_cstats',
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
-
 global_names.REF = args.ref
 
 logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
@@ -134,6 +133,7 @@ for arg in sys.argv:
 logging.info(commandstring)
 
 logging.info("AmpliconArchitect version " + __version__ + "\n")
+logging.info("Python version " + sys.version + "\n")
 rdAlts = args.rdAlts
 if os.path.splitext(args.bam)[-1] == '.cram':
     bamFile = pysam.Samfile(args.bam, 'rc')
@@ -150,19 +150,19 @@ cbed = args.cbed
 try:
     DATA_REPO = os.environ["AA_DATA_REPO"]
 except:
-    logging.warning("#TIME " + '%.3f\t'%(clock() - TSTART) + "unable to set AA_DATA_REPO variable. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "unable to set AA_DATA_REPO variable. Setting to working directory")
     DATA_REPO = '.'
 if DATA_REPO == '.' or DATA_REPO == '':
-    logging.warning("#TIME " + '%.3f\t'%(clock() - TSTART) + "AA_DATA_REPO not set or empy. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "AA_DATA_REPO not set or empy. Setting to working directory")
     DATA_REPO = '.'
 
 
-logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
-import hg19util as hg
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
+import ref_util as hg
 import bam_to_breakpoint as b2b
 
 
-logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
 rdList0 = hg.interval_list(rdAlts, 'bed', exclude_info_string=True)
 rdList = hg.interval_list([r for r in rdList0])
 cb = bamFile
@@ -201,7 +201,7 @@ segments = []
 
 
 if args.extendmode == 'VIRAL':
-    logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Finding integration sites: " + str(rdList[0]))
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Finding integration sites: " + str(rdList[0]))
     de = bamFileb2b.interval_discordant_edges(rdList)
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
@@ -218,11 +218,11 @@ if args.extendmode == 'VIRAL':
 all_ilist = copy.copy(rdList)
 irdhops = []
 irddict = {}
-irdSets = Set([Set([ird]) for ird in rdList])
-irdgroupdict = {ird:Set([ird]) for ird in rdList}
+irdSets = set([frozenset([ird]) for ird in rdList])
+irdgroupdict = {ird: frozenset([ird]) for ird in rdList}
 if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
     for ird in rdList:
-        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Exploring interval: " + str(ird))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Exploring interval: " + str(ird))
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
         ilist = bamFileb2b.interval_hops(ird, rdlist=all_ilist)
@@ -240,14 +240,14 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
     allhops.sort()
     allmerge = allhops.merge_clusters()
     for am in allmerge:
-        nset = Set([])
+        nset = set()
         for ami in am[1]:
             nset.update(irdgroupdict[irddict[ami]])
             if irdgroupdict[irddict[ami]] in irdSets:
                 irdSets.remove(irdgroupdict[irddict[ami]])
         for ird in nset:
             irdgroupdict[ird] = nset
-        irdSets.add(nset)
+        irdSets.add(frozenset(nset))
     irdgroups = []
     for nset in irdSets:
         ngroup = hg.interval_list([])
@@ -262,7 +262,7 @@ else:
     irdgroups = [hg.interval_list([r]) for r in rdList]
 
 
-logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Interval sets for amplicons determined: ")
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Interval sets for amplicons determined: ")
 for il in enumerate(irdgroups):
     logging.info("[amplicon" + str(il[0] + 1) + ']\t' + ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in il[1]]))
 
@@ -288,11 +288,11 @@ for ig in irdgroups:
     ilist1 = hg.interval_list([a[0] for a in ilist.merge_clusters()])
     istr = ','.join([i.chrom + ':' + str(i.start) + '-' + str(i.end) for i in ilist1])
     summary_logger.info("Intervals = " + str(istr))
-    oncolist = ','.join(Set([a[1].info['Name'] for a in ilist1.intersection(hg.oncogene_list)]))+','
+    oncolist = ','.join(set([a[1].info['Name'] for a in ilist1.intersection(hg.oncogene_list)]))+','
     summary_logger.info("OncogenesAmplified = " + str(oncolist))
     amplicon_name = outName + '_amplicon' + str(amplicon_id)
     if args.runmode in ['FULL', 'CYCLES', 'BPGRAPH']:
-        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reconstructing amplicon" + str(amplicon_id))
         graph_handler = logging.FileHandler(amplicon_name + '_graph.txt', 'w')
         cycle_handler = logging.FileHandler(amplicon_name + '_cycles.txt', 'w')
         graph_logger.addHandler(graph_handler)
@@ -301,7 +301,7 @@ for ig in irdgroups:
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
     if args.runmode in ['FULL', 'SVVIEW']:
-        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
             ilist, amplicon_name, segments=segments, font=args.plotstyle)
     summary_logger.info(
@@ -319,9 +319,9 @@ if (args.extendmode in ['VIRAL', 'VIRAL_CLUSTERED']) and (args.runmode in ['FULL
     for i in irdgroups[0]:
         if i.intersects(rdList0[-1]) or len(hg.interval_list([i]).intersection(rdList)) == 0:
             continue
-        logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Plotting viral view for interval " + str(i))
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting viral view for interval " + str(i))
         bamFileb2b.plot_segmentation(hg.interval_list([i, rdList0[-1]]), outName + '_amplicon' + str(amplicon_id), scale_list=hg.interval_list([i]), font='large')
         amplicon_id += 1
 
 
-logging.info("#TIME " + '%.3f\t'%(clock() - TSTART) + "Total Runtime")  
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Total Runtime")

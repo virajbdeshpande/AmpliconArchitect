@@ -21,10 +21,8 @@
 import pysam
 import argparse
 import math
-from time import clock, time
+from time import time
 from collections import defaultdict
-from sets import Set
-from cStringIO import StringIO
 import sys
 import os
 import numpy as np
@@ -33,7 +31,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import logging
-import JobNotifier
 import random
 import hashlib
 #plt.rc('text', usetex=True)
@@ -44,7 +41,7 @@ import global_names
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
 parser.add_argument('--bam', dest='bam',
-                    help="Coordinate sorted BAM file with index mapped to hg19 reference sequence", metavar='FILE',
+                    help="Coordinate sorted BAM file with index", metavar='FILE',
                     action='store', type=str, nargs=1)
 parser.add_argument('--final', dest='final',
                     help="Optional Final coverage. Default is 10. If initial coverage is less than final, do nothing.", metavar='FLOAT',
@@ -59,16 +56,15 @@ parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, None]. \"hg19\"(default), \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
-                    action='store', type=str, default='hg19')
+                    help="Values: [hg19, GRCh37, GRCh38, mm10, None]. \"hg19\"(default), \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. Default: hg19", metavar='STR',
+                    action='store', type=str, required=True)
 
 args = parser.parse_args()
 
 global_names.REF = args.ref
 
 
-
-import hg19util as hg
+import ref_util as hg
 import bam_to_breakpoint as b2b
 from breakpoint_graph import *
 
@@ -84,8 +80,6 @@ if args.cbam is not None:
     else:
         cbam = pysam.Samfile(args.cbam, 'rb')
 cbed = args.cbed
-
-
 
 
 coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats")
@@ -115,8 +109,6 @@ final = args.final
 if cstats[0] <= final:
     exit()    
 ratio = float(final) / float(cstats[0])
-
-
 
 downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':

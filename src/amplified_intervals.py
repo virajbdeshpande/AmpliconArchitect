@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 # This software is Copyright 2017 The Regents of the University of California. All Rights Reserved. Permission to copy, modify, and distribute this software and its documentation for educational, research and non-profit purposes, without fee, and without a written agreement is hereby granted, provided that the above copyright notice, this paragraph and the following three paragraphs appear in all copies. Permission to make commercial use of this software may be obtained by contacting:
 #
@@ -18,12 +18,11 @@
 
 # Author: Viraj Deshpande
 # Contact: virajbdeshpande@gmail.com
-
+# Maintained by Jens Luebeck jluebeck@ucsd.edu
 
 import copy
 from collections import defaultdict
 import sys
-from sets import Set
 import numpy as np
 import re
 
@@ -32,10 +31,6 @@ import argparse
 import os
 import pysam
 import global_names
-
-if sys.version_info >= (3, 0):
-    sys.stderr.write("AA must be run with python2. Python3 support is under development.\n")
-    sys.exit(1)
 
 GAIN = 5.0
 CNSIZE_MIN = 100000
@@ -68,7 +63,7 @@ parser.add_argument('--no_cstats', dest='no_cstats',
 args = parser.parse_args()
 
 global_names.REF = args.ref
-import hg19util as hg
+import ref_util as hg
 
 if args.bed != '':
     rdAlts = args.bed
