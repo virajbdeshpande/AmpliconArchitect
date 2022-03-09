@@ -2,6 +2,9 @@
 
 ### Recent updates:
 
+### March 2022 update:
+Version `1.3_r1` released which supports `python3` in addition to `python2`. 
+
 ### January 2022 update:
 We have released a testing version of the mm10 mouse genome data repo [here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz). 
 To use with an existing installation please extract and place the mm10 directory with the other reference build directories in your AA data repo.
@@ -9,11 +12,11 @@ Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also
 argument. 
 
 ### October 2021 update:
-Version 1.2_r2 released with additional flags for manual control over insert size and read-pair support cutoffs, and minor improvements to logging. 
+Version `1.2_r2` released with additional flags for manual control over insert size and read-pair support cutoffs, and minor improvements to logging. 
 No changes to output or performance when run with default arguments. Users are now required to also specify `--ref` when running AA.
 
 ### October 2020 update: 
-Version 1.2 released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
+Version `1.2` released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
 
 We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo with latest updates for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
 
@@ -77,6 +80,7 @@ AA can be installed in 2 ways:
         ```bash
         tar zxf data_repo.tar.gz
         echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
+        cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
         source ~/.bashrc
         ```
 #### Obtain AmpliconArchitect image and execution script:
@@ -97,7 +101,7 @@ echo export AA_SRC=$PWD/src >> ~/.bashrc
 ```
 
 #### Prerequisites:
-1. Python 2.7
+1. Python 2.6+ or 3.5+
 2. Ubuntu libraries and tools:
 ```bash
 sudo apt-get install software-properties-common -y
@@ -108,7 +112,7 @@ wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
 sudo python2 get-pip.py
 ```
 3. Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam) or higher and Flask (Flask is optional):
-`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask`
+`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask future`
 
 Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
@@ -138,6 +142,7 @@ Set annotations directory and environment variable AA_DATA_REPO:
 ```bash
 mkdir -p data_repo
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
+cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
 Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.

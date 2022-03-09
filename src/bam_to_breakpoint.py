@@ -1531,7 +1531,6 @@ class bam_to_breakpoint():
                     eilist = self.interval_discordant_edges(ilist, pair_support=pair_support)
             eilist.sort(key=lambda x: hg.absPos(
                         x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
-            logging.info("GSDE " + str(len(eilist)))
             if amplicon_name is not None:
                 edge_file = open("%s_edges.txt" % amplicon_name, 'w')
                 for e in eilist:
@@ -1633,11 +1632,9 @@ class bam_to_breakpoint():
         msrlist = [self.get_meanshift(i2, ms_window_size0, ms_window_size1, gcc)]
         logging.info("#TIME " + '%.3f\t'%time() + " Detecting breakpoint edges (interval neighbors)")
         edges = self.interval_discordant_edges(i2, ms=msrlist)
-        logging.info("I_N_Pre " + str(len(edges)))
         edges = [(e[1], e[0]) for e in edges]
         edges.sort(reverse=True)
         edges = [(e[1], e[0]) for e in edges]
-        logging.info("I_N_Post " + str(len(edges)))
         ei = 0
         logging.info("#TIME " + '%.3f\t'%time() + " Selecting neighbors")
         neighbors = hg.interval_list([])
@@ -1860,7 +1857,6 @@ class bam_to_breakpoint():
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Detecting breakpoint edges (interval filter vertices")
         sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts, amplicon_name=amplicon_name)
         eilist = sensitive_elist
-        logging.info("SENS EILIST - IFV " + str(len(eilist)))
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Building breakpoint graph")
         for i, msr in zip(ilist, msrlist):
             elist = []
@@ -1868,7 +1864,6 @@ class bam_to_breakpoint():
                 if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i):
                     elist.append(e)
 
-            logging.info("CURR ELIST " + str(len(elist)))
             ms_vlist = []
             msv_index = {}
             for msi in range(len((msr)) - 1):
