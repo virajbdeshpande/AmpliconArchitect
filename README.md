@@ -2,7 +2,7 @@
 
 ### Recent updates:
 
-### March 2022 update:
+### April 2022 update:
 Version `1.3_r1` released which supports `python3` in addition to `python2`. 
 
 ### January 2022 update:

@@ -45,8 +45,8 @@ from functools import reduce
 
 from breakpoint_graph import *
 import ref_util as hg
-
 from mycolors import *
+import global_names
 
 # matplotlib.rcParams.update({'font.size': 28})
 
@@ -60,12 +60,14 @@ cycle_logger = logging.getLogger('cycle')
 
 # suppress some specific harmless numpy warnings during AA
 np.seterr(divide='ignore', invalid='ignore', )
+TSTART = global_names.TSTART
 
 # check mosek version
 mosek_major_version = mosek.Env.getversion()[0]
 if mosek_major_version > 8:
     logging.warning("Mosek version is " + '.'.join([str(x) for x in mosek.Env.getversion()]) +
                     " AA requires version 8\n")
+    
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):
@@ -100,7 +102,7 @@ class bam_to_breakpoint():
         hg.update_chrLen([(c['SN'], c['LN']) for c in self.bamfile.header['SQ']])
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
-        self.tstart = tstart if tstart != 0 else time()
+        self.tstart = tstart if tstart != 0 else TSTART
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -825,7 +827,7 @@ class bam_to_breakpoint():
             if len(dlist) > self.pair_support:
                 v2= breakpoint_vertex(v.chrom,
                                          max(v.pos + 1, min([a.next_reference_start for a in dlist])), -1)
-                logging.debug("#TIME " + '%.3f\t'%time() + " concordant edges " + str(v) + " " + str(len(dlist)))
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " concordant edges " + str(v) + " " + str(len(dlist)))
                 return (breakpoint_edge(v, v2), dlist)
         else:
             dlist = [a for a in self.fetch(v.chrom,
@@ -837,9 +839,9 @@ class bam_to_breakpoint():
             if len(dlist) > self.pair_support:
                 v2 = breakpoint_vertex(v.chrom,
                                          min(v.pos - 1, max([a.reference_end - 1 for a in dlist])), 1)
-                logging.debug("#TIME " + '%.3f\t'%time() + " concordant edges " + str(v) + " " + str(len(dlist)))
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " concordant edges " + str(v) + " " + str(len(dlist)))
                 return (breakpoint_edge(v, v2), dlist)
-        logging.debug("#TIME " + '%.3f\t'%time() + " concordant edges " + str(v) + " not found")
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " concordant edges " + str(v) + " not found")
         return (None, dlist)
             
     def foldup_count(self, chrom, position, strand, cdiff=-1):
@@ -864,7 +866,7 @@ class bam_to_breakpoint():
 
 
     def refine_discordant_edge(self, e):
-        # logging.debug("#TIME " + '%.3f\t'%time() + " refine discordant edge " + str(e))
+        # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " refine discordant edge " + str(e))
         v1min = max(0, (e.v1.pos - self.max_insert + self.read_length if e.v1.strand == 1 else e.v1.pos) - 1)
         v2min = max(0, (e.v2.pos - self.max_insert + self.read_length if e.v2.strand == 1 else e.v2.pos) - 1)
         v1max = min(e.v1.pos + self.max_insert - self.read_length if e.v1.strand == -1 else e.v1.pos, hg.chrLen[hg.chrNum(e.v1.chrom)]) - 1
@@ -969,7 +971,7 @@ class bam_to_breakpoint():
         max_p = [p for p in dpairs.keys() if len(dpairs[p]) == max_s]
 
         if len(max_p) != 1:
-            logging.debug("#TIME " + '%.3f\t'%time() + " refine discordant edge max_p not 1 " + str(e) + " " + str(max_p))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " refine discordant edge max_p not 1 " + str(e) + " " + str(max_p))
             return (e, 0, [], None)
         hom = max_p[0][0]
         hom_seq = ''
@@ -991,7 +993,7 @@ class bam_to_breakpoint():
                 hom_seq = a.query_sequence[a.query_alignment_start - abs(hom): a.query_alignment_start]
         p1 = max_p[0][1]
         p2 = max_p[0][2]
-        logging.debug("#TIME " + '%.3f\t'%time() + " refine discordant edge found "
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " refine discordant edge found "
             + str(breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand)))
             + " " + str(hom) + " " + str(len(dpairs[max_p[0]])) + " " + str(len(rSet)))
         return (breakpoint_edge(breakpoint_vertex(e.v1.chrom, p1, e.v1.strand), breakpoint_vertex(e.v2.chrom, p2, e.v2.strand), hom=hom, hom_seq=hom_seq), hom, dpairs[max_p[0]], hom_seq)
@@ -999,7 +1001,7 @@ class bam_to_breakpoint():
     def edge_has_high_mapq(self, read_list):
         bp1_mapq = max([rr[0].mapping_quality for rr in read_list])
         bp2_mapq = max([rr[1].mapping_quality for rr in read_list])
-        logging.debug("#TIME %.3f\tbreakpoint_mapq: %d %d" % (time(), bp1_mapq, bp2_mapq))
+        logging.debug("#TIME " + '%.3f\t'%(time() - self.tstart) + " breakpoint_mapq: %d %d" % (bp1_mapq, bp2_mapq))
         if bp1_mapq < self.breakpoint_mapping_quality_cutoff:
             return False
         if bp2_mapq < self.breakpoint_mapping_quality_cutoff:
@@ -1015,7 +1017,7 @@ class bam_to_breakpoint():
             bp1_entropy = max([stats.entropy(np.unique([x for x in rr[0].query_alignment_sequence.upper() if x != 'N'], return_counts=True)[1]) for rr in read_list])
             bp2_entropy = max([stats.entropy(np.unique([x for x in rr[1].query_alignment_sequence.upper() if x != 'N'], return_counts=True)[1]) for rr in read_list])
 
-        logging.debug("#TIME %.3f\tbreakpoint_entropy: %.3f %.3f" % (time(), bp1_entropy, bp2_entropy))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " breakpoint_entropy: %.3f %.3f" % (bp1_entropy, bp2_entropy))
         if bp1_entropy < self.breakpoint_entropy_cutoff:
             return False
         if bp2_entropy < self.breakpoint_entropy_cutoff:
@@ -1023,7 +1025,7 @@ class bam_to_breakpoint():
         return True
 
     def edge_passes_filters(self, read_list, e=None):
-        logging.debug("#TIME %.3f\tedge_breakpoint_filter: %s" % (time(), str(e)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " edge_breakpoint_filter: " + str(e))
         if self.edge_has_high_mapq(read_list) and self.edge_has_high_entropy(read_list):
             return True
         return False
@@ -1061,7 +1063,7 @@ class bam_to_breakpoint():
         return False
 
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
-        logging.debug("#TIME " + '%.3f\t'%time() + " searching discordant edges in " + str(interval))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " searching discordant edges in " + str(interval))
         if pair_support == -1:
             pair_support = self.pair_support
         if type(interval) != hg.interval_list:
@@ -1093,7 +1095,7 @@ class bam_to_breakpoint():
                        and not (a.reference_name == a.next_reference_name
                                 and not a.mate_is_reverse
                                 and abs(a.reference_start - a.next_reference_start) < self.max_insert)] # this section catches everted sequencing artifacts
-        logging.debug("#TIME " + '%.3f\t'%time() + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
         # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
 
@@ -1101,7 +1103,7 @@ class bam_to_breakpoint():
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
 
 
-        logging.debug("#TIME " + '%.3f\t'%time() + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval) , len(dflist), len(drlist)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval) , len(dflist), len(drlist)))
 
         # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
         vlist = []
@@ -1198,7 +1200,7 @@ class bam_to_breakpoint():
                 mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
 
 
-        logging.debug("#TIME " + '%.3f\t'%time() + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
 
         dnlist0 = []
         dnlist = []
@@ -1382,7 +1384,7 @@ class bam_to_breakpoint():
                 if bb1 not in dnlist0:
                     logging.debug('dnlist: ' + str(bb1[0]) + " " + str(bb1[1]))
 
-        logging.debug("#TIME " + '%.3f\t'%time() + " discordant edges: local edges done " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)) + " " + str(len(dnlist)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: local edges done " + str(interval) + " " + str(len(mcdflist)) + " " + str(len(mcdrlist)) + " " + str(len(dnlist)))
         self.get_mates_time = 0
         self.get_mates_num_calls = 0
         for c in mcdflist + mcdrlist:
@@ -1488,10 +1490,11 @@ class bam_to_breakpoint():
                 if bre.type() != 'concordant':
                     if self.edge_passes_filters(vl, bre):
                         dnlist.append((bre, len(vl)))
-        logging.debug("#TIME " + '%.3f\t'%time() + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
         dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
         for e in dnlist:
-            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f" % (time(), e[0], e[1], e[0].type(), self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()))
+            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f" % (time() - TSTART, e[0], e[1], e[0].type(),
+            self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()))
         self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
                                     filter_repeats, pair_support, not ms is None)] = dnlist
         return dnlist
@@ -1628,15 +1631,16 @@ class bam_to_breakpoint():
         # i2 = self.interval_extend(i, ilist, rdlist)
         ms_window_size0 = 10000
         ms_window_size1 = 300
-        logging.info("#TIME " + '%.3f\t'%time() + " Calculating coverage meanshift segmentation")
+        merge_thresh = 100000
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Calculating coverage meanshift segmentation")
         msrlist = [self.get_meanshift(i2, ms_window_size0, ms_window_size1, gcc)]
-        logging.info("#TIME " + '%.3f\t'%time() + " Detecting breakpoint edges (interval neighbors)")
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Detecting breakpoint edges (interval neighbors)")
         edges = self.interval_discordant_edges(i2, ms=msrlist)
         edges = [(e[1], e[0]) for e in edges]
         edges.sort(reverse=True)
         edges = [(e[1], e[0]) for e in edges]
         ei = 0
-        logging.info("#TIME " + '%.3f\t'%time() + " Selecting neighbors")
+        logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Selecting neighbors")
         neighbors = hg.interval_list([])
         while len(neighbors) < 10 and ei < len(edges):
             covered = False
@@ -1663,12 +1667,12 @@ class bam_to_breakpoint():
                 neighbors.append(n)
             ei += 1
         neighbors.sort()
-        mc = neighbors.merge_clusters(extend=ms_window_size0)
+        mc = neighbors.merge_clusters(extend=merge_thresh)  # previously ms_window_size0
         for c in mc:
             c[0].info = sum([c1.info for c1 in c[1]])
         nn = hg.interval_list([c[0] for c in mc])
         for e in nn:
-            logging.debug("#TIME " + '%.3f\t'%time() + " interval_neighbors: edges %s %s" % (str(i), str(e)))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_neighbors: edges %s %s" % (str(i), str(e)))
         return nn
 
 
@@ -1678,12 +1682,12 @@ class bam_to_breakpoint():
             i = i[0]
         else:
             i1list = hg.interval_list([i])
-        logging.debug("#TIME " + '%.3f\t'%time() + " interval_hops: init " + str(i))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: init " + str(i))
         ms_window_size0 = 10000
         i2list = hg.interval_list([])
         for i2 in i1list:
             ii = self.interval_extend(i2)
-            logging.debug("#TIME " + '%.3f\t'%time() + " interval_hops: interval extend " + str(i2) + " " + str(ii))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: interval extend " + str(i2) + " " + str(ii))
             i2list.append(ii)
         seen_list = hg.interval_list([])
         unseen_list = [(0,ii) for ii in i2list]
@@ -1696,16 +1700,16 @@ class bam_to_breakpoint():
             if explore == False and len(hg.interval_list([ic]).intersection(i2list)) == 0:
                 seen_list.append(ic)
                 continue
-            logging.debug("#TIME " + '%.3f\t'%time() + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
             if len(hg.interval_list([ic]).intersection(i2list)) == 0 and len(hg.interval_list([ic]).intersection(rdlist)) > 0:
                 seen_list.append(ic)
                 continue
-            logging.debug("#TIME " + '%.3f\t'%time() + " interval_hops: search new " + str(i) + " " + str(ic))
-            logging.info("#TIME " + '%.3f\t'%time() + " Searching new neighbors for interval: " + str(ic))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: search new " + str(i) + " " + str(ic))
+            logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Searching new neighbors for interval: " + str(ic))
             icn = self.interval_neighbors(ic, clist, rdlist=rdlist, gcc=gcc)
-            logging.debug("#TIME " + '%.3f\t'%time() + " interval_hops: neighbors " + str(i) + " " + str(ic) + " " + str(len(icn)))
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: neighbors " + str(i) + " " + str(ic) + " " + str(len(icn)))
             for ic2 in icn:
-                logging.info("#TIME " + '%.3f\t'%time() + " New neighbor: %s (weight=%d)" % (str(ic2), ic2.info))
+                logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " New neighbor: %s (weight=%d)" % (str(ic2), ic2.info))
                 contained = False
                 for i2 in clist:
                     if i2.contains(ic2):
@@ -1837,7 +1841,7 @@ class bam_to_breakpoint():
                     ic.start = max(ic.start - 2 * ms_window_size, 0)
                     break
         # if ic.size() > ms_window_size:
-        logging.debug('#TIME %.3f\t interval_extend: %s, %s, %s' % (time(), str(i), strand, str(ic)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + ' interval_extend: %s, %s, %s' % (str(i), strand, str(ic)))
         return ic
 
 
@@ -1954,7 +1958,7 @@ class bam_to_breakpoint():
                     msi += 1
                 if (vc.pos == vp.pos and vc.strand <= vp.strand) or (vc.pos == vp.pos + 1 and vc.strand < vp.strand):
                     continue
-                logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices new: " + str(vc) + " " + vc_type)
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices new: " + str(vc) + " " + vc_type)
                 if vc.strand == 1:
                     if ngvlist[nei].strand == 1:
                         nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
@@ -1979,7 +1983,7 @@ class bam_to_breakpoint():
                     ngvlist.append(nv)
                     nei += 1
                 else:
-                    logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices: adding reverse edge = " + str(vc))
+                    logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: adding reverse edge = " + str(vc))
                     if ngvlist[nei].strand == 1 and not (ngvlist[nei].chrom == vc.chrom and ngvlist[nei].pos == vc.pos - 1):
                         nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
                         oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
@@ -2045,10 +2049,10 @@ class bam_to_breakpoint():
             e = e0[0]
             if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and e.v1.pos >= e.v2.pos:
                 ne = new_graph.add_edge(e)
-                logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices: added edge e = " + str(e))
-                logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices: added edge ne = " + str(ne) + " " + ne.edge_type)
-                logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices: added edge ne, v1.elist = " + str(ne.v1) + " " + ','.join(map(str, ne.v1.elist)))
-                logging.debug("#TIME " + '%.3f\t'%time() + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge e = " + str(e))
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne = " + str(ne) + " " + ne.edge_type)
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne, v1.elist = " + str(ne.v1) + " " + ','.join(map(str, ne.v1.elist)))
+                logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
                 if ne is None:
                     raise ValueError("ne is None:" + str(e) + " " + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
                 kbpe[ne] = e0[1]

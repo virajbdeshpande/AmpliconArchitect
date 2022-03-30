@@ -33,24 +33,25 @@ import logging
 
 import global_names
 
+REF = global_names.REF
+TSTART = global_names.TSTART
+print("Global ref name is " + REF)
+
 try:
     DATA_REPO = os.environ["AA_DATA_REPO"]
 except:
-    logging.warning("#TIME " + '%.3f\t'%time() + " Unable to set AA_DATA_REPO variable. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " Unable to set AA_DATA_REPO variable. Setting to working directory")
     DATA_REPO = '.'
 if DATA_REPO == '.' or DATA_REPO == '':
-    logging.warning("#TIME " + '%.3f\t'%time() + " AA_DATA_REPO not set or empy. Setting to working directory")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " AA_DATA_REPO not set or empy. Setting to working directory")
     DATA_REPO = '.'
-
-REF = global_names.REF
-print("Global ref name is " + REF)
 
 REF_files = defaultdict(lambda: '', {})
 try:
     for l in open(DATA_REPO + '/' + REF + '/file_list.txt'):
         REF_files[l.strip().split()[0]] = l.strip().split()[1]
 except:
-    logging.warning("#TIME " + '%.3f\t'%time() + " Unable to find reference in $AA_DATA_REPO/REF/file_list.txt. Setting to empty.")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " Unable to find reference in $AA_DATA_REPO/REF/file_list.txt. Setting to empty.")
 
 
 class fake_fasta(object):
@@ -59,7 +60,7 @@ class fake_fasta(object):
 try:
     fa_file = pysam.Fastafile(DATA_REPO + '/' + REF + '/' + REF_files['fa_file'])
 except:
-    logging.warning("#TIME " + '%.3f\t'%time() + " Unable to open fasta file: \"" + DATA_REPO + '/' + REF + '/' + REF_files['fa_file'] + "\". Reference sequences will be set to N.")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " Unable to open fasta file: \"" + DATA_REPO + '/' + REF + '/' + REF_files['fa_file'] + "\". Reference sequences will be set to N.")
     fa_file = fake_fasta()
 
 chrLen_filename = DATA_REPO + '/' + REF + '/' + REF_files['chrLen_file']
@@ -99,7 +100,7 @@ try:
         ll = line.strip().split()
         chrLen[chrNum(ll[0], mode='init')] = int(ll[1])
 except:
-    logging.warning("#TIME " + '%.3f\t'%time() + " Unable to open chromosome lengths file: \"" + chrLen_filename + "\"")
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " Unable to open chromosome lengths file: \"" + chrLen_filename + "\"")
 
 chrOffset = {}
 def absPos(chrname, pos=0):
@@ -348,23 +349,23 @@ class interval(object):
         return False
 
     def rep_content(self):
-        # logging.info("#TIME " + '%.3f\t'%time() + " rep_content: init ")
+        # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: init ")
         if self.chrom == 'chrM' or self.chrom == 'MT':
             return 5.0
         if self.chrom.strip('chr') not in chromList:
             return 1.0
         s34 = interval(self.chrom, self.start, max(self.start, self.end - 34))
-        # logging.info("#TIME " + '%.3f\t'%time() + " rep_content: to load duke ")
+        # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: to load duke ")
         if duke35_exists[0] and len(duke35) == 0:
             try:
                 duke35file = open(duke35_filename)
                 duke35.extend([l.strip() for l in duke35file])
                 duke35file.close()
             except:
-                logging.warning("#TIME " + '%.3f\t'%time() + " rep_content: Unable to open mapability file \"" + duke35_filename + "\"." )
+                logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: Unable to open mapability file \"" + duke35_filename + "\"." )
                 duke35_exists[0] = False
                 duke35.extend(["chr_Un  0   1   1"])
-        # logging.info("#TIME " + '%.3f\t'%time() + " rep_content: duke loaded")
+        # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: duke loaded")
         ictime = 0
         itime = 0
         hi = len(duke35) - 1
@@ -386,7 +387,7 @@ class interval(object):
         m = interval(duke35[p])
         sum_duke = 0
         len_duke = 0
-        # logging.info("#TIME " + '%.3f\t'%time() + " rep_content: found " + str(numiter) + " " + str(ictime) + " " + str(itime))
+        # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: found " + str(numiter) + " " + str(ictime) + " " + str(itime))
         while s34 > m or s34.intersects(m):
             if not s34.intersects(m):
                 p += 1
@@ -401,7 +402,7 @@ class interval(object):
             if p >= len(duke35):
                 break
             m = interval(duke35[p])
-        # logging.info("#TIME " + '%.3f\t'%time() + " rep_content: done")
+        # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " rep_content: done")
         # exit()
         if len_duke > 0:
             return sum_duke / len_duke
@@ -445,7 +446,7 @@ class interval_list(list, object):
                               and l.strip()[0] != '#'])
                 f.close()
             except:
-                logging.warning("#TIME " + '%.3f\t'%time() + " interval_list: Unable to open interval file \"" + file_name + "\"." )
+                logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_list: Unable to open interval file \"" + file_name + "\"." )
 
 
     def merge_clusters(self, extend=0, margin=0.0):
@@ -605,7 +606,7 @@ class interval_list(list, object):
             duke35_file.close()
             return {self[i]:sum_duke[i] / len_duke[i] for i in range(len(interval_list))}
         except:
-            logging.warning("#TIME " + '%.3f\t'%time() + " get_repeat_content: Unable to open mapability file \"" + duke35_filename + "\"." )
+            logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " get_repeat_content: Unable to open mapability file \"" + duke35_filename + "\"." )
             duke35_exists[0] = False
             duke35.extend(["chr_Un  0   1   1"])
             return {self[i]:1.0 for i in range(len(interval_list))}
@@ -732,7 +733,7 @@ def load_exons():
         exon_file.close()
         exon_list.extend((exonFields))
     except:
-        logging.warning("#TIME " + '%.3f\t'%time() + "unable to load exon file: \"" + exon_filename + "\"")
+        logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "unable to load exon file: \"" + exon_filename + "\"")
 
 conserved_regions = interval_list(conserved_regions_filename, 'bed')
 conserved_regions.sort()

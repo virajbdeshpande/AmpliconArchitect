@@ -20,23 +20,18 @@
 
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
-# Maintained by Jens Luebeck jluebeck@ucsd.edu
+# Maintained by Jens Luebeck, jluebeck@ucsd.edu
 
 
 from time import time
 TSTART = time()
 import pysam
 import argparse
-import math
-from collections import defaultdict
 import sys
 import os
-import numpy as np
 import matplotlib
 import copy
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
 import logging
 from functools import reduce
 #plt.rc('text', usetex=True)
@@ -100,6 +95,7 @@ parser.add_argument("-v", "--version", action='version', version='AmpliconArchit
 
 args = parser.parse_args()
 global_names.REF = args.ref
+global_names.TSTART = TSTART
 
 logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
 # # output logs to stdout
@@ -256,6 +252,13 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
                 ngroup.append(am[0])
         ngroup.sort()
         irdgroups.append(ngroup)
+
+    # TODO: Sort the irdgroups by minimum chrom and minimum coord here
+    irdgroups.sort()
+    # irdgroup_min_chrom_pos = []
+    # for group in irdgroups:
+    #     for x
+
 elif args.extendmode == 'CLUSTERED' or args.extendmode == 'VIRAL_CLUSTERED':
     irdgroups = [rdList]
 else:
