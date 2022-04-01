@@ -153,7 +153,7 @@ class bam_to_breakpoint():
                     yield a
         else:                    
             for a in self.bamfile.fetch(c, s, e + 1):
-                random.seed(a.query_name.encode('hex'))
+                random.seed(a.query_name)
                 if random.uniform(0, 1) < self.downsample_ratio:
                         yield a
 
@@ -394,6 +394,7 @@ class bam_to_breakpoint():
             r[11] = max((r[4] / 10.0)  * ((r[7] - r[6]) / 2 / r[6])*r[12], 2)
             self.pair_support = r[11]
             self.downsample_stats = r
+
         else:
             self.downsample_stats = self.basic_stats
 
@@ -427,9 +428,8 @@ class bam_to_breakpoint():
                 scale[i] = gc_total_rd[i] / gc_num_windows[i] / sc_factor
         self.gc_scale = scale
         self.gc_set = True
-        print("GC scale:", scale)
+        logging.debug("GC scale:", scale)
         return scale
-
 
     # Methods to find all coverage shifts in amplicon
     def meanshift(self, i, window_size=-1, hb=2, cov=None, rd_global=-1, h0=-1, gcc=False, n=-1):
@@ -506,6 +506,7 @@ class bam_to_breakpoint():
             hgl = hg.chrLen[hg.chrNum(i.chrom)]
             e2 = hgl - (hgl - i.end) % window_size
             endskip = n - (hgl - i.end) / window_size
+
         i2 = hg.interval(i.chrom, s2, e2)
         cov = [c for c in self.window_coverage(i2, window_size, gcc, exact=False)]
         cov = [(None, 0) for ni in range(startskip)] + cov + [(None, 0) for ni in range(endskip)]
@@ -687,6 +688,7 @@ class bam_to_breakpoint():
             return shift_intervals
 
     def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False, shifts_unrefined=None):
+        logging.debug("Meanshift refining " + i.chrom + ":" + str(i.start) + "-" + str(i.end))
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
             ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
             for ii in ms_ws1:
@@ -738,6 +740,7 @@ class bam_to_breakpoint():
         return matched_shifts
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
+        print("get_meanshift on " + str(i))
         file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
         if os.path.exists(file_name):
             msfile = open(file_name)
@@ -766,7 +769,6 @@ class bam_to_breakpoint():
                 return [a for a in self.fetch(chrom, max(0, start), min(end, hg.chrLen[hg.chrNum(chrom)]))
                         if not a.is_unmapped and not a.is_reverse 
                         and (a.mate_is_unmapped or a.next_reference_id == -1 or len(ilist.intersection([hg.interval(a.next_reference_name, a.next_reference_start, a.next_reference_start)])) == 0)]
-
 
     # Methods to find breakpoint edges in amplicon
     def get_mates(self, a):
@@ -1095,7 +1097,7 @@ class bam_to_breakpoint():
                        and not (a.reference_name == a.next_reference_name
                                 and not a.mate_is_reverse
                                 and abs(a.reference_start - a.next_reference_start) < self.max_insert)] # this section catches everted sequencing artifacts
-        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
+        # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
         # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
         # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
 
@@ -1200,7 +1202,7 @@ class bam_to_breakpoint():
                 mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
 
 
-        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
+        # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
 
         dnlist0 = []
         dnlist = []
@@ -1561,7 +1563,7 @@ class bam_to_breakpoint():
                 if ('end_refined' in msr[msi].info) and msr[msi].info['end_refined']:
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size1]
                     if len(msve) == 0:
-                        print("finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1]))
+                        # print("finesearch discordant edges", i.chrom, str(msr[msi]), str(msr[msi + 1]))
                         efine = self.interval_discordant_edges(hg.interval(i.chrom, msv.pos - ms_window_size0-self.max_insert, msv.pos + ms_window_size1+self.max_insert), pair_support=2)
                         if len([e for e in efine if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0]) > 0:
                             if len([(e[1], e[0]) for e in efine if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(e[0].v1.pos - msv.pos) < ms_window_size1]) > 0:
@@ -1572,7 +1574,7 @@ class bam_to_breakpoint():
                                     msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
                             msve = [ebest]
-                            print("finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1])
+                            # print("finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1])
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
                                 eilist.append(ebest)
@@ -1584,7 +1586,7 @@ class bam_to_breakpoint():
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                 else:
-                    print("msv end not refined", str(msr[msi]), str(msr[msi + 1]))
+                    # print("msv end not refined", str(msr[msi]), str(msr[msi + 1]))
                     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
                         e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
 
@@ -1704,8 +1706,8 @@ class bam_to_breakpoint():
             if len(hg.interval_list([ic]).intersection(i2list)) == 0 and len(hg.interval_list([ic]).intersection(rdlist)) > 0:
                 seen_list.append(ic)
                 continue
-            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: search new " + str(i) + " " + str(ic))
-            logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Searching new neighbors for interval: " + str(ic))
+            # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: search new " + str(i) + " " + str(ic))
+            # logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Searching new neighbors for interval: " + str(ic))
             icn = self.interval_neighbors(ic, clist, rdlist=rdlist, gcc=gcc)
             logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: neighbors " + str(i) + " " + str(ic) + " " + str(len(icn)))
             for ic2 in icn:
@@ -1879,8 +1881,7 @@ class bam_to_breakpoint():
                 ms_vlist.append(msv)
                 msv_index[msv] = msi
             all_msv.append(ms_vlist)
-            print("Meanshift", str(i), len(ms_vlist), ms_vlist)
-            sys.stdout.flush()
+            # logging.debug("Meanshift", str(i), len(ms_vlist), ms_vlist)
             msve_match = {}
             for msv in ms_vlist:
                 msi = msv_index[msv]
@@ -1892,7 +1893,7 @@ class bam_to_breakpoint():
                     msve_match[msv] = msve
             msv_nocover = [msv for msv in ms_vlist if msv not in msve_match]
             all_msv_nocover.append(msv_nocover)
-            print("Meanshift no cover", str(i), msv_nocover)
+            # logging.debug("Meanshift no cover", str(i), msv_nocover)
 
         # setup graph for flow optimization
         ngvlist_full = []
@@ -2306,7 +2307,8 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        # msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
+        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.get_meanshift(i, window_size0=300) for i in ilist]
         sensitive_elist = self.get_sensitive_discordant_edges(
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
@@ -2329,12 +2331,14 @@ class bam_to_breakpoint():
                 wc_i = [w for w in self.window_coverage(i, 10000, exact=False)]
             else:
                 wc_i = [w for w in self.window_coverage(i, 100, exact=False)]
+
             cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
             wc += wc_i
 
         cx0 = [c for c in cx if ilist.xpos(c[0][0], c[0][1]) is not None]
         ax.bar([ilist.xpos(c[0][0], c[0][1]) for c in cx0], [c[1] for c in cx0], 0.0001, zorder=1, edgecolor='0.7', linewidth=1)
-        cmax = max([c[1] for c in wc])
+        # cmax = max([c[1] for c in wc])
+        # logging.debug("cmax was " + str(cmax))
 
         covl = []
         for i, msr in zip(ilist, msrlist):
@@ -2345,9 +2349,9 @@ class bam_to_breakpoint():
                     scale_max_cov = max(scale_max_cov, avg_cov)
                     if seg.info['cn'] != float('inf'):
                         scale_max_ms = max(scale_max_ms, seg.info['cn'])
-
                     else:
                         scale_max_ms = max(scale_max_ms, 2000)
+
 
                 ax2.plot((ilist.xpos(seg.chrom, max(i.start, seg.start)), ilist.xpos(seg.chrom, min(i.end, seg.end))), (seg.info['cn'], seg.info['cn']), linewidth=4, color='k')
         
@@ -2405,8 +2409,8 @@ class bam_to_breakpoint():
         ty = 0.65
         ogene_width = 4
         if font == 'large':
-            ry = 0.85
-            ry = 0.87
+            # ry = 0.85
+            # ry = 0.87
             ry = 0.77
             ogene_width = 12
         ogene_plotted = []
@@ -2418,10 +2422,10 @@ class bam_to_breakpoint():
                     ty = 0
                 elif font == 'all_amplicons':
                     if gparity == 0:
-                        ty = -0.1
+                        # ty = -0.1
                         ty = -0.07
                     else:
-                        ty = 0.20
+                        # ty = 0.20
                         ty = 0.3
                 else:
                     if gparity == 0:

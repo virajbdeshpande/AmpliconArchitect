@@ -249,7 +249,7 @@ class interval(object):
         if len(str(self.info)) == 0:
             return '\t'.join(map(str, [self.chrom, self.start, self.end]))
         elif type(self.info) == list:
-            return '\t'.join(map(str, [self.chrom, self.start, self.end] + self.info))
+            return '\t'.join(map(str, [self.chrom, self.start, self.end] + list(self.info)))
         elif type(self.info) == dict:
             return '\t'.join(map(str, [self.chrom, self.start, self.end] + [str(s) + '=' + str(self.info[s]) for s in self.info]))
         else:
