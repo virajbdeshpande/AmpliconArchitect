@@ -501,13 +501,14 @@ class bam_to_breakpoint():
         endskip = 0
         if s2 < 0:
             s2 = i.start % window_size
-            startskip = n - (i.start - s2) / window_size
+            startskip = n - (i.start - s2) // window_size
         if e2 > hg.chrLen[hg.chrNum(i.chrom)]:
             hgl = hg.chrLen[hg.chrNum(i.chrom)]
             e2 = hgl - (hgl - i.end) % window_size
-            endskip = n - (hgl - i.end) / window_size
+            endskip = n - (hgl - i.end) // window_size
 
         i2 = hg.interval(i.chrom, s2, e2)
+        logging.debug("MS: " + str(i) + " startskip,endskip" + str((startskip,endskip)))
         cov = [c for c in self.window_coverage(i2, window_size, gcc, exact=False)]
         cov = [(None, 0) for ni in range(startskip)] + cov + [(None, 0) for ni in range(endskip)]
         frozen = []
