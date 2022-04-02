@@ -486,6 +486,7 @@ class bam_to_breakpoint():
  
 
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
+        logging.debug("Computing meanshift segmentation on " + str(i))
         if window_size == -1:
             window_size = 10000
         i = hg.interval(i.chrom, window_size * int(round(float(i.start) / window_size)), window_size * int(round(float(i.end) / window_size)))
@@ -495,8 +496,10 @@ class bam_to_breakpoint():
         hb_profile = [2, 5, 10, 50, 100]
         # hb_profile = [2]
         n = min(max(100, 10 * hb_profile[-1]), 10000000 // window_size) #number of windows used to calculate meanshift
+        logging.debug("MS: " + str(i) + " window_size, n: " + str((window_size, n)))
         s2 = i.start - window_size * n
         e2 = i.end + window_size * n
+        logging.debug("MS: " + str(i) + " s2, e2: " + str((s2, e2)))
         startskip = 0
         endskip = 0
         if s2 < 0:
@@ -691,10 +694,12 @@ class bam_to_breakpoint():
     def meanshift_refined(self, i, window_size0=10000, window_size1=300, gcc=False, shifts_unrefined=None):
         logging.debug("Meanshift refining " + i.chrom + ":" + str(i.start) + "-" + str(i.end))
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
+            logging.debug("small chrom")
             ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
             for ii in ms_ws1:
                 ii.info['start_refined'] = True
                 ii.info['end_refined'] = True
+                logging.debug(str((ii.start, ii.end, ii.info['cn'])))
             return ms_ws1
         if shifts_unrefined is None:
             shifts0 = self.meanshift_segmentation(i, window_size0, gcc, pvalue=0.0027)
@@ -738,6 +743,10 @@ class bam_to_breakpoint():
             matched_shifts.append(hg.interval(i.chrom, best_start, best_end, info={'cn':shifts0[s0i].info['cn'], 'start_refined':prev_end is not None, 'end_refined': False}))
         else:
             matched_shifts.append(hg.interval(i.chrom, i.start, i.end, info={'cn':shifts0[0].info['cn'], 'start_refined': False, 'end_refined': False}))
+
+        for ii in matched_shifts:
+            logging.debug(str((ii.start, ii.end, ii.info["cn"])))
+            
         return matched_shifts
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
