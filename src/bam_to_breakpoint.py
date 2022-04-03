@@ -695,10 +695,10 @@ class bam_to_breakpoint():
         logging.debug("Meanshift refining " + i.chrom + ":" + str(i.start) + "-" + str(i.end))
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
             logging.debug("small chrom")
-            ms_ws1 = self.meanshift_refined(i, window_size1, gcc)
+            ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
             for ii in ms_ws1:
-                ii.info['start_refined'] = True
-                ii.info['end_refined'] = True
+                # ii.info['start_refined'] = True
+                # ii.info['end_refined'] = True
                 logging.debug(str((ii.start, ii.end, ii.info['cn'])))
             return ms_ws1
         if shifts_unrefined is None:
