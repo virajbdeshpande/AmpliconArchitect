@@ -695,7 +695,7 @@ class bam_to_breakpoint():
         logging.debug("Meanshift refining " + i.chrom + ":" + str(i.start) + "-" + str(i.end))
         if hg.chrLen[hg.chrNum(i.chrom)] < 3 * window_size0:
             logging.debug("small chrom")
-            ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
+            ms_ws1 = self.meanshift_refined(i, window_size1, gcc)
             for ii in ms_ws1:
                 ii.info['start_refined'] = True
                 ii.info['end_refined'] = True
@@ -746,11 +746,11 @@ class bam_to_breakpoint():
 
         for ii in matched_shifts:
             logging.debug(str((ii.start, ii.end, ii.info["cn"])))
-            
+
         return matched_shifts
 
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
-        print("get_meanshift on " + str(i))
+        logging.debug("get_meanshift on " + str(i))
         file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
         if os.path.exists(file_name):
             msfile = open(file_name)
