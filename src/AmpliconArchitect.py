@@ -177,6 +177,9 @@ if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_
 
     coverage_stats_file.close()
 
+if cstats:
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reusing cstats from" + str(os.path.join(hg.DATA_REPO, "coverage.stats")))
+
 coverage_windows=None
 if cbed is not None:
     coverage_windows=hg.interval_list(cbed, 'bed')
