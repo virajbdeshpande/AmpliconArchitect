@@ -697,8 +697,8 @@ class bam_to_breakpoint():
             logging.debug("small chrom")
             ms_ws1 = self.meanshift_segmentation(i, window_size1, gcc)
             for ii in ms_ws1:
-                # ii.info['start_refined'] = True
-                # ii.info['end_refined'] = True
+                ii.info['start_refined'] = True
+                ii.info['end_refined'] = True
                 logging.debug(str((ii.start, ii.end, ii.info['cn'])))
             return ms_ws1
         if shifts_unrefined is None:
@@ -752,7 +752,8 @@ class bam_to_breakpoint():
     def get_meanshift(self, i, window_size0=10000, window_size1=300, gcc=False):
         logging.debug("get_meanshift on " + str(i))
         file_name = "%s_%s_%s_%s_cnseg.txt" % (self.sample_name, i.chrom, i.start, i.end)
-        if os.path.exists(file_name):
+        if os.path.exists(file_name) and i.end - i.start < 50000:
+            logging.debug("Re-using cn-seg info in " + file_name)
             msfile = open(file_name)
             msr = []
             for line in msfile:
