@@ -42,9 +42,6 @@ RUN fc-cache -f
 
 RUN pip2 install -r /home/requirements/pip2_requirements.txt
 
-RUN apt-get install -y python3-matplotlib=3.1.2-1ubuntu4 python3-numpy=1:1.17.4-5ubuntu3 python3-scipy=1.3.3-3build1
-RUN pip3 install -r /home/requirements/pip3_requirements.txt
-
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
 # ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
