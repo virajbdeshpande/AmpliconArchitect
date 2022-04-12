@@ -166,19 +166,28 @@ if cbam is not None:
     cb = cbam
 
 cstats = None
+if args.no_cstats:
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "--no_cstats was set. Will not attempt to re-use coverage.stats info")
+
 if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_cstats:
     coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
     for l in coverage_stats_file:
         ll = l.strip().split()
-        if ll[0] == os.path.abspath(cb.filename):
+        bamfile_pathname = str(cb.filename.decode())
+        bamfile_filesize = os.path.getsize(bamfile_pathname)
+        if ll[0] == os.path.abspath(bamfile_pathname):
                 cstats = tuple(map(float, ll[1:]))
-                if int(cstats[-2]) != args.pair_support_min:
+                if len(cstats) < 15 or int(round(cstats[11])) < args.pair_support_min:
+                    cstats = None
+                elif cstats[13] != args.insert_sdevs or bamfile_filesize != int(cstats[14]):
                     cstats = None
 
     coverage_stats_file.close()
 
 if cstats:
-    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reusing cstats from" + str(os.path.join(hg.DATA_REPO, "coverage.stats")))
+    logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Reusing cstats from " + str(os.path.join(hg.DATA_REPO, "coverage.stats")))
+else:
+    logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "cstats not found, generating coverage statistics... ")
 
 coverage_windows=None
 if cbed is not None:

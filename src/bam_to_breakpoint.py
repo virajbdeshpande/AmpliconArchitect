@@ -107,7 +107,9 @@ class bam_to_breakpoint():
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
         else:
-            (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length, self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support, self.percent_proper) = coverage_stats
+            (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length,
+             self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support,
+             self.percent_proper, _, _) = coverage_stats
             self.basic_stats = coverage_stats
             self.basic_stats_set = True
             r = coverage_stats
@@ -367,13 +369,17 @@ class bam_to_breakpoint():
         
         (wc_10000_median, wc_10000_avg, wc_10000_std) = (wc_median[0], wc_avg[0], wc_std[0])
         (wc_300_median, wc_300_avg, wc_300_std) = (wc_median[1], wc_avg[1], wc_std[1])
-        self.pair_support = max((wc_300_avg / 10.0)  * ((self.insert_size - self.read_length) / 2 / self.read_length)*percent_proper, self.pair_support_min)
-        rstats = (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length, self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support, self.percent_proper)
+        bamfile_pathname = str(self.bamfile.filename.decode())
+        bamfile_filesize = os.path.getsize(bamfile_pathname)
+        self.pair_support = max(int(round((wc_300_avg / 10.0) * ((self.insert_size - self.read_length) / 2 / self.read_length)*self.percent_proper)), self.pair_support_min)
+        rstats = (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length,
+                  self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support,
+                  self.percent_proper, self.num_sdevs, bamfile_filesize)
         if refi == -1:
             self.basic_stats = rstats
             self.basic_stats_set = True
             print("read length:", self.read_length, "insert size:", self.insert_size, "insert std dev:", self.insert_std,
-                  "max_insert:", self.max_insert, "percent proper:", percent_proper)
+                  "max_insert:", self.max_insert, "percent proper:", percent_proper, "num_sdevs", self.num_sdevs)
             print("coverage stats", self.basic_stats, len(wc_ws_filter))
             print("pair support", self.pair_support)
             coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats", 'a')
@@ -390,7 +396,7 @@ class bam_to_breakpoint():
         if self.downsample_ratio != 1:
             rr = self.downsample_ratio
             rsq = math.sqrt(rr)         
-            r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1], r)]
+            r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1, 1, 1], r)]
             r[11] = max((r[4] / 10.0)  * ((r[7] - r[6]) / 2 / r[6])*r[12], 2)
             self.pair_support = r[11]
             self.downsample_stats = r
