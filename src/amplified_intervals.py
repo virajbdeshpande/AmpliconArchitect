@@ -32,8 +32,8 @@ import os
 import pysam
 import global_names
 
-GAIN = 5.0
-CNSIZE_MIN = 100000
+GAIN = 4.5
+CNSIZE_MIN = 50000
 
 parser = argparse. \
     ArgumentParser(description="Filter and merge amplified intervals")
@@ -56,8 +56,7 @@ parser.add_argument('--cnsize_min', dest='cnsize_min',
 parser.add_argument('--ref', dest='ref',
                     help="Values: [hg19, GRCh37, GRCh38, mm10, GRCm38]. \"hg19\", \"GRCh38\", \"mm10\" : chr1, .. chrM etc / \"GRCh37\", \"GRCm38\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
                     action='store', type=str, choices=["hg19", "GRCh37", "GRCh38", "mm10", "GRCm38"], required=True)
-parser.add_argument('--no_cstats', dest='no_cstats',
-                    help="Do not re-use coverage statistics from coverage.stats. Set this if trying multiple values of --insert_sdevs or --pair_support_min",
+parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverage statistics from coverage.stats.",
                     action='store_true', default=False)
 
 args = parser.parse_args()
@@ -116,9 +115,12 @@ if args.bam != "":
     pre_int_list = []
     for r in rdList:
         try:
+            chrom_cov_ratio = bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]
+            print("chrom ratio " + r.chrom + " " + str(chrom_cov_ratio))
             if float(r.info[-1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2 and \
                     bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0] > 0:
-                pre_int_list.append(r)
+                if r.size() < 10000000 or float(r.info[-1]) > 1.5*GAIN:
+                    pre_int_list.append(r)
 
         except ZeroDivisionError:
             continue
