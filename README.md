@@ -3,7 +3,10 @@
 ### Recent updates:
 
 ### April 2022 update:
-Version `1.3_r1` released which supports `python3` in addition to `python2`. 
+Version `1.3_r1` released which supports both `python3` and `python2`. 
+This release also corrects a bug in the visualization of amplicon copy numbers for 
+genome segments < 50kbp and includes small improvements to seed filtering and 
+merging of nearby segments. Complete changelog available [here](https://docs.google.com/document/d/1tGwKcHgaU36OzMZ02S5ky5JR-67WvRtXI3-Hv0FYkm4/edit?usp=sharing). 
 
 ### January 2022 update:
 We have released a testing version of the mm10 mouse genome data repo [here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz). 
@@ -11,15 +14,7 @@ To use with an existing installation please extract and place the mm10 directory
 Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
 argument. 
 
-### October 2021 update:
-Version `1.2_r2` released with additional flags for manual control over insert size and read-pair support cutoffs, and minor improvements to logging. 
-No changes to output or performance when run with default arguments. Users are now required to also specify `--ref` when running AA.
-
-### October 2020 update: 
-Version `1.2` released with performance improvements, better handling of sequencing artifacts, and some improvements to useability.
-
-We have revised the GRCh38 data repository and updated docker support. The new data repo for all supported reference genomes is available [here](https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk). A separate version of the data repo with latest updates for development purposes is [available here](https://drive.google.com/drive/folders/18T83A12CfipB0pnGsTs3s-Qqji6sSvCu). 
-
+**[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
 
 ## Introduction
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others.
@@ -50,7 +45,7 @@ AmpliconArchitect was developed by Viral Deshpande, and is maintained by Jens Lu
     * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+    * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
     
 #### Usage:
 
@@ -62,8 +57,8 @@ See instructions below for manual installation without docker.
 
 ## Installation
 AA can be installed in 2 ways:
-1. Docker image: This will automatically pull the latest build including necessary dependencies
-2. Github source code
+1. Docker image: This will automatically pull the latest build including necessary dependencies.
+2. Github source code.
 
 ### Option 1: Docker image:
 #### Prerequisites:
@@ -75,12 +70,14 @@ AA can be installed in 2 ways:
     * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from `https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+    * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
-        tar zxf data_repo.tar.gz
-        echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
-        cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
+        mkdir data_repo && cd data_repo
+        # copy or download files into data_repo directory
+        tar zxf [hg19/GRCh37/GRCh38/mm10].tar.gz
+        echo export AA_DATA_REPO=$PWD >> ~/.bashrc
+        touch coverage.stats && chmod a+r coverage.stats
         source ~/.bashrc
         ```
 #### Obtain AmpliconArchitect image and execution script:
@@ -108,11 +105,18 @@ sudo apt-get install software-properties-common -y
 sudo add-apt-repository universe -y
 sudo apt-get update && sudo apt-get install -y
 sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools python2 wget -y
+# Last two steps only required if using python2
 wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
 sudo python2 get-pip.py
 ```
-3. Pysam verion 0.9.0 (https://github.com/pysam-developers/pysam) or higher and Flask (Flask is optional):
-`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask future`
+3. [Pysam](https://github.com/pysam-developers/pysam) verion 0.9.0  or higher is required. Flask is optional.
+
+`sudo pip3 install pysam Cython numpy scipy matplotlib Flask future`
+
+ **... or for python 2:**
+
+`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask future` 
+
 
 Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
@@ -125,7 +129,10 @@ export MOSEKPLATFORM=linux64x86
 echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
 echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
-cd $PWD/mosek/8/tools/platform/linux64x86/python/2/
+cd $PWD/mosek/8/tools/platform/linux64x86/python/3/
+# OR FOR PYTHON2 
+# cd $PWD/mosek/8/tools/platform/linux64x86/python/2/ # if using python2
+
 sudo python setup.py install #(--user) [can also build locally with "pip2 install -e ."]
 cd -
 source ~/.bashrc
@@ -151,12 +158,12 @@ cd $AA_DATA_REPO
 tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
-`https://drive.google.com/drive/folders/0ByYcg0axX7udeGFNVWtaUmxrOFk`
+` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
 Available annotations:
 * hg19
 * GRCh37
 * GRCh38 (hg38)
-* mm10 ([available here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz))
+* mm10
 
 ## Running AmpliconArchitect
 
