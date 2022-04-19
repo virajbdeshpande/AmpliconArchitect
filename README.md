@@ -132,8 +132,9 @@ echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
 cd $PWD/mosek/8/tools/platform/linux64x86/python/3/
 # OR FOR PYTHON2 
 # cd $PWD/mosek/8/tools/platform/linux64x86/python/2/ # if using python2
+# sudo python2 setup.py install #(--user)
 
-sudo python setup.py install #(--user) [can also build locally with "pip2 install -e ."]
+sudo python3 setup.py install #(--user) [can also build locally with "pip install -e ."]
 cd -
 source ~/.bashrc
 ```
@@ -141,7 +142,8 @@ source ~/.bashrc
 
 To get the Microsoft fonts on Ubuntu
 ```
-sudo apt-get install ttf-mscorefonts-installer
+sudo apt-get install fontconfig ttf-mscorefonts-installer
+sudo fc-cache -f
 ```
 
 #### Data repositories:
