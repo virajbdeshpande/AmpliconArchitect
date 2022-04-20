@@ -446,7 +446,7 @@ class interval_list(list, object):
                               and l.strip()[0] != '#'])
                 f.close()
             except:
-                logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_list: Unable to open interval file \"" + file_name + "\"." )
+                logging.error("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_list: Unable to open interval file \"" + file_name + "\"." )
 
 
     def merge_clusters(self, extend=0, margin=0.0):
