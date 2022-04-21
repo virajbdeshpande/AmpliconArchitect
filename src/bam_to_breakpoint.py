@@ -1316,7 +1316,7 @@ class bam_to_breakpoint():
                         logging.debug("FOLDBACK: " + str(bp1) + str(bp2))
                         continue
                     vl = vl2
-                    vl.sort(key=lambda x: x[0][0].reference_start - x[1][0].reference_start)
+                    vl.sort(key=lambda x: x[0].reference_start - x[1].reference_start)
                     if bp1.strand == 1:
                         maxp = vl[0][0].reference_end - 1
                         maxn = 0
