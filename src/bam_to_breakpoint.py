@@ -1877,7 +1877,7 @@ class bam_to_breakpoint():
         all_msv_nocover = []
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Calculating coverage meanshift segmentation")
         msrlist = [self.get_meanshift(i, ms_window_size0, ms_window_size1, gcc) for i in ilist]
-        logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Detecting breakpoint edges (interval filter vertices")
+        logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Detecting breakpoint edges (interval filter vertices)")
         sensitive_elist = self.get_sensitive_discordant_edges(ilist, msrlist, eilist, ms_window_size0=ms_window_size0, ms_window_size1=ms_window_size1, adaptive_counts=adaptive_counts, amplicon_name=amplicon_name)
         eilist = sensitive_elist
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Building breakpoint graph")

@@ -9,7 +9,7 @@ genome segments < 50kbp and includes small improvements to seed filtering and
 merging of nearby segments. Complete changelog available [here](https://docs.google.com/document/d/1tGwKcHgaU36OzMZ02S5ky5JR-67WvRtXI3-Hv0FYkm4/edit?usp=sharing). 
 
 ### January 2022 update:
-We have released a testing version of the mm10 mouse genome data repo [here](https://aamousedatarepo.s3.us-west-1.amazonaws.com/mm10/mm10.tar.gz). 
+We have released a testing version of the mm10 mouse genome data repo [here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/). 
 To use with an existing installation please extract and place the mm10 directory with the other reference build directories in your AA data repo.
 Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
 argument. 
@@ -161,11 +161,13 @@ tar zxf $ref.tar.gz
 ```
 The annotations may be downloaded here:
 ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
-Available annotations:
+Available annotations: 
 * hg19
 * GRCh37
 * GRCh38 (hg38)
 * mm10
+
+In the data repo files, "`indexed`" indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
 ## Running AmpliconArchitect
 
