@@ -169,6 +169,9 @@ Available annotations:
 
 In the data repo files, "`indexed`" indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
+### Option 3: Other platforms:
+AA can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
+
 ## Running AmpliconArchitect
 
 #### PrepareAA:
