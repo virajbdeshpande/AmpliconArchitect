@@ -35,6 +35,7 @@ import global_names
 GAIN = 4.5
 CNSIZE_MIN = 50000
 
+
 parser = argparse. \
     ArgumentParser(description="Filter and merge amplified intervals")
 parser.add_argument('--bed', dest='bed',
@@ -110,6 +111,7 @@ if args.bam != "":
                     cstats = None
 
         coverage_stats_file.close()
+
 
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats)
     pre_int_list = []

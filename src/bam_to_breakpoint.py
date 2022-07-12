@@ -1037,6 +1037,7 @@ class bam_to_breakpoint():
             bp2_entropy = max([stats.entropy(np.unique([x for x in rr[1].query_alignment_sequence.upper() if x != 'N'], return_counts=True)[1]) for rr in read_list])
 
         logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " breakpoint_entropy: %.3f %.3f" % (bp1_entropy, bp2_entropy))
+
         if bp1_entropy < self.breakpoint_entropy_cutoff:
             return False
         if bp2_entropy < self.breakpoint_entropy_cutoff:

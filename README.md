@@ -14,6 +14,7 @@ To use with an existing installation please extract and place the mm10 directory
 Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
 argument. 
 
+
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
 
 ## Introduction
@@ -46,7 +47,7 @@ AmpliconArchitect was developed by Viral Deshpande, and is maintained by Jens Lu
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
-    
+
 #### Usage:
 
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
@@ -71,6 +72,7 @@ AA can be installed in 2 ways:
     * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
+
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         mkdir data_repo && cd data_repo
@@ -119,6 +121,7 @@ sudo python2 get-pip.py
 
 
 Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
+
 4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
 ```bash
 wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
@@ -135,6 +138,7 @@ cd $PWD/mosek/8/tools/platform/linux64x86/python/3/
 # sudo python2 setup.py install #(--user)
 
 sudo python3 setup.py install #(--user) [can also build locally with "pip install -e ."]
+
 cd -
 source ~/.bashrc
 ```
@@ -176,7 +180,7 @@ AA can also be run through Nextflow, using the [nf-core/circdna pipeline](https:
 
 #### PrepareAA:
 We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/PrepareAA. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
-PrepareAA can directly invoke AA if installed. 
+PrepareAA can directly invoked AA if installed. 
 
 
 ### 1) Input data:
@@ -194,8 +198,9 @@ AA requires 2 input files:
         - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
         - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
 
-            `python $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName}`
+            `python2 $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
         - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. 
+        - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
 ### 2) Usage:
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`

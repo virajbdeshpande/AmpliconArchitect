@@ -42,6 +42,7 @@ RUN fc-cache -f
 
 RUN pip2 install -r /home/requirements/pip2_requirements.txt
 
+
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
 # ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
