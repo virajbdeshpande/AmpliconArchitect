@@ -26,6 +26,7 @@
 
 from time import time
 TSTART = time()
+import numpy as np
 import pysam
 import argparse
 import sys
@@ -178,7 +179,7 @@ if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_
                 cstats = tuple(map(float, ll[1:]))
                 if len(cstats) < 15 or int(round(cstats[11])) < args.pair_support_min:
                     cstats = None
-                elif cstats[13] != args.insert_sdevs or bamfile_filesize != int(cstats[14]):
+                elif cstats[13] != args.insert_sdevs or bamfile_filesize != int(cstats[14]) or any(np.isnan(cstats)):
                     cstats = None
 
     coverage_stats_file.close()

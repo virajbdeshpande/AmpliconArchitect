@@ -107,7 +107,7 @@ if args.bam != "":
             bamfile_filesize = os.path.getsize(bamfile_pathname)
             if ll[0] == os.path.abspath(bamfile_pathname):
                 cstats = tuple(map(float, ll[1:]))
-                if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]):
+                if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]) or any(np.isnan(cstats)):
                     cstats = None
 
         coverage_stats_file.close()
