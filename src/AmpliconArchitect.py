@@ -46,7 +46,7 @@ else:
 
 import global_names
 
-__version__ = "1.3_r1"
+__version__ = "1.3.r1"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -122,9 +122,9 @@ commandstring = 'Commandline: '
 
 for arg in sys.argv:
     if ' ' in arg:
-        commandstring += '"{}"  '.format(arg)
+        commandstring += '"{}" '.format(arg)
     else:
-        commandstring+="{}  ".format(arg)
+        commandstring+="{} ".format(arg)
 
 logging.info(commandstring)
 

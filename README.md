@@ -1,9 +1,13 @@
 # AmpliconArchitect (AA)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
+![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r1/master)
+![GitHub all releases](https://img.shields.io/github/downloads/jluebeck/AmpliconArchitect/total)
+
 
 ### Recent updates:
 
 ### April 2022 update:
-Version `1.3_r1` released which supports both `python3` and `python2`. 
+Version `1.3.r1` released which supports both `python3` and `python2`. 
 This release also corrects a bug in the visualization of amplicon copy numbers for 
 genome segments < 50kbp and includes small improvements to seed filtering and 
 merging of nearby segments. Complete changelog available [here](https://docs.google.com/document/d/1tGwKcHgaU36OzMZ02S5ky5JR-67WvRtXI3-Hv0FYkm4/edit?usp=sharing). 
