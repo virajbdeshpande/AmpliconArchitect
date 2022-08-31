@@ -123,8 +123,9 @@ if args.bam != "":
                     bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0] > 0:
                 if r.size() < 10000000 or float(r.info[-1]) > 1.5*GAIN:
                     pre_int_list.append(r)
-                elif float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.info[0].startswith("chr"):
-                    pre_int_list.append(r)
+
+            elif float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.info[0].startswith("chr"):
+                pre_int_list.append(r)
 
         except ZeroDivisionError:
             continue
