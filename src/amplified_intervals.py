@@ -154,13 +154,24 @@ for a in amplicon_listl:
             if a.end > cpos:
                 uc_list.append(hg.interval(a.chrom, cpos, a.end, info=a.info))
 
-uc_list = hg.interval_list(
-    [a for a in uc_list if float(a.info[-1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5])
-uc_merge = uc_list.merge_clusters(extend=300000)
+new_uc_list = []
+for a in uc_list:
+    if args.ref == "GRCh38_viral" and not a.info[0].startswith("chr"):
+        if a.rep_content() < 2.5:
+            new_uc_list.append(a)
+    else:
+        if float(a.info[-1]) * a.segdup_uniqueness() > GAIN and a.rep_content() < 2.5:
+            new_uc_list.append(a)
+
+uc_merge = hg.interval_list(new_uc_list).merge_clusters(extend=300000)
 
 with open(outname, "w") as outfile:
     for a in uc_merge:
-        if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN:
+        is_viral = False
+        if args.ref == "GRCh38_viral" and not a.info[0].startswith("chr"):
+            is_viral = True
+            
+        if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN or is_viral:
             outfile.write('\t'.join(
                 [str(a[0]), str(sum([ai.size() * float(ai.info[-1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])),
                  rdAlts]) + '\n')
