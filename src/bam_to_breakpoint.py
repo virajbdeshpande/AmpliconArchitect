@@ -476,7 +476,6 @@ class bam_to_breakpoint():
         #[(interval,ms)]
         return dfi
 
-    
     def meanshift_pval(self, s1, s2):
         if len(s1) <= 1 and len(s2) <= 1:
            return 1.0
@@ -489,7 +488,6 @@ class bam_to_breakpoint():
             zscore = abs(s2[0] - np.average(s1 + s2)) / np.std(s1 + s2)
             return stats.norm.sf(zscore)
         return 1.0
- 
 
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
         logging.debug("Computing meanshift segmentation on " + str(i))

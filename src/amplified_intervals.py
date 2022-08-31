@@ -55,8 +55,8 @@ parser.add_argument('--cnsize_min', dest='cnsize_min',
                     help="OPTIONAL: Minimum size (in bp) for interval to be considered as a seed. Default: 100000",
                     action='store', type=int, default=CNSIZE_MIN)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, mm10, GRCm38]. \"hg19\", \"GRCh38\", \"mm10\" : chr1, .. chrM etc / \"GRCh37\", \"GRCm38\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
-                    action='store', type=str, choices=["hg19", "GRCh37", "GRCh38", "mm10", "GRCm38"], required=True)
+                    help="Values: [hg19, GRCh37, GRCh38, GRCh38_viral, mm10, GRCm38]. \"hg19\", \"GRCh38\", \"mm10\" : chr1, .. chrM etc / \"GRCh37\", \"GRCm38\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
+                    action='store', type=str, choices=["hg19", "GRCh37", "GRCh38", "GRCh38_viral", "mm10", "GRCm38"], required=True)
 parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverage statistics from coverage.stats.",
                     action='store_true', default=False)
 
@@ -122,6 +122,8 @@ if args.bam != "":
             if float(r.info[-1]) > GAIN + 2 * max(1.0, bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0]) - 2 and \
                     bamFileb2b.median_coverage(refi=r)[0] / bamFileb2b.median_coverage()[0] > 0:
                 if r.size() < 10000000 or float(r.info[-1]) > 1.5*GAIN:
+                    pre_int_list.append(r)
+                elif float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.info[0].startswith("chr"):
                     pre_int_list.append(r)
 
         except ZeroDivisionError:

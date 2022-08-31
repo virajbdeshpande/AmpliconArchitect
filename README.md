@@ -28,7 +28,7 @@ Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. T
 
 Please check out the **detailed guide** on running AA [available here](https://github.com/jluebeck/PrepareAA/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
 
-AmpliconArchitect was developed by Viral Deshpande, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
+**AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
 
 *Deshpande, V. et al. Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
 
