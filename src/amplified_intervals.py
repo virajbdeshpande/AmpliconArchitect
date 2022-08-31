@@ -124,7 +124,7 @@ if args.bam != "":
                 if r.size() < 10000000 or float(r.info[-1]) > 1.5*GAIN:
                     pre_int_list.append(r)
 
-            elif float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.info[0].startswith("chr"):
+            elif float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.chrom.startswith("chr"):
                 pre_int_list.append(r)
 
         except ZeroDivisionError:
@@ -132,7 +132,6 @@ if args.bam != "":
 
     rdList = hg.interval_list(pre_int_list)
 
-genome_features = hg.oncogene_list
 amplicon_listl = rdList
 
 cr = hg.conserved_regions
@@ -156,7 +155,7 @@ for a in amplicon_listl:
 
 new_uc_list = []
 for a in uc_list:
-    if args.ref == "GRCh38_viral" and not a.info[0].startswith("chr"):
+    if args.ref == "GRCh38_viral" and not a.chrom.startswith("chr"):
         if a.rep_content() < 2.5:
             new_uc_list.append(a)
     else:
@@ -168,9 +167,9 @@ uc_merge = hg.interval_list(new_uc_list).merge_clusters(extend=300000)
 with open(outname, "w") as outfile:
     for a in uc_merge:
         is_viral = False
-        if args.ref == "GRCh38_viral" and not a.info[0].startswith("chr"):
+        if args.ref == "GRCh38_viral" and not a.chrom.startswith("chr"):
             is_viral = True
-            
+
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN or is_viral:
             outfile.write('\t'.join(
                 [str(a[0]), str(sum([ai.size() * float(ai.info[-1]) for ai in a[1]]) / sum([ai.size() for ai in a[1]])),
