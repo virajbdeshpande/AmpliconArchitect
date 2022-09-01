@@ -88,7 +88,17 @@ if rdList0:
         sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.\n")
         sys.exit(1)
 
-rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN])
+tempL = []
+for r in rdList0:
+    if args.ref == "GRCh38_viral" and not r.chrom.endswith("chr"):
+        tempL.append(r)
+
+    elif float(r.info[-1]) > GAIN:
+        tempL.append(r)
+
+rdList = hg.interval_list(tempL)
+
+# rdList = hg.interval_list([r for r in rdList0 if float(r.info[-1]) > GAIN or (args.ref == "GRCh38_viral" and not r.chrom.endswith("chr"))])
 
 if args.bam != "":
     import bam_to_breakpoint as b2b
@@ -128,6 +138,10 @@ if args.bam != "":
                 pre_int_list.append(r)
 
         except ZeroDivisionError:
+            print(r.chrom, args.ref, float(r.info[-1]))
+            # if float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.chrom.startswith("chr"):
+            #     pre_int_list.append(r)
+            #
             continue
 
     rdList = hg.interval_list(pre_int_list)
@@ -167,7 +181,7 @@ uc_merge = hg.interval_list(new_uc_list).merge_clusters(extend=300000)
 with open(outname, "w") as outfile:
     for a in uc_merge:
         is_viral = False
-        if args.ref == "GRCh38_viral" and not a.chrom.startswith("chr"):
+        if args.ref == "GRCh38_viral" and not a[0].chrom.startswith("chr"):
             is_viral = True
 
         if sum([ai.size() for ai in a[1]]) > CNSIZE_MIN or is_viral:
