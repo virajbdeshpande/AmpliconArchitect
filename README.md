@@ -15,7 +15,7 @@ merging of nearby segments. Complete changelog available [here](https://docs.goo
 ### January 2022 update:
 We have released a testing version of the mm10 mouse genome data repo [here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/). 
 To use with an existing installation please extract and place the mm10 directory with the other reference build directories in your AA data repo.
-Upstream and downstream tools (PrepareAA, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
+Upstream and downstream tools (AmpliconSuite-pipeline, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
 argument. 
 
 
@@ -182,9 +182,9 @@ AA can also be run through Nextflow, using the [nf-core/circdna pipeline](https:
 
 ## Running AmpliconArchitect
 
-#### PrepareAA:
-We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/PrepareAA. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
-PrepareAA can directly invoked AA if installed. 
+#### AmpliconSuite-pipeline:
+We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/AmpliconSuite-pipeline. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
+AmpliconSuite-pipeline can directly invoked AA if installed. 
 
 
 ### 1) Input data:
