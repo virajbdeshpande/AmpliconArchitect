@@ -7,22 +7,41 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Set the working directory to /app
 WORKDIR /home/
 
+# Make "requirements" directory and copy requirements over
+RUN mkdir -p /home/requirements
+COPY requirements/* /home/requirements/
+
 #Copy AA and mosek to image
 RUN mkdir -p /home/programs
 
 #Download libraries for AA
 RUN apt-get update
-RUN apt-get install software-properties-common -y
+RUN apt-get install -f software-properties-common=0.99.9.8 -y
 RUN add-apt-repository universe -y
-RUN apt-get install -y python2
-ADD https://bootstrap.pypa.io/get-pip.py /home/
-RUN python2 get-pip.py
+RUN apt-get install -y python2=2.7.17-2ubuntu4
+ADD https://bootstrap.pypa.io/pip/2.7/get-pip.py /home/programs
+RUN python2 /home/programs/get-pip.py
+RUN pip2 --version
 RUN apt-get update && apt-get install -y
-RUN apt-get install libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
-#RUN update-alternatives --install /usr/bin/python python /usr/bin/python2 10
-#RUN update-alternatives --config python
-RUN pip2 install Cython
-RUN pip2 install numpy scipy matplotlib pysam Flask
+#RUN apt-get install libcurl4-gnutls-dev libssl-dev python-dev libbz2-dev liblzma-dev gfortran zlib1g-dev samtools wget unzip curl -y
+RUN apt-get install -y --fix-missing \
+bcftools=1.10.2-2 \
+bwa=0.7.17-4 \
+fontconfig=2.13.1-2ubuntu3 \
+gfortran=4:9.3.0-1ubuntu2 \
+libbz2-dev=1.0.8-2 \
+liblzma-dev=5.2.4-1ubuntu1 \
+python-dev \
+python3-dev=3.8.2-0ubuntu2 \
+samtools=1.10-3 \
+ttf-mscorefonts-installer=3.7ubuntu6 \
+unzip=6.0-25ubuntu1 \
+wget=1.20.3-1ubuntu2 \
+zlib1g-dev
+RUN fc-cache -f
+
+RUN pip2 install -r /home/requirements/pip2_requirements.txt
+
 
 RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
 RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2

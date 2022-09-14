@@ -623,7 +623,7 @@ if __name__ == '__main__':
     if ref == "GRCh38":
         ref = "hg38"
 
-    if ref != "hg19" and ref != "hg38" and ref != "GRCh37":
+    if ref not in {"hg19", "hg38", "GRCh37", "mm10", "GRCm38"}:
         sys.stderr.write("Ref must be one of hg19, GRCh37 or hg38")
 
     global_names.REF = ref
