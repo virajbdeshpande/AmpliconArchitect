@@ -125,10 +125,14 @@ if args.downsample_dir != '':
 i=0
 rulist = []
 t0 = time()
-b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
+b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template=bamFile)
+
+seed_shift = str(t0)
+if global_names.SEED is not None:
+    seed_shift = str(global_names.SEED)
+
 for a in bamFile.fetch():
-    random.seed(a.query_name + str(t0))
-    random.uniform(0, 1)
+    random.seed(a.query_name + seed_shift)
     ru = random.uniform(0, 1)
     if ru < ratio:
         b2.write(a)

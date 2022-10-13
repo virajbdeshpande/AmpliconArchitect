@@ -28,7 +28,6 @@ import sys
 import numpy as np
 from scipy import stats
 import heapq
-import random
 import os
 import logging
 import bisect
@@ -291,6 +290,7 @@ class bam_to_breakpoint():
             insert_size = []
             window_list_index = 0
             non_mapping = 0
+            random.seed(global_names.SEED)
             while (window_list is not None and window_list_index < len(window_list)) or (window_list is None and iteri <= num_iter):
                 if window_list is None:
                     newpos = int(random.random() * sumchrLen) + chroffset
@@ -327,6 +327,7 @@ class bam_to_breakpoint():
         wc_median = []
         wc_avg = []
         wc_std = []
+        random.seed(global_names.SEED)
         for ws in ws_list:
             wc_ws = []
             iteri = 0
@@ -1105,7 +1106,7 @@ class bam_to_breakpoint():
                                 and a.mate_is_reverse
                                 and abs(a.reference_start - a.next_reference_start) < self.max_insert)] # this section catches everted sequencing artifacts
             drlist += [a for a in self.fetch(i.chrom, max(1, i.start), i.end)
-                  if not a.is_unmapped and a.is_reverse and a.is_paired
+                       if not a.is_unmapped and a.is_reverse and a.is_paired
                        and not a.is_proper_pair
                        and not a.mate_is_unmapped
                        and not a.is_secondary and a.reference_end is not None

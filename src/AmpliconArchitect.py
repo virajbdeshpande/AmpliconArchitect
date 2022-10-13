@@ -46,7 +46,7 @@ else:
 
 import global_names
 
-__version__ = "1.3.r1"
+__version__ = "1.3.r2"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -91,11 +91,16 @@ parser.add_argument('--pair_support_min', dest='pair_support_min',
                     action='store', type=int, default=2)
 parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverage statistics from coverage.stats.",
                     action='store_true', default=False)
+parser.add_argument('--random_seed', dest="random_seed",
+                    help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
+                    action='store_true', default=False)
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
 global_names.REF = args.ref
 global_names.TSTART = TSTART
+if args.random_seed:
+    global_names.SEED = None
 
 logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
 # # output logs to stdout
