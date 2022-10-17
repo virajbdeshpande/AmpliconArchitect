@@ -30,7 +30,7 @@ bwa=0.7.17-4 \
 fontconfig=2.13.1-2ubuntu3 \
 gfortran=4:9.3.0-1ubuntu2 \
 libbz2-dev=1.0.8-2 \
-liblzma-dev=5.2.4-1ubuntu1 \
+liblzma-dev \
 python-dev \
 python3-dev=3.8.2-0ubuntu2 \
 samtools=1.10-3 \
