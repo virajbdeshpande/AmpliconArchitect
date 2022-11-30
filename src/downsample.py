@@ -22,21 +22,11 @@
 
 import pysam
 import argparse
-import math
 from time import time
-from collections import defaultdict
-import sys
 import os
-import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-import logging
 import random
-import hashlib
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
 
 import global_names
 
@@ -58,15 +48,14 @@ parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, mm10, None]. \"hg19\", \"mm10\", \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
+                    help="Values: [hg19, GRCh37, GRCh38, GRCh38_viral, mm10, None]. \"hg19\", \"mm10\", \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
                     action='store', type=str, required=True)
+parser.add_argument('--cstats_only', help="Compute the coverage statistics for the BAM file and exit. Do not perform any downsampling.", action='store_true')
 
 args = parser.parse_args()
 
 global_names.REF = args.ref
 
-
-import ref_util as hg
 import bam_to_breakpoint as b2b
 from breakpoint_graph import *
 
@@ -111,6 +100,9 @@ elif cstats is None:
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = bamFileb2b.basic_stats
 
+print("Estimated bamfile coverage is ", str(cstats[0]))
+if args.cstats_only:
+    sys.exit(0)
 
 final = args.final
 
