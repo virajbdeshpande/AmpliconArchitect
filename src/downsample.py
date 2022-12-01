@@ -82,8 +82,8 @@ if cbam is not None:
 for l in coverage_stats_file:
     ll = l.strip().split()
     bamfile_pathname = str(cb.filename.decode())
-    bamfile_filesize = os.path.getsize(bamfile_pathname)
     if ll[0] == os.path.abspath(bamfile_pathname):
+        bamfile_filesize = os.path.getsize(bamfile_pathname)
         cstats = tuple(map(float, ll[1:]))
         if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]):  # 3 is default sdevs
             cstats = None
