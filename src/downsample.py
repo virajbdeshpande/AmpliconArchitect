@@ -19,7 +19,8 @@
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
 
-
+from time import time
+TSTART = time()
 import pysam
 import argparse
 from time import time
@@ -51,10 +52,17 @@ parser.add_argument('--ref', dest='ref',
                     help="Values: [hg19, GRCh37, GRCh38, GRCh38_viral, mm10, None]. \"hg19\", \"mm10\", \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
                     action='store', type=str, required=True)
 parser.add_argument('--cstats_only', help="Compute the coverage statistics for the BAM file and exit. Do not perform any downsampling.", action='store_true')
+parser.add_argument('--random_seed', dest="random_seed",
+                    help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
+                    action='store_true', default=False)
+
 
 args = parser.parse_args()
 
 global_names.REF = args.ref
+global_names.TSTART = TSTART
+if args.random_seed:
+    global_names.SEED = None
 
 import bam_to_breakpoint as b2b
 from breakpoint_graph import *
