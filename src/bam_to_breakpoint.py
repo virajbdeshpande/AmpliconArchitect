@@ -52,6 +52,7 @@ import global_names
 # use Arial font if you have it. will fall back to default if not available.
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['font.sans-serif'] = ['Arial']
+matplotlib.rcParams['pdf.fonttype'] = 42
 
 summary_logger = logging.getLogger('summary')
 graph_logger = logging.getLogger('graph')
