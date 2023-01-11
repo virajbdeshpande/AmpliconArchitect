@@ -23,7 +23,7 @@ import pysam
 import math
 import copy
 from collections import defaultdict
-import mosek
+import mosek_solver
 import sys
 import numpy as np
 from scipy import stats
@@ -61,13 +61,6 @@ cycle_logger = logging.getLogger('cycle')
 # suppress some specific harmless numpy warnings during AA
 np.seterr(divide='ignore', invalid='ignore', )
 TSTART = global_names.TSTART
-
-# check mosek version
-mosek_major_version = mosek.Env.getversion()[0]
-if mosek_major_version > 8:
-    logging.warning("Mosek version is " + '.'.join([str(x) for x in mosek.Env.getversion()]) +
-                    " AA requires version 8\n")
-    
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):
@@ -2108,22 +2101,9 @@ class bam_to_breakpoint():
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
         print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
 
-        # set up problem size and variable types and constraint types
-        numvar = n + m #r0 + r1-rn + m breakpoint edges + 2 dummy variables g0, g1 for separable objective + te (m values)
-        numcon = 2 * n #flow for each sequence edge + flows for source and sink + ratio f0 to readdepth and one quadratic constraint + 2 constraints for dummy variables g0, g1 + te(1..m)
-        bkx = [mosek.boundkey.lo] * (n + m)
-        blx = [0.0] * (n + m)
-        bux = [float('Inf')] * (n + m)
-        bkc = [mosek.boundkey.fx] * (2 * n)
-        blc = [0.0] * (2 * n)
-        buc = [0.0] * (2 * n)
+        # set up problem size and coefficients
         asub = []
         aval = []
-        qsubi = {}
-        qsubj = {}
-        qval = {}
-
-        # setting up constraints
         for i in range(n):
             subarr = [i]
             valarr = [1.0]
@@ -2136,8 +2116,8 @@ class bam_to_breakpoint():
                 else:
                     subarr.append(n + bpdict[e])
                     valarr.append(-1.0)
-            asub.append(np.array(subarr))
-            aval.append(np.array(valarr))
+            asub.append(subarr)
+            aval.append(valarr)
             subarr = [i]
             valarr = [1.0]
             for e in seqlist[i].v2.elist:
@@ -2149,55 +2129,17 @@ class bam_to_breakpoint():
                 else:
                     subarr.append(n + bpdict[e])
                     valarr.append(-1.0)
-            asub.append(np.array(subarr))
-            aval.append(np.array(valarr))
-        # setting up objective
-        opro = [mosek.scopr.log] * (n + m)
-        oprjo = range(n + m)
-        oprfo = [-1 * ki for ki in k] + [-1 * ke[e] for e in bplist]
-        oprgo = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
-        oprho = [0.0001] * (n + m)
-        opcj = {cj:C * l[cj] / self.read_length for cj in range(len(l))}
-        for e in bpdict:
-            opcj[n + bpdict[e]] = self.max_insert * C / 2 / self.read_length
-        
-        def streamprinter(msg): 
-            sys.stdout.write (msg) 
-            sys.stdout.flush()
-        env = mosek.Env()
-        task = env.Task(0,0)
-        task.set_Stream (mosek.streamtype.log, streamprinter)
-        task.appendcons(numcon)
-        task.appendvars(numvar)
+            asub.append(subarr)
+            aval.append(valarr)
 
-        if mosek_major_version >= 9:
-            for j in range(numvar):
-                task.putvarbound(j, bkx[j], blx[j], bux[j])
-            for i in range(numcon):
-                task.putconbound(i, bkc[i], blc[i], buc[i])
+        coeff_f = [-1 * ki for ki in k] + [-1 * ke[e] for e in bplist]
+        coeff_g = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
+        const_h = [0.0001] * (n + m)
+        coeff_c = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
 
-        else:
-            for j in range(numvar):
-                task.putbound(mosek.accmode.var, j, bkx[j], blx[j], bux[j])
-            for i in range(numcon):
-                task.putbound(mosek.accmode.con, i, bkc[i], blc[i], buc[i])
-
-        for i in range(numcon):
-            task.putarow(i, asub[i], aval[i])
-        # for i in qsubi:
-        #    task.putqconk(2 * n + 2, qsubi[i], qsubj[i], qval[i])
-        print("Problem set up done. Optimizing ..")
-        for cj in opcj:
-            task.putcj(cj, opcj[cj])
-        task.putobjsense(mosek.objsense.minimize)
-        task.putSCeval(opro, oprjo, oprfo, oprgo, oprho)
-        task.optimize()
-        res = [ 0.0 ] * numvar
-        print("Solution summary")
-        task.solutionsummary(mosek.streamtype.log)
-        task.getsolutionslice(mosek.soltype.itr, mosek.solitem.xx, 0, numvar, res)
-        print( "Solution is: %s" % res )
-        
+        # Solve the optimization problem
+        res = mosek_solver.call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)
+                
         wehc = {}
         for msv_ilist in zip(all_msv, ilist):
             slist = hg.interval_list([hg.interval('\t'.join(map(str, [sq[0].v1.chrom, sq[0].v1.pos, sq[0].v2.pos, sq[1]]))) for sq in zip(seqlist, res)])
