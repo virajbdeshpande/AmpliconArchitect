@@ -47,12 +47,6 @@ import ref_util as hg
 from mycolors import *
 import global_names
 
-mosek_major_version = mosek.Env.getversion()[0]
-if sys.version_info < (3, 0) and mosek_major_version >= 10:
-    logging.warning("Mosek version is " + '.'.join([str(x) for x in mosek.Env.getversion()]) +
-                    " which requires python3. Exiting.\n")
-    sys.exit(1)
-
 # use Arial font if you have it. will fall back to default if not available.
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['font.sans-serif'] = ['Arial']

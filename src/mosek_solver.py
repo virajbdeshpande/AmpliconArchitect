@@ -2,13 +2,21 @@
 #
 # Supports all versions of MOSEK >= 8
 #
-import mosek
 import logging
+import sys
+
+import mosek
 
 # Check Mosek version
 mosek_ver = mosek.Env.getversion()
 logging.info("Mosek version is {}".format(mosek_ver))
 mosek_major = mosek_ver[0]
+
+if sys.version_info < (3, 0) and mosek_major >= 10:
+    logging.warning("Mosek version is " + '.'.join([str(x) for x in mosek_ver]) +
+                    " which requires python3. Exiting.\n")
+    sys.exit(1)
+
 
 # MOSEK logging
 mosek_logger = logging.getLogger('MOSEK')
