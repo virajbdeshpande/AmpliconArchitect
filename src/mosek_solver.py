@@ -9,7 +9,7 @@ import mosek
 
 # Check Mosek version
 mosek_ver = mosek.Env.getversion()
-logging.info("Mosek version is {}".format(mosek_ver))
+logging.info("Mosek version is {}".format('.'.join([str(x) for x in mosek_ver])))
 mosek_major = mosek_ver[0]
 
 if sys.version_info < (3, 0) and mosek_major >= 10:
