@@ -12,13 +12,19 @@ mosek_major = mosek_ver[0]
 
 # MOSEK logging
 mosek_logger = logging.getLogger('MOSEK')
+
+
 def moseklogfunc(msg):
-    mosek_logger.info(msg.rstrip())
+    mosek_logger.debug(msg.rstrip())
+
+
 class fusionlogger:
     def write(self, msg):
         moseklogfunc(msg)
+
     def flush(self):
         pass
+
 
 # Calls MOSEK to solve one instance of the problem
 def call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
@@ -35,7 +41,7 @@ def call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
         elif mosek_major >= 10:
             return call_mosek_acc(n, m, asub, aval, coeff_c, coeff_f)
         else:
-            raise Exeption("Unsupported MOSEK version {}".format(mosek_major))
+            raise Exception("Unsupported MOSEK version {}".format(mosek_major))
     except Exception as e:
         # If an error occurred in the MOSEK call then save
         # all input data to a JSON file so they can be loaded
@@ -44,6 +50,7 @@ def call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
         filename = save_mosek_input(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)        
         mosek_logger.info("Saved MOSEK inputs to {}. Submit that file to support to reproduce the issue.".format(filename))
         raise e
+
 
 '''
 This method works with MOSEK == 8.
@@ -88,6 +95,7 @@ def call_mosek_scopt(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
 
             return res
 
+
 '''
 This method works with MOSEK >= 10.
 
@@ -120,10 +128,10 @@ def call_mosek_acc(n, m, asub, aval, coeff_c, coeff_f):
         task.putafeg(2*(n + m), 1.0)
 
         expdom = task.appendprimalexpconedomain()
-        task.appendaccs([expdom]*(n + m), sum([ [i, 2*(n + m), i + n + m] for i in range(n + m)], []), None)
+        task.appendaccs([expdom]*(n + m), sum([[i, 2*(n + m), i + n + m] for i in range(n + m)], []), None)
 
         task.putclist(range(0, n + m), coeff_c)
-        task.putclist(range(n + m, 2* (n + m)), coeff_f)
+        task.putclist(range(n + m, 2 * (n + m)), coeff_f)
         
         task.putobjsense(mosek.objsense.minimize)
 
@@ -134,6 +142,7 @@ def call_mosek_acc(n, m, asub, aval, coeff_c, coeff_f):
             raise Exception("Failed to solve to optimality. Solution status {}".format(task.getsolsta(mosek.soltype.itr)))
 
         return task.getxxslice(mosek.soltype.itr, 0, n + m)
+
 
 '''
 This method works with MOSEK >= 9.
@@ -174,6 +183,7 @@ def call_mosek_fusion(n, m, asub, aval, coeff_c, coeff_f):
 
         return x.level()
 
+
 # Debug functions. Dumping input data.
 mosek_save_num = 1
 def save_mosek_input(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
@@ -190,6 +200,7 @@ def save_mosek_input(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
     
     mosek_save_num += 1
     return filename
+
 
 # Debug functions. Loading input data.
 def load_mosek_input(filename):

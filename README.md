@@ -1,10 +1,17 @@
 # AmpliconArchitect (AA)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
-![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r1/master)
+![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r3/master)
 ![GitHub all releases](https://img.shields.io/github/downloads/jluebeck/AmpliconArchitect/total)
 
 
 ### Recent updates:
+
+### January 2023 update:
+Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek).
+`1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
+Now adjusting font type and size on AA output figures can be done with much more ease.
+This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually. While these changes improve quality of life for users, they
+do not signficantly alter outputs from the AA.
 
 ### October 2022 update:
 Version `1.3.r2` sets a deterministic seed for read downsampling, which can be disabled by setting `--random_seed`.
@@ -14,12 +21,6 @@ Version `1.3.r1` released which supports both `python3` and `python2`.
 This release also corrects a bug in the visualization of amplicon copy numbers for 
 genome segments < 50kbp and includes small improvements to seed filtering and 
 merging of nearby segments. Complete changelog available [here](https://docs.google.com/document/d/1tGwKcHgaU36OzMZ02S5ky5JR-67WvRtXI3-Hv0FYkm4/edit?usp=sharing). 
-
-### January 2022 update:
-We have released a testing version of the mm10 mouse genome data repo [here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/). 
-To use with an existing installation please extract and place the mm10 directory with the other reference build directories in your AA data repo.
-Upstream and downstream tools (AmpliconSuite-pipeline, AmpliconClassifier, CycleViz) are also enabled to accept the `--ref mm10`
-argument. 
 
 
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
@@ -31,37 +32,41 @@ Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. T
 
 Please check out the **detailed guide** on running AA [available here](https://github.com/jluebeck/PrepareAA/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
 
-**AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. Please cite the following reference if using AmpliconArchitect in your work:
+**AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. You may cite the following if using AmpliconArchitect in your work:
 
-*Deshpande, V. et al. Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
+*Deshpande, V. et al., Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* PMID: 30674876. [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
 
 ## Table of contents:
 1. [Quickstart](#quickstart)
 2. [Installation](#installation)
-3. [Usage](#ampliconarchitect-reconstruction)
+3. [Usage](#running-ampliconarchitect)
 4. [The AA Algorithm](#the-aa-algorithm)
 5. [File formats](#file-formats)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
-## Quickstart:
-#### Prerequisites:
-1. Docker (only if intending to use docker image):
-    * Install docker: `https://docs.docker.com/install/`
-    * (Optional): Add user to the docker group and relogin:
-        `sudo usermod -a -G docker $USER`
-2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
-    * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
-3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
+## Quickstart
 
-#### Usage:
+### AmpliconSuite-pipeline
+Input files for AmpliconArchitect must first be prepared and filtered in specific ways. We provide an end-to-end wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. AmpliconSuite-pipeline is available at https://github.com/jluebeck/AmpliconSuite-pipeline. 
 
-`$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
+This pipeline greatly simplifies the process of selecting CNV seed regions to feed to AA.
+AmpliconSuite-pipeline can directly invoke AA if installed. As AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used.
 
-The execution script `$AA` may point to `AA=AmpliconArchitect/docker/run_aa_docker.sh`.
+Due to a collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) can now be used from your web browser. No tool installation required. Visit https://beta.genepattern.org/ to register. After registering and signing-in, search for the "AmpliconSuite" module.  
 
-See instructions below for manual installation without docker.
+### Prerequisites
+1. License for Mosek optimization tool (free for academic use):
+    * `mkdir $HOME/mosek`
+    * Download license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`) and place it in `$HOME/mosek/`.
+2. Download relevant AA data repositories:
+    * Download from `https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
+
+#### Usage (AA docker)
+Please first ensure that the output location `--out /path/to/generated/outputs` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image.
+
+`AmpliconArchitect/docker/run_aa_docker.sh --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
+
+See installation Option 2 for local usage without docker.
 
 ## Installation
 AA can be installed in 2 ways:
@@ -69,95 +74,83 @@ AA can be installed in 2 ways:
 2. Github source code.
 
 ### Option 1: Docker image:
-#### Prerequisites:
 1. Docker:
     * Install docker: `https://docs.docker.com/install/`
-    * (Optional): Add user to the docker group and relogin:
-        `sudo usermod -a -G docker $USER`
-2. License for Mosek optimization tool:
-    * Obtain license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`)
-    * `export MOSEKLM_LICENSE_FILE=<Parent directory of mosek.lic> >> ~/.bashrc && source ~/.bashrc`
+    * Add user to the docker group:
+        * `sudo usermod -a -G docker $USER`
+        * To apply change, log out of session and log back in
+2. License for Mosek optimization tool (free for academic users):
+    * See Mosek instructions in [Prerequisites](#prerequisites)
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from ` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
+    * Download from https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/
 
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         mkdir data_repo && cd data_repo
         # copy or download files into data_repo directory
+        wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
         tar zxf [hg19/GRCh37/GRCh38/mm10].tar.gz
         echo export AA_DATA_REPO=$PWD >> ~/.bashrc
         touch coverage.stats && chmod a+r coverage.stats
         source ~/.bashrc
         ```
+      
 #### Obtain AmpliconArchitect image and execution script:
 1. Pull docker image:
     * `docker pull jluebeck/ampliconarchitect`
 
+
 2. Clone script `run_aa_docker.sh` from Github:
     * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
-### Option 2: Github source code:
-`git clone https://github.com/jluebeck/AmpliconArchitect.git`
+### Option 2: Install from Github source code:
+* `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
-**Note: In the rest of this document, we will refer to the path of the parent directory `AmpliconArchitect/src` as `$AA_SRC`**
-
+* Set `AmpliconArchitect/src` as `$AA_SRC`:
+```bash
+    cd AmpliconArchitect
+    echo export AA_SRC=$PWD/src >> ~/.bashrc
 ```
-cd AmpliconArchitect
-echo export AA_SRC=$PWD/src >> ~/.bashrc
-```
 
-#### Prerequisites:
+#### Dependencies
 1. Python 2.6+ or 3.5+
 2. Ubuntu libraries and tools:
 ```bash
 sudo apt-get install software-properties-common -y
 sudo add-apt-repository universe -y
 sudo apt-get update && sudo apt-get install -y
-sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools python2 wget -y
-# Last two steps only required if using python2
+sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools wget -y
+
+# Last three steps only required if using python2
+sudo apt-get install python2
 wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
 sudo python2 get-pip.py
 ```
-3. [Pysam](https://github.com/pysam-developers/pysam) verion 0.9.0  or higher is required. Flask is optional.
+3. Python packages. Note that [pysam](https://github.com/pysam-developers/pysam) verion 0.9.0  or higher is required. Flask is optional.
 
-`sudo pip3 install pysam Cython numpy scipy matplotlib Flask future`
+`sudo pip3 install pysam Cython numpy scipy matplotlib future mosek Flask`
 
  **... or for python 2:**
 
-`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib Flask future` 
+`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib future mosek Flask` 
 
 
 Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
 
-4. Mosek optimization tool version 8.x (https://www.mosek.com/). **Due to breaking changes in the newer versions of Mosek, we require version 8 to be used**:
+4. Configure the Mosek optimization tool:
 ```bash
-wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
-tar xf mosektoolslinux64x86.tar.bz2
-echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $PWD/mosek/8/licenses
-echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
-export MOSEKPLATFORM=linux64x86
-echo export PATH=$PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-echo export MOSEKLM_LICENSE_FILE=$PWD/mosek/8/licenses >> ~/.bashrc
-cd $PWD/mosek/8/tools/platform/linux64x86/python/3/
-# OR FOR PYTHON2 
-# cd $PWD/mosek/8/tools/platform/linux64x86/python/2/ # if using python2
-# sudo python2 setup.py install #(--user)
-
-sudo python3 setup.py install #(--user) [can also build locally with "pip install -e ."]
-
-cd -
-source ~/.bashrc
+mkdir -p $HOME/mosek/
+echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
 ```
-- Arial font for matplotlib (optional installation):
+5. (Optional) Arial font for matplotlib:
 
-To get the Microsoft fonts on Ubuntu
+To get Microsoft fonts on Ubuntu:
 ```
 sudo apt-get install fontconfig ttf-mscorefonts-installer
 sudo fc-cache -f
 ```
 
-#### Data repositories:
+#### Data repository
 Set annotations directory and environment variable AA_DATA_REPO:
 ```bash
 mkdir -p data_repo
@@ -165,51 +158,46 @@ echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
-Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA.
-```
+Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/.
+```bash
 cd $AA_DATA_REPO
-tar zxf $ref.tar.gz
+wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
+tar xzvf [hg19/GRCh37/GRCh38/mm10].tar.gz
 ```
-The annotations may be downloaded here:
-` https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
-Available annotations: 
+Available data repo annotations: 
 * hg19
 * GRCh37
 * GRCh38 (hg38)
+* GRCh38 viral (includes oncoviral sequences)
 * mm10
 
 In the data repo files, "`indexed`" indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
-### Option 3: Other platforms:
+### Option 3: Other platforms for use
 AA can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
 
 ## Running AmpliconArchitect
 
-#### AmpliconSuite-pipeline:
-We provide a wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. PrepareAA is available at https://github.com/jluebeck/AmpliconSuite-pipeline. We recommmend this for users who are less experienced with AA as it greatly simplifies the process of selecting CNV seed regions to feed to AA.
-AmpliconSuite-pipeline can directly invoked AA if installed. 
-
-
-### 1) Input data:
+### 1) Input data
 AA requires 2 input files:
 
 1. Coordinate-sorted, indexed BAM file:
     * Align reads to a reference present in the `data_repo`.
-    * AA has been tested on `bwa mem` on `hg19` and `GRCh38` reference genomes.
     * Recommended depth of coverage for WGS data is 5X-10X.
     * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample`. 
     * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
 2. BED file with seed intervals:
+    * We recommend generating this using [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
     * One or more intervals per amplicon in the sample
     * AA has been tested on seed intervals generated as follows:
         - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
-        - Select CNVs with copy number > 5x and size > 100kbp (default) and merge adjacent CNVs into a single interval using:
+        - Select CNVs with copy number > 4.5x and size > 50kbp (default) and merge adjacent CNVs into a single interval using:
 
-            `python2 $AA_SRC/amplified_intervals.py --bed {read_depth_folder}/output/alts.dat --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
-        - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. 
+            `python2 $AA_SRC/amplified_intervals.py --bed {bed file of cnv calls} --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
+        - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. AmpliconSuite-pipeline provides additional filters for karyotypic abnormalities not provided by `amplified_intervals.py` alone.
         - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
-### 2) Usage:
+### 2) Usage
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
 
 The execution script `$AA` is provided within the Github source code and the exact path depends on the installation option used:
@@ -217,7 +205,7 @@ The execution script `$AA` is provided within the Github source code and the exa
 2. Github source: `AA=python2 AmpliconArchitect/src/AmpliconArchitect.py`
 
 
-#### Outputs:
+#### Outputs
 AA generates informative output at each step in the algorithm (details below):
 1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
 2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
@@ -227,14 +215,14 @@ AA generates informative output at each step in the algorithm (details below):
 
 The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
 
-#### Required Arguments:
+#### Required Arguments
 
-| Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ---------- | ---- |---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--bed`         |FILE| Bed file with putative list of amplified intervals                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | 
-| `--bam`         |FILE| Coordinate sorted BAM file with index mapped to provided reference genome                                                                                                                                                                                                                                                                                                                                                                                                                                           | 
-| `--out`         |PATH| Prefix for output files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | 
-| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `mm10`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> - Default: `hg19` |
+| Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------- | ---- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--bed`         |FILE| Bed file with putative list of amplified intervals                                                                                                                                                                                                                                                                                                                                                                                                                                                 | 
+| `--bam`         |FILE| Coordinate sorted BAM file with index mapped to provided reference genome                                                                                                                                                                                                                                                                                                                                                                                                                          | 
+| `--out`         |PATH| Prefix for output files                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
+| `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `mm10`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> |
 
 **NOTE1:** Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
@@ -242,7 +230,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 
 **NOTE3:** The current docker script cannot accept paths with special characters including spaces. For paths with special characters, please install AA from the github source.
 
-#### Optional Arguments:
+#### Optional Arguments
 
 | Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------- | ---- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -275,10 +263,10 @@ A common question after running AA is, **"How do I know if these reconstructions
 
 To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/jluebeck/AmpliconClassifier).
 
-### 5) Visualizing reconstruction:
+### 5) Visualizing reconstruction
 The outputs can be visualized in 3 different formats:
 - SVVIEW: This corresponds to the output file `{out}_amplicon{id}.png/pdf` and roughly shows, the discordant edges, copy number segments and genomic coverage.
-- CYCLEVIEW: This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
+- CYCLEVIEW (deprecated): This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
 ```bash
 export FLASK_APP=$AA_SRC/cycle_visualization/web_app.py
 flask run --host=0.0.0.0 --port=8000
@@ -287,7 +275,7 @@ This format of visualization makes it easy to discern the segments in the struct
 
 - CYCLEVIZ: We developed a python program called [CycleViz](https://github.com/jluebeck/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
 
-### Instructions for web interface:
+### Instructions for web interface
 - Choose and upload a cycles files generated by AA.
 - Optional but recommended: Upload corresponding png file generated AA.
 - Operations:
@@ -402,7 +390,7 @@ This file provides the list of discordant edges in the amplicon. If this file is
     * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
 
 
-## Checkpointing and modular integration with other tools:
+## Checkpointing and modular integration with other tools
 The user may force AA to use existing data in order to recalculate information from previous runs or use data from external tools. 
 Here are instructions for using prior or external data at various stages:
 1. Interval selection: The user may select intervals from each amplicon and provide them in a separate BED file. The user may then run AA separately with each amplicon (bed file) using the option `--extendmode CLUSTERED` to indicate that AA should use all intervals within the provided as a single amplicon).
