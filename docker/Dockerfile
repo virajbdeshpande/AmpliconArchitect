@@ -43,23 +43,20 @@ RUN fc-cache -f
 RUN pip2 install -r /home/requirements/pip2_requirements.txt
 
 
-RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
-RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
-# ADD mosek.lic /home/programs/mosek/8/licenses/mosek.lic
+# To install Mosek8 (Mosek 9 is installed in the pip2 requirements).
+#RUN cd /home/programs && wget http://download.mosek.com/stable/8.0.0.60/mosektoolslinux64x86.tar.bz2
+#RUN cd /home/programs && tar xf mosektoolslinux64x86.tar.bz2
+#RUN echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+# RUN echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
+# RUN echo export PATH=$PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
+# RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python2 setup.py install
 
 RUN mkdir -p /home/output/
 RUN mkdir -p /home/input/
-RUN mkdir -p /home/programs/mosek/8/licenses/
+RUN mkdir -p /home/mosek/
 ADD run_aa_script.sh /home/
 
 #Set environmental variables
-
-RUN echo export MOSEKPLATFORM=linux64x86 >> ~/.bashrc
-RUN export MOSEKPLATFORM=linux64x86
-RUN echo export PATH=$PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-RUN echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/programs/mosek/8/tools/platform/$MOSEKPLATFORM/bin >> ~/.bashrc
-RUN echo export MOSEKLM_LICENSE_FILE=/home/programs/mosek/8/licenses >> ~/.bashrc
-RUN cd /home/programs/mosek/8/tools/platform/linux64x86/python/2/ && python2 setup.py install
 RUN echo export AA_DATA_REPO=/home/data_repo >> ~/.bashrc
 ADD https://github.com/jluebeck/AmpliconArchitect/archive/master.zip /home/programs
 RUN cd /home/programs && unzip master.zip

@@ -7,11 +7,11 @@
 ### Recent updates:
 
 ### January 2023 update:
-Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek).
+Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 
+will slightly change AA copy number estimates between versions (typical difference < 0.02 copies).
 `1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
 Now adjusting font type and size on AA output figures can be done with much more ease.
-This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually. While these changes improve quality of life for users, they
-do not signficantly alter outputs from the AA.
+This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually.
 
 ### October 2022 update:
 Version `1.3.r2` sets a deterministic seed for read downsampling, which can be disabled by setting `--random_seed`.
