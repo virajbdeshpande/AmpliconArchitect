@@ -46,13 +46,15 @@ Please check out the **detailed guide** on running AA [available here](https://g
 
 ## Quickstart
 
-### AmpliconSuite-pipeline
-Input files for AmpliconArchitect must first be prepared and filtered in specific ways. We provide an end-to-end wrapper for jumping off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. AmpliconSuite-pipeline is available at https://github.com/jluebeck/AmpliconSuite-pipeline. 
+### Using AA as part of AmpliconSuite-pipeline (recommended)
+**In collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) can now be used from your web browser. No tool installation required.** Visit https://genepattern.ucsd.edu/ to register. After registering and signing-in, search for the "AmpliconSuite" module. 
 
-This pipeline greatly simplifies the process of selecting CNV seed regions to feed to AA.
-AmpliconSuite-pipeline can directly invoke AA if installed. As AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used.
+*Why does AmpliconSuite exist?* Input files for AmpliconArchitect must first be prepared and filtered in specific ways. We provide an end-to-end wrapper for jumping-off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. AmpliconSuite-pipeline is available at https://github.com/jluebeck/AmpliconSuite-pipeline. Unless you are using the cloud-based in-browser GenePattern Notebook version of AA, AA must be installed locally to use AmpliconSuite-pipleline.
 
-In collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) can now be used from your web browser. No tool installation required. Visit https://genepattern.ucsd.edu/ to register. After registering and signing-in, search for the "AmpliconSuite" module.  
+AmpliconSuite-pipeline greatly simplifies the process of selecting CNV seed regions to feed to AA.
+AmpliconSuite-pipeline can directly invoke AA if installed. As AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used as a wrapper for AA.
+
+ 
 
 ### Prerequisites
 1. License for Mosek optimization tool (free for academic use):
