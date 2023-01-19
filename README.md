@@ -62,7 +62,7 @@ In collaboration with the [GenePattern Notebook](https://genepattern-notebook.or
     * Download from `https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
 
 #### Usage (AA docker)
-Please first ensure that the output location `--out /path/to/generated/outputs` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image.
+Please first ensure that the output location `--out /path/to/generated/outputs` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
 
 `AmpliconArchitect/docker/run_aa_docker.sh --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
 
