@@ -113,6 +113,8 @@ if args.bam != "":
         coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
         for l in coverage_stats_file:
             ll = l.strip().split()
+            if not ll:
+                continue
             bamfile_pathname = str(cb.filename.decode())
             if ll[0] == os.path.abspath(bamfile_pathname):
                 bamfile_filesize = os.path.getsize(bamfile_pathname)
