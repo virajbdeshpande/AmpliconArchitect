@@ -3,6 +3,7 @@
 # Supports all versions of MOSEK >= 8
 #
 import logging
+import subprocess
 import sys
 
 import mosek
@@ -34,8 +35,21 @@ class fusionlogger:
         pass
 
 
+def mosek_license_test():
+    mosek_logger.info("Testing MOSEK license")
+    cmd = "msktestlic"
+    t = str(subprocess.check_output(cmd, shell=True).decode("utf-8"))
+    try:
+        t.index("MOSEK error")
+        mosek_logger.error(t)
+
+    except ValueError:
+        mosek_logger.info("No errors detected")
+
+
 # Calls MOSEK to solve one instance of the problem
 def call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
+    mosek_logger.info("Beginning MOSEK call")
 
     ## Enable this line to ALWAYS save all Mosek inputs
     #save_mosek_input(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)

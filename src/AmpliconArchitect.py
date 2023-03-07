@@ -36,8 +36,6 @@ import copy
 matplotlib.use('Agg')
 import logging
 from functools import reduce
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
 
 if sys.version_info >= (3, 0):
     from io import StringIO
@@ -46,7 +44,7 @@ else:
 
 import global_names
 
-__version__ = "1.3.r3"
+__version__ = "1.3.r4"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -161,7 +159,6 @@ if DATA_REPO == '.' or DATA_REPO == '':
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
 import ref_util as hg
 import bam_to_breakpoint as b2b
-
 
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
 rdList0 = hg.interval_list(rdAlts, 'bed', exclude_info_string=True)

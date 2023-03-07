@@ -1,10 +1,14 @@
 # AmpliconArchitect (AA)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
-![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r3/master)
+![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r4/master)
 ![GitHub all releases](https://img.shields.io/github/downloads/jluebeck/AmpliconArchitect/total)
 
 
 ### Recent updates:
+
+### March 2023 update:
+Version `1.3.r4` adds automatic testing of the MOSEK license status and better handling of the coverage stats lookup file.
+TODO: Bugfixes to coverage plotting in SV view.
 
 ### January 2023 update:
 Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 

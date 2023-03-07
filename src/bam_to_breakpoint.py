@@ -59,6 +59,7 @@ cycle_logger = logging.getLogger('cycle')
 # suppress some specific harmless numpy warnings during AA
 np.seterr(divide='ignore', invalid='ignore', )
 TSTART = global_names.TSTART
+mosek_solver.mosek_license_test()
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):
