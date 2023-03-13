@@ -190,7 +190,7 @@ class bam_to_breakpoint():
             return self.interval_coverage_calls[call_args]
         else:
             alist_len = len([a for a in self.fetch(i.chrom, s2, e2)
-                     if a.reference_end - 1 <= e2 and a.mapping_quality > self.mapping_quality_cutoff])
+                if not a.is_unmapped and a.reference_end - 1 <= e2 and a.mapping_quality > self.mapping_quality_cutoff])
             self.interval_coverage_calls[call_args] = alist_len * self.read_length / max(1.0, float(e2 - s2 + 1))
             return self.interval_coverage_calls[call_args]
 
