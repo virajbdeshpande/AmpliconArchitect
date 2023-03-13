@@ -44,7 +44,7 @@ def mosek_license_test():
         mosek_logger.error(t)
 
     except ValueError:
-        mosek_logger.info("No errors detected")
+        mosek_logger.info("No MOSEK errors detected in test")
 
 
 # Calls MOSEK to solve one instance of the problem
