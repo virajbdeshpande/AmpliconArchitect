@@ -7,8 +7,8 @@
 ### Recent updates:
 
 ### March 2023 update:
-Version `1.3.r4` adds automatic testing of the MOSEK license status and better handling of the coverage stats lookup file.
-TODO: Bugfixes to coverage plotting in SV view.
+Version `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status and better handling of the coverage stats lookup file.
+
 
 ### January 2023 update:
 Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 

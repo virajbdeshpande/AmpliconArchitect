@@ -178,20 +178,20 @@ class bam_to_breakpoint():
             e2 = hg.chrLen[hg.chrNum(i.chrom)]
         if s2 >= e2:
             return 0
-        alist = [a for a in self.fetch(i.chrom, s2, e2)
-                 if not a.is_unmapped]
+
         # if e2 - s2 >= window_size and clip == False and gcc == False:
         #     return len(alist) * self.read_length / float(e2 - s2)
-        sumb = 0
+        # sumb = 0
         # if clip == True or (clip == False and i.size() >= 100 * self.read_length):
         #     return len(alist) * self.read_length / float(i.size())
-        if clip == True or (clip is None and e2-s2 < 1000):
-            icc = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2)]) / max(1.0, float(e2-s2 + 1))
+        if clip == True or (clip is None and e2-s2 <= 1000):
+            icc = sum([sum(a) for a in self.bamfile.count_coverage(i.chrom, s2, e2, quality_threshold=self.mapping_quality_cutoff)]) * self.downsample_ratio / max(1.0, float(e2-s2 + 1))
             self.interval_coverage_calls[call_args] = icc
             return self.interval_coverage_calls[call_args]
         else:
-            self.interval_coverage_calls[call_args] = len(
-                [a for a in alist if a.reference_end - 1 <= e2]) * self.read_length / max(1.0, float(e2 - s2 + 1))
+            alist_len = len([a for a in self.fetch(i.chrom, s2, e2)
+                     if a.reference_end - 1 <= e2 and a.mapping_quality > self.mapping_quality_cutoff])
+            self.interval_coverage_calls[call_args] = alist_len * self.read_length / max(1.0, float(e2 - s2 + 1))
             return self.interval_coverage_calls[call_args]
 
         # Maintainer found this code block is unreachable
@@ -227,6 +227,7 @@ class bam_to_breakpoint():
                 iend = window_size * int(round(float(i.end) / window_size))
             for k in xrange(istart, iend, window_size):
                 yield hg.interval(i.chrom, k, k + window_size - 1)
+
         for k in win_breakup(i, window_size):
             yield (k, self.interval_coverage(k, gcc=gcc, clip=clip))
         # return [(k, self.interval_coverage(k, gcc=gcc)) for k in jj]
@@ -454,7 +455,7 @@ class bam_to_breakpoint():
                 e2 = hg.chrLen[hg.chrNum(i.chrom)]
             j = range(s2, e2, window_size)
             # j = range(i.start, i.end, window_size)
-            jj = [hg.interval(i.chrom, k, k + window_size) for k in j]
+            # jj = [hg.interval(i.chrom, k, k + window_size) for k in j]
             i2 = hg.interval(i.chrom, s2, e2)
             cov = [c for c in self.window_coverage(i2, window_size, gcc, exact=False)]
             # cov = [self.interval_coverage(k) for k in jj]
@@ -563,8 +564,8 @@ class bam_to_breakpoint():
             cpi = n
             for si in range(len(segs)):
                 c = cov2[ci][1]
-                c0 = cov[ci][1]
-                lseg = segs[si][-1][0].end - segs[si][0][0].start
+                # c0 = cov[ci][1]
+                # lseg = segs[si][-1][0].end - segs[si][0][0].start
                 freeze = 0
                 # if segs[si][0][0].start < 54857402 and segs[si][-1][0].end > 54857402:
                 #     print (segs[si][0][0].start, segs[si][-1][0].end), (segs[si-1][0][0].start, segs[si-1][-1][0].end), (segs[si+1][0][0].start, segs[si+1][-1][0].end)
@@ -1583,7 +1584,7 @@ class bam_to_breakpoint():
                                 ebest = max([(e[1], e[0]) for e in efine if e[0].v1.strand * (
                                     msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
-                            msve = [ebest]
+                            # msve = [ebest]
                             # print("finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1])
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
@@ -1595,10 +1596,12 @@ class bam_to_breakpoint():
                                         eiSet.add((ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand, ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand))
                                 elist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
                                 eilist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.1*x[0].v1.strand)
-                else:
-                    # print("msv end not refined", str(msr[msi]), str(msr[msi + 1]))
-                    msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
-                        e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
+
+                # Maintainer found the following lines had no effect
+                # else:
+                #     # print("msv end not refined", str(msr[msi]), str(msr[msi + 1]))
+                #     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
+                #         e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
 
         if amplicon_name is not None:
             edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
@@ -1666,7 +1669,7 @@ class bam_to_breakpoint():
             found_neighbor = False
             for i3 in rdlist:
                 if i3.chrom == edges[ei][0].v2.chrom and edges[ei][0].v2.pos >= i3.start and edges[ei][0].v2.pos <= i3.end:
-                    n = i3
+                    # n = i3
                     n = hg.interval(i3.chrom, i3.start, i3.end)
                     found_neighbor = True
             if not found_neighbor:
@@ -1704,7 +1707,7 @@ class bam_to_breakpoint():
         seen_list = hg.interval_list([])
         unseen_list = [(0,ii) for ii in i2list]
         heapq.heapify(unseen_list)
-        clist = hg.interval_list(i2list)
+        # clist = hg.interval_list(i2list)
         clist = hg.interval_list([ii[0] for ii in i2list.merge_clusters(extend=1)])
         while len(seen_list) < 10 and len(unseen_list) > 0:
             icc = heapq.heappop(unseen_list)
@@ -2088,7 +2091,7 @@ class bam_to_breakpoint():
         k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
         # kgcc = [self.interval_coverage(hg.interval(i.chrom, e.v1.pos, e.v2.pos), gcc=True) * (e.v2.pos - e.v1.pos) / self.read_length for e in seqlist]
         # k = kgcc
-        kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
+        # kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
         ke = {}
         ke.update(kbpe)
         ke.update(kce)
@@ -2288,8 +2291,12 @@ class bam_to_breakpoint():
         for i in ilist:
             if i.size() > 1000000:
                 wc_i = [w for w in self.window_coverage(i, 10000, exact=False)]
+
+            elif i.size() > 100000:
+                wc_i = [w for w in self.window_coverage(i, 1000, exact=False)]
+
             else:
-                wc_i = [w for w in self.window_coverage(i, 100, exact=False)]
+                wc_i = [w for w in self.window_coverage(i, 150, exact=False)]
 
             cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
             wc += wc_i
