@@ -1,6 +1,6 @@
 # AmpliconArchitect (AA)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
-![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r4/master)
+![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r5/master)
 ![GitHub all releases](https://img.shields.io/github/downloads/jluebeck/AmpliconArchitect/total)
 
 
