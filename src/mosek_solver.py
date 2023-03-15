@@ -3,6 +3,7 @@
 # Supports all versions of MOSEK >= 8
 #
 import logging
+import os
 import subprocess
 import sys
 
@@ -37,14 +38,26 @@ class fusionlogger:
 
 def mosek_license_test():
     mosek_logger.info("Testing MOSEK license")
-    cmd = "msktestlic"
-    t = str(subprocess.check_output(cmd, shell=True).decode("utf-8"))
-    try:
-        t.index("MOSEK error")
-        mosek_logger.error(t)
+    src_path = os.path.dirname(os.path.realpath(__file__))
+    cmd = src_path + "/msktestlic"
 
-    except ValueError:
-        mosek_logger.info("No MOSEK errors detected in test")
+    t = None
+    try:
+        t = str(subprocess.check_output(cmd, shell=True).decode("utf-8"))
+
+    except Exception as e:
+        mosek_logger.warning("Could not test Mosek license status: {}".format(e))
+
+    if t is not None:
+        try:
+            t.index("MOSEK error")
+            mosek_logger.error(t)
+            return 1
+
+        except ValueError:
+            mosek_logger.info("No MOSEK errors detected in test")
+
+    return 0
 
 
 # Calls MOSEK to solve one instance of the problem
@@ -69,6 +82,7 @@ def call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h):
         # all input data to a JSON file so they can be loaded
         # to recreate the MOSEK problem in a stand-alone way.
         mosek_logger.error("Error when using MOSEK: {}".format(e))
+        print("Error when using MOSEK: {}".format(e))
         filename = save_mosek_input(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)        
         mosek_logger.info("Saved MOSEK inputs to {}. Submit that file to support to reproduce the issue.".format(filename))
         raise e

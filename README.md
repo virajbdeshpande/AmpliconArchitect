@@ -7,8 +7,9 @@
 ### Recent updates:
 
 ### March 2023 update:
-Version `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status and better handling of the coverage stats lookup file.
+Version `1.3.r5` improves handling of the mosek license test and better compatibility with the AmpliconSuite-pipeline Singularity image.
 
+Version `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status, and better handling of the coverage stats lookup file.
 
 ### January 2023 update:
 Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 
@@ -16,15 +17,6 @@ will slightly change AA copy number estimates between versions (typical differen
 `1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
 Now adjusting font type and size on AA output figures can be done with much more ease.
 This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually.
-
-### October 2022 update:
-Version `1.3.r2` sets a deterministic seed for read downsampling, which can be disabled by setting `--random_seed`.
-
-### April 2022 update:
-Version `1.3.r1` released which supports both `python3` and `python2`. 
-This release also corrects a bug in the visualization of amplicon copy numbers for 
-genome segments < 50kbp and includes small improvements to seed filtering and 
-merging of nearby segments. Complete changelog available [here](https://docs.google.com/document/d/1tGwKcHgaU36OzMZ02S5ky5JR-67WvRtXI3-Hv0FYkm4/edit?usp=sharing). 
 
 
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
@@ -41,24 +33,34 @@ Please check out the **detailed guide** on running AA [available here](https://g
 *Deshpande, V. et al., Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* PMID: 30674876. [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
 
 ## Table of contents:
-1. [Quickstart](#quickstart)
+1. [AmpliconSuite-pipeline](#Recommended:-Using-AA-as-part-of-AmpliconSuite-pipeline)
 2. [Installation](#installation)
 3. [Usage](#running-ampliconarchitect)
 4. [The AA Algorithm](#the-aa-algorithm)
 5. [File formats](#file-formats)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
-## Quickstart
+## Recommended: Using AA as part of AmpliconSuite-pipeline
 
-### Using AA as part of AmpliconSuite-pipeline (recommended)
-**In collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) can now be used from your web browser. No tool installation required.** Visit https://genepattern.ucsd.edu/ to register. After registering and signing-in, search for the "AmpliconSuite" module. 
+We provide an end-to-end wrapper, which supports entry from any intermediate step, including generating the 
+prerequisite BAM file, CNV calls and CNV seed selection before running AA. It also wraps AA and AmpliconClassifier (AC). AmpliconSuite-pipeline is available at
+https://github.com/jluebeck/AmpliconSuite-pipeline.
 
-*Why does AmpliconSuite exist?* Input files for AmpliconArchitect must first be prepared and filtered in specific ways. We provide an end-to-end wrapper for jumping-off at any intermediate step including generating the prerequisite BAM alignments with BWA, CNV calls for seeding and CNV seed selection. AmpliconSuite-pipeline is available at https://github.com/jluebeck/AmpliconSuite-pipeline. Unless you are using the cloud-based in-browser GenePattern Notebook version of AA, AA must be installed locally to use AmpliconSuite-pipleline.
+Because AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used as a wrapper for AA.
 
-AmpliconSuite-pipeline greatly simplifies the process of selecting CNV seed regions to feed to AA.
-AmpliconSuite-pipeline can directly invoke AA if installed. As AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used as a wrapper for AA.
+**Singularity and Docker images containing AmpliconArchitect can be found on the [AmpliconSuite-pipeline GitHub page](https://github.com/jluebeck/AmpliconSuite-pipeline)**
 
- 
+### Installation-free ways to use AA (and AmpliconSuite):
+
+### - GenePattern Notebook
+In collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) 
+can now be used from your web browser. No tool installation required. Visit https://genepattern.ucsd.edu/ to register. 
+After registering and signing-in, search for the "AmpliconSuite" module. 
+
+### - Nextflow
+AmpliconSuite can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
+
+## Standalone AA Quickstart
 
 ### Prerequisites
 1. License for Mosek optimization tool (free for academic use):
@@ -70,14 +72,18 @@ AmpliconSuite-pipeline can directly invoke AA if installed. As AmpliconSuite-pip
 #### Usage (AA docker)
 Please first ensure that the output location `--out /path/to/generated/outputs` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
 
-`AmpliconArchitect/docker/run_aa_docker.sh --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
+`docker pull jluebeck/ampliconarchitect`
+
+`AmpliconArchitect/docker/run_aa_docker.sh --bam {input_bam} --bed {AA_CNV_SEEDS.bed} --out {prefix_of_output_files} <optional arguments>`
+
+For instructions on generating the file, `AA_CNV_SEEDS.bed`, please see the [AmpliconSuite-pipeline GitHub page](https://github.com/jluebeck/AmpliconSuite-pipeline).
 
 See installation Option 2 for local usage without docker.
 
 ## Installation
 AA can be installed in 2 ways:
 1. Docker image: This will automatically pull the latest build including necessary dependencies.
-2. Github source code.
+2. GitHub source code.
 
 ### Option 1: Docker image:
 1. Docker:
@@ -106,10 +112,10 @@ AA can be installed in 2 ways:
     * `docker pull jluebeck/ampliconarchitect`
 
 
-2. Clone script `run_aa_docker.sh` from Github:
+2. Clone script `run_aa_docker.sh` from GitHub:
     * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
-### Option 2: Install from Github source code:
+### Option 2: Install from GitHub source code:
 * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 * Set `AmpliconArchitect/src` as `$AA_SRC`:
@@ -179,8 +185,6 @@ Available data repo annotations:
 
 In the data repo files, "`indexed`" indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
-### Option 3: Other platforms for use
-AA can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
 
 ## Running AmpliconArchitect
 
@@ -206,9 +210,9 @@ AA requires 2 input files:
 ### 2) Usage
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
 
-The execution script `$AA` is provided within the Github source code and the exact path depends on the installation option used:
+The execution script `$AA` is provided within the GitHub source code and the exact path depends on the installation option used:
 1. Docker image: `AA=AmpliconArchitect/docker/run_aa_docker.sh`
-2. Github source: `AA=python2 AmpliconArchitect/src/AmpliconArchitect.py`
+2. GitHub source: `AA=python2 AmpliconArchitect/src/AmpliconArchitect.py`
 
 
 #### Outputs
