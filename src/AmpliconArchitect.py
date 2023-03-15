@@ -101,6 +101,8 @@ if args.random_seed:
     global_names.SEED = None
 
 logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
+logging.getLogger('fontTools.subset').level = logging.WARN
+
 # # output logs to stdout
 root = logging.getLogger()
 # root.setLevel(logging.DEBUG)
