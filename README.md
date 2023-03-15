@@ -7,7 +7,7 @@
 ### Recent updates:
 
 ### March 2023 update:
-Version `1.3.r5` improves handling of the mosek license test and better compatibility with the AmpliconSuite-pipeline Singularity image.
+Version `1.3.r5` Provides better compatibility with the AmpliconSuite-pipeline Singularity image and versions of Mosek installed via pip/conda.
 
 Version `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status, and better handling of the coverage stats lookup file.
 

@@ -59,10 +59,6 @@ cycle_logger = logging.getLogger('cycle')
 # suppress some specific harmless numpy warnings during AA
 np.seterr(divide='ignore', invalid='ignore', )
 TSTART = global_names.TSTART
-mosek_exit_status = mosek_solver.mosek_license_test()
-if mosek_exit_status:
-    logging.info("MOSEK not configured properly. See AA .log file")
-    sys.exit(1)
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):

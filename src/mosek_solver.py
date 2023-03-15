@@ -3,8 +3,6 @@
 # Supports all versions of MOSEK >= 8
 #
 import logging
-import os
-import subprocess
 import sys
 
 import mosek
@@ -34,30 +32,6 @@ class fusionlogger:
 
     def flush(self):
         pass
-
-
-def mosek_license_test():
-    mosek_logger.info("Testing MOSEK license")
-    src_path = os.path.dirname(os.path.realpath(__file__))
-    cmd = src_path + "/msktestlic"
-
-    t = None
-    try:
-        t = str(subprocess.check_output(cmd, shell=True).decode("utf-8"))
-
-    except Exception as e:
-        mosek_logger.warning("Could not test Mosek license status: {}".format(e))
-
-    if t is not None:
-        try:
-            t.index("MOSEK error")
-            mosek_logger.error(t)
-            return 1
-
-        except ValueError:
-            mosek_logger.info("No MOSEK errors detected in test")
-
-    return 0
 
 
 # Calls MOSEK to solve one instance of the problem
