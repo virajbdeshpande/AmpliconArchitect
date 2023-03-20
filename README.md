@@ -51,8 +51,8 @@ Because AmpliconSuite-pipeline uses our recommended best practices, and simplifi
 
 ### Installation-free ways to use AA (and AmpliconSuite):
 
-### - GenePattern Notebook
-In collaboration with the [GenePattern Notebook](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) 
+### - GenePattern Web Interface
+In collaboration with the [GenePattern](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) 
 can now be used from your web browser. No tool installation required. Visit https://genepattern.ucsd.edu/ to register. 
 After registering and signing-in, search for the "AmpliconSuite" module. 
 
