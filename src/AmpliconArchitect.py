@@ -244,9 +244,9 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         irdhops.append((ird, ilist))
         for i in ilist:
             irddict[i] = ird
-        iout = open(outName + '.' + ird.chrom + ":" + str(ird.start) + '-' + str(ird.end) + '.out', 'w')
-        iout.write(mystdout.getvalue())
-        iout.close()
+        # iout = open(outName + '.' + ird.chrom + ":" + str(ird.start) + '-' + str(ird.end) + '.out', 'w')
+        # iout.write(mystdout.getvalue())
+        # iout.close()
         sys.stdout = old_stdout
         all_ilist += ilist
         all_ilist.sort()

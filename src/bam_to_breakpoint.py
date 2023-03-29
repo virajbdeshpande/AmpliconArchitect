@@ -2083,7 +2083,7 @@ class bam_to_breakpoint():
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Optimizing graph copy number flow")
         C = self.median_coverage()[0] / 2
         print("C (haploid coverage) = ", C)
-        G = new_graph
+        # G = new_graph
         seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
         n = len(seqlist)
         l = [abs(e.v2.pos - e.v1.pos)+1 for e in seqlist]
