@@ -218,12 +218,9 @@ AA requires 2 input files:
         - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
 ### Standalone usage of AA
-`$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
+>`AA=python AmpliconArchitect/src/AmpliconArchitect.py`
 
-The execution script `$AA` is provided within the GitHub source code and the exact path depends on the installation option used:
-1. Docker image: `AA=AmpliconArchitect/docker/run_aa_docker.sh`
-2. GitHub source: `AA=python2 AmpliconArchitect/src/AmpliconArchitect.py`
-
+>`$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
 
 #### Outputs
 AA generates informative output at each step in the algorithm (details below):
