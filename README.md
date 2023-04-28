@@ -375,39 +375,39 @@ This file describes the amplicon structure predicted by AA in the form of simple
 
 ### 4. The SV view ({out}_amplicon{id}.png/pdf)
 The SV view file is a PNG/PDF file displaying the underlying sequence signatures of the amplicon. This image consists of:
-  * The set of amplicon intervals (x-axis)
-  * Window-based depth of coverage across the intervals represented as histogram (grey vertical bars)
-  * Segmentation of the intervals based on coverage and copy number estimate of these segments represented by (horizontal black lines spanning the segment where the y-position of the line represents the copy number)
-  * Discordant read pair clusters represented as arcs where color represents orienation of the reads. Red: Length discordant in expected orientation (forward-reverse), Brown: Everted read pairs (reverse-forward), Teal: Both reads map to forward strand and Magenta: Both reads map to the reverse strand. Vertical blue lines indicate connections to source vertex.
-  * Bottom panel may represent various annotations on the amplicon intervals where the default view displays oncogene annotations.
+- The set of amplicon intervals (x-axis)
+- Window-based depth of coverage across the intervals represented as histogram (grey vertical bars)
+- Segmentation of the intervals based on coverage and copy number estimate of these segments represented by (horizontal black lines spanning the segment where the y-position of the line represents the copy number)
+- Discordant read pair clusters represented as arcs where color represents orienation of the reads. Red: Length discordant in expected orientation (forward-reverse), Brown: Everted read pairs (reverse-forward), Teal: Both reads map to forward strand and Magenta: Both reads map to the reverse strand. Vertical blue lines indicate connections to source vertex.
+- Bottom panel may represent various annotations on the amplicon intervals where the default view displays oncogene annotations.
 
 The SV view file may be uploaded to web interface for Cycle view to visualize the cycles in conjunction with the SV view.
 
 
 ### 5. [Intermediate] Copy number segmentation file (`{out}_{CHROM}_{START}_{END}_cnseg.txt`)
 This files provides the segmentation of an interval based on coverage alone. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
-  * `{CHROM}`: Chromosome name
-  * `{START}`: Coordinate of the first basepair in the segment
-  * `{END}`: Coordinate of the last basepair in the segment
-  * `{CN}`: Predicted copy number of segment
-  * `{start_refined}`: Whether the start position of the segment could be determined at a fine resolution (300bp)
-  * `{end_refined}`: Whether the end position of the segment could be determined at a fine resolution (300bp)
+- `{CHROM}`: Chromosome name
+- `{START}`: Coordinate of the first basepair in the segment
+- `{END}`: Coordinate of the last basepair in the segment
+- `{CN}`: Predicted copy number of segment
+- `{start_refined}`: Whether the start position of the segment could be determined at a fine resolution (300bp)
+- `{end_refined}`: Whether the end position of the segment could be determined at a fine resolution (300bp)
 
 If the copy number segmentation is present, AA will use this file instead of calculating the interval segmentation.
 
 ### 6. [Intermediate] Unrefined edges file (`{out}_amplicon{ampliconid}_edges.txt`)
 This file provides the list of discordant edges in the amplicon. If this file is present but the refined edges file (See 7) is absent, then AA will use these edges in the amplicon reconstruction and also predict additional edges at boundaries of copy number segments (from 5) which do not have a matching discordant edge. Tab-separated fields:
-  * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
-  * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
-  * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
-  * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
+- `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
+- NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
+- HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
+- Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
 
 ### 7. [Intermediate] Refined edges file (`{out}_amplicon{ampliconid}_edges_cnseg.txt`)
 This file provides the list of discordant edges in the amplicon. If this file is present, then AA will use these edges as the final set of edges in the amplicon reconstruction. Tab-separated fields:
-  * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
-  * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
-  * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
-  * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
+- `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
+- NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
+- HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
+- Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
 
 
 ## Checkpointing and modular integration with other tools
