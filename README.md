@@ -39,82 +39,90 @@ Please check out the **detailed guide** on running AA [available here](https://g
 5. [File formats](#file-formats)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
-## Recommended: Using AA as part of AmpliconSuite-pipeline
+## Recommended way to run AA: [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
 
-We provide an end-to-end wrapper, which supports entry from any intermediate step, including generating the 
-prerequisite BAM file, CNV calls and CNV seed selection before running AA. It also wraps AA and AmpliconClassifier (AC). AmpliconSuite-pipeline is available at
+We provide an end-to-end wrapper, which supports entry from any intermediate step, so users may start with fastqs, or a bam file, and the wrapper enables generation of the 
+ CNV calls and amplicon seed regions before running AA. After invoking AA, AmpliconSuite-pipeline calls AmpliconClassifier to enable predictions of ecDNA status, and other modes of focal amplification. AmpliconSuite-pipeline is available at
 https://github.com/jluebeck/AmpliconSuite-pipeline.
 
-Because AmpliconSuite-pipeline uses our recommended best practices, and simplifies both upstream preparation and downstream interpretation of results, we highly recommend AmpliconSuite-pipeline be used as a wrapper for AA.
+*Importantly, AmpliconSuite-pipeline uses all our recommended best practices*, and simplifies both upstream preparation and downstream interpretation of results. We *strongly* recommend AmpliconSuite-pipeline be used to invoke AmpliconArchitect.
 
 **Singularity and Docker images containing AmpliconArchitect can be found on the [AmpliconSuite-pipeline GitHub page](https://github.com/jluebeck/AmpliconSuite-pipeline)**
 
 ### Installation-free ways to use AA (and AmpliconSuite):
 
 ### - GenePattern Web Interface
-In collaboration with the [GenePattern](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline (and AA) 
+In collaboration with the [GenePattern](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline 
 can now be used from your web browser. No tool installation required. Visit https://genepattern.ucsd.edu/ to register. 
 After registering and signing-in, search for the "AmpliconSuite" module. 
 
 ### - Nextflow
 AmpliconSuite can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
 
-## Standalone AA Quickstart
-
-### Prerequisites
+## Quickstart for AA setup
 1. License for Mosek optimization tool (free for academic use):
-    * `mkdir $HOME/mosek`
-    * Download license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`) and place it in `$HOME/mosek/`.
+
 2. Download relevant AA data repositories:
-    * Download from `https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`
-
-#### Usage (AA docker)
-Please first ensure that the output location `--out /path/to/generated/outputs` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
-
-`docker pull jluebeck/ampliconarchitect`
-
-`AmpliconArchitect/docker/run_aa_docker.sh --bam {input_bam} --bed {AA_CNV_SEEDS.bed} --out {prefix_of_output_files} <optional arguments>`
-
-For instructions on generating the file, `AA_CNV_SEEDS.bed`, please see the [AmpliconSuite-pipeline GitHub page](https://github.com/jluebeck/AmpliconSuite-pipeline).
-
-See installation Option 2 for local usage without docker.
+    * [Download data repos here](`https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`)
 
 ## Installation
 AA can be installed in 2 ways:
-1. Docker image: This will automatically pull the latest build including necessary dependencies.
+1. Containerized image: This will automatically pull the latest build including necessary dependencies.
 2. GitHub source code.
 
-### Option 1: Docker image:
-1. Docker:
-    * Install docker: `https://docs.docker.com/install/`
-    * Add user to the docker group:
-        * `sudo usermod -a -G docker $USER`
-        * To apply change, log out of session and log back in
+### Option 1: Containerized image:
+1. Install container software
+    * Docker option:
+      * Install Docker: https://docs.docker.com/install/
+      * Add user to the Docker group:
+          * `sudo usermod -a -G docker $USER`
+          * To apply change, log out of session and log back in
+    * Singularity option:
+      * Install Singularity: https://docs.sylabs.io/guides/3.0/user-guide/installation.html
+      * Must have Singularity version 3.6 or higher.
 2. License for Mosek optimization tool (free for academic users):
-    * See Mosek instructions in [Prerequisites](#prerequisites)
+   * `mkdir $HOME/mosek`
+   * Download license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`) and place it in `$HOME/mosek/`.
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * Download from https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/
+    * [Downloads page here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/)
 
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         mkdir data_repo && cd data_repo
         # copy or download files into data_repo directory
         wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
-        tar zxf [hg19/GRCh37/GRCh38/mm10].tar.gz
+        tar -xzf [hg19/GRCh37/GRCh38/mm10].tar.gz
         echo export AA_DATA_REPO=$PWD >> ~/.bashrc
         touch coverage.stats && chmod a+r coverage.stats
         source ~/.bashrc
         ```
-      
-#### Obtain AmpliconArchitect image and execution script:
-1. Pull docker image:
-    * `docker pull jluebeck/ampliconarchitect`
 
 
-2. Clone script `run_aa_docker.sh` from GitHub:
-    * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
+### Using the Containerized images
+First see the [Installation](#Installation) section to configure system paths and the Mosek license location. Then proceed with with the Docker or Singularity options below.
+#### Docker
+Please first ensure that the output location `-o /path/to/generated/outputs/` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
 
+>`docker pull jluebeck/prepareaa`
+ 
+>`wget https://raw.githubusercontent.com/jluebeck/AmpliconSuite-pipeline/master/docker/run_paa_docker.py`
+ 
+>`run_paa_docker.py --run_AA --run_AC --bam {input_bam} --bed {CNV_data.bed} -s {name_of_sample} -o {directory_of_output_files} -t {num_threads} <optional arguments>`
+
+#### Singularity
+>`singularity pull library://jluebeck/ampliconsuite-pipeline/ampliconsuite-pipeline`
+
+>`wget https://github.com/jluebeck/AmpliconSuite-pipeline/blob/master/singularity/run_paa_singularity.py`
+
+>`run_paa_singularity.py --run_AA --run_AC --bam {input_bam} --bed {CNV_data.bed} -s {name_of_sample} -o {directory_of_output_files} -t {num_threads} <optional arguments>`
+
+
+
+    
 ### Option 2: Install from GitHub source code:
+
+If you are installing AmpliconSuite-pipeline locally, you will need to perform the following steps to install AA.
+
 * `git clone https://github.com/jluebeck/AmpliconArchitect.git`
 
 * Set `AmpliconArchitect/src` as `$AA_SRC`:
@@ -151,7 +159,7 @@ Note that 0.15.2 is the last version of pysam which appears to support pip2 inst
 4. Configure the Mosek optimization tool:
 ```bash
 mkdir -p $HOME/mosek/
-echo Please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
+# Then please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
 ```
 5. (Optional) Arial font for matplotlib:
 
@@ -179,21 +187,24 @@ Available data repo annotations:
 * hg19
 * GRCh37
 * GRCh38 (hg38)
-* GRCh38 viral (includes oncoviral sequences)
+* GRCh38_viral (includes oncoviral sequences)
 * mm10
 
-In the data repo files, "`indexed`" indicates the BWA index is packaged as well, which is only needed if also using for alignment.
+On the data repo download page, the suffix `indexed` indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
 
-## Running AmpliconArchitect
 
-### 1) Input data
+
+
+## Running standalone AmpliconArchitect
+Standalone usage of AA requires many more manual steps than using [AmpliconSuite-pipleine](https://github.com/jluebeck/AmpliconSuite-pipeline), and does not include best practices for seed region identification.
+### Input data
 AA requires 2 input files:
 
 1. Coordinate-sorted, indexed BAM file:
     * Align reads to a reference present in the `data_repo`.
-    * Recommended depth of coverage for WGS data is 5X-10X.
-    * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample`. 
+    * Recommended depth of coverage for WGS data is 5X-10X (higher is also fine but may run a bit more slowly).
+    * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample` (default is `--downsample 10`. 
     * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
 2. BED file with seed intervals:
     * We recommend generating this using [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
@@ -203,10 +214,10 @@ AA requires 2 input files:
         - Select CNVs with copy number > 4.5x and size > 50kbp (default) and merge adjacent CNVs into a single interval using:
 
             `python2 $AA_SRC/amplified_intervals.py --bed {bed file of cnv calls} --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
-        - ***Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. AmpliconSuite-pipeline provides additional filters for karyotypic abnormalities not provided by `amplified_intervals.py` alone.
+        - **Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. AmpliconSuite-pipeline provides additional filters for karyotypic abnormalities not provided by `amplified_intervals.py` alone**.
         - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 
-### 2) Usage
+### Standalone usage of AA
 `$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
 
 The execution script `$AA` is provided within the GitHub source code and the exact path depends on the installation option used:
@@ -364,39 +375,39 @@ This file describes the amplicon structure predicted by AA in the form of simple
 
 ### 4. The SV view ({out}_amplicon{id}.png/pdf)
 The SV view file is a PNG/PDF file displaying the underlying sequence signatures of the amplicon. This image consists of:
-    * The set of amplicon intervals (x-axis)
-    * Window-based depth of coverage across the intervals represented as histogram (grey vertical bars)
-    * Segmentation of the intervals based on coverage and copy number estimate of these segments represented by (horizontal black lines spanning the segment where the y-position of the line represents the copy number)
-    * Discordant read pair clusters represented as arcs where color represents orienation of the reads. Red: Length discordant in expected orientation (forward-reverse), Brown: Everted read pairs (reverse-forward), Teal: Both reads map to forward strand and Magenta: Both reads map to the reverse strand. Vertical blue lines indicate connections to source vertex.
-    * Bottom panel may represent various annotations on the amplicon intervals where the default view displays oncogene annotations.
+  * The set of amplicon intervals (x-axis)
+  * Window-based depth of coverage across the intervals represented as histogram (grey vertical bars)
+  * Segmentation of the intervals based on coverage and copy number estimate of these segments represented by (horizontal black lines spanning the segment where the y-position of the line represents the copy number)
+  * Discordant read pair clusters represented as arcs where color represents orienation of the reads. Red: Length discordant in expected orientation (forward-reverse), Brown: Everted read pairs (reverse-forward), Teal: Both reads map to forward strand and Magenta: Both reads map to the reverse strand. Vertical blue lines indicate connections to source vertex.
+  * Bottom panel may represent various annotations on the amplicon intervals where the default view displays oncogene annotations.
 
 The SV view file may be uploaded to web interface for Cycle view to visualize the cycles in conjunction with the SV view.
 
 
 ### 5. [Intermediate] Copy number segmentation file (`{out}_{CHROM}_{START}_{END}_cnseg.txt`)
 This files provides the segmentation of an interval based on coverage alone. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
-    * `{CHROM}`: Chromosome name
-    * `{START}`: Coordinate of the first basepair in the segment
-    * `{END}`: Coordinate of the last basepair in the segment
-    * `{CN}`: Predicted copy number of segment
-    * `{start_refined}`: Whether the start position of the segment could be determined at a fine resolution (300bp)
-    * `{end_refined}`: Whether the end position of the segment could be determined at a fine resolution (300bp)
+  * `{CHROM}`: Chromosome name
+  * `{START}`: Coordinate of the first basepair in the segment
+  * `{END}`: Coordinate of the last basepair in the segment
+  * `{CN}`: Predicted copy number of segment
+  * `{start_refined}`: Whether the start position of the segment could be determined at a fine resolution (300bp)
+  * `{end_refined}`: Whether the end position of the segment could be determined at a fine resolution (300bp)
 
 If the copy number segmentation is present, AA will use this file instead of calculating the interval segmentation.
 
 ### 6. [Intermediate] Unrefined edges file (`{out}_amplicon{ampliconid}_edges.txt`)
 This file provides the list of discordant edges in the amplicon. If this file is present but the refined edges file (See 7) is absent, then AA will use these edges in the amplicon reconstruction and also predict additional edges at boundaries of copy number segments (from 5) which do not have a matching discordant edge. Tab-separated fields:
-    * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
-    * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
-    * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
-    * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
+  * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
+  * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
+  * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
+  * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
 
 ### 7. [Intermediate] Refined edges file (`{out}_amplicon{ampliconid}_edges_cnseg.txt`)
 This file provides the list of discordant edges in the amplicon. If this file is present, then AA will use these edges as the final set of edges in the amplicon reconstruction. Tab-separated fields:
-    * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
-    * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
-    * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
-    * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
+  * `{POSITION1}->{POSITION2}`: Breakpoint vertices corresponding to the discordant edge.
+  * NumberofReadPairs: Number of discordant read pairs mapping across the breakpoint edge.
+  * HomologySizeIfAvailable(<0ForInsertions): Size of homology at the breakpoint edge in terms of number of basepairs detected using the split read alignment with the largest homology. If an insertion is detected then this field is set to negative of the size of the insertion. If split reads are not found, this column is set to `None`.
+  * Homology/InsertionSequence: Sequence of the homologous sequence or insertion at the breakpoint. If split reads are not found, this column is set to `None`. If the size is `0`, then this column is empty.
 
 
 ## Checkpointing and modular integration with other tools
