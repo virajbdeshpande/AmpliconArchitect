@@ -31,6 +31,7 @@ import pysam
 import global_names
 
 sys.setrecursionlimit(10000)
+
 GAIN = 4.5
 CNSIZE_MIN = 50000
 
@@ -118,6 +119,7 @@ if args.bam != "":
             bamfile_pathname = str(cb.filename.decode())
             if ll[0] == os.path.abspath(bamfile_pathname):
                 bamfile_filesize = os.path.getsize(bamfile_pathname)
+
                 cstats = tuple(map(float, ll[1:]))
                 if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]) or any(np.isnan(cstats)):
                     cstats = None
@@ -141,6 +143,7 @@ if args.bam != "":
 
         except ZeroDivisionError:
             logging.error("zero division error", r.chrom, args.ref, float(r.info[-1]))
+
             # if float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.chrom.startswith("chr"):
             #     pre_int_list.append(r)
             #

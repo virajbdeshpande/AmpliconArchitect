@@ -2,7 +2,6 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
 ![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r5/master)
 
-
 ### Recent updates:
 
 ### March 2023 update:
@@ -16,7 +15,6 @@ will slightly change AA copy number estimates between versions (typical differen
 `1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
 Now adjusting font type and size on AA output figures can be done with much more ease.
 This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually.
-
 
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
 
@@ -86,22 +84,24 @@ AA can be installed in 2 ways:
 3. Download AA data repositories and set environment variable AA_DATA_REPO:
     * [Downloads page here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/)
 
+
     * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
         ```bash
         mkdir data_repo && cd data_repo
         # copy or download files into data_repo directory
         wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
         tar -xzf [hg19/GRCh37/GRCh38/mm10].tar.gz
+
         echo export AA_DATA_REPO=$PWD >> ~/.bashrc
         touch coverage.stats && chmod a+r coverage.stats
         source ~/.bashrc
         ```
 
-
 ### Using the Containerized images
 First see the [Installation](#Installation) section to configure system paths and the Mosek license location. Then proceed with with the Docker or Singularity options below.
 #### Docker
 Please first ensure that the output location `-o /path/to/generated/outputs/` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
+
 
 >`docker pull jluebeck/prepareaa`
  
@@ -132,6 +132,7 @@ If you are installing AmpliconSuite-pipeline locally, you will need to perform t
 ```
 
 #### Dependencies
+
 1. Python 2.6+ or 3.5+
 2. Ubuntu libraries and tools:
 ```bash
@@ -153,13 +154,13 @@ sudo python2 get-pip.py
 
 `sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib future mosek Flask` 
 
-
 Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
 
 4. Configure the Mosek optimization tool:
 ```bash
 mkdir -p $HOME/mosek/
 # Then please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
+
 ```
 5. (Optional) Arial font for matplotlib:
 
@@ -191,10 +192,6 @@ Available data repo annotations:
 * mm10
 
 On the data repo download page, the suffix `indexed` indicates the BWA index is packaged as well, which is only needed if also using for alignment.
-
-
-
-
 
 ## Running standalone AmpliconArchitect
 Standalone usage of AA requires many more manual steps than using [AmpliconSuite-pipleine](https://github.com/jluebeck/AmpliconSuite-pipeline), and does not include best practices for seed region identification.
@@ -240,6 +237,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | `--bam`         |FILE| Coordinate sorted BAM file with index mapped to provided reference genome                                                                                                                                                                                                                                                                                                                                                                                                                          | 
 | `--out`         |PATH| Prefix for output files                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | 
 | `--ref`         |STR | Values: [`hg19`, `GRCh37`, `GRCh38`, `mm10`, `<CUSTOM>`, `None`]. Pick reference annotations to use from the AA_DATA_REPO directory. BAM and BED files match these annotations. <br> - `hg19`/`GRCh38` : chr1,, chr2, .. chrM etc <br> - `GRCh37` : '1', '2', .. 'MT' etc<br> - `<CUSTOM>` : User provided annotations in AA_DATA_REPO directory. <br> - `None` : do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected. <br> |
+
 
 **NOTE1:** Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
 

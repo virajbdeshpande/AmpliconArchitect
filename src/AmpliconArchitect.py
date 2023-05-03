@@ -37,6 +37,7 @@ matplotlib.use('Agg')
 import logging
 from functools import reduce
 
+
 if sys.version_info >= (3, 0):
     from io import StringIO
 else:
@@ -92,6 +93,7 @@ parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverag
 parser.add_argument('--random_seed', dest="random_seed",
                     help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
                     action='store_true', default=False)
+
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
@@ -99,6 +101,7 @@ global_names.REF = args.ref
 global_names.TSTART = TSTART
 if args.random_seed:
     global_names.SEED = None
+
 
 logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
 logging.getLogger('fontTools.subset').level = logging.WARN
@@ -187,6 +190,7 @@ if os.path.exists(os.path.join(hg.DATA_REPO, "coverage.stats")) and not args.no_
                 cstats = None
             elif cstats[13] != args.insert_sdevs or bamfile_filesize != int(cstats[14]) or any(np.isnan(cstats)):
                 cstats = None
+
 
     coverage_stats_file.close()
 

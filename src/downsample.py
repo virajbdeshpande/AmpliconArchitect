@@ -56,7 +56,6 @@ parser.add_argument('--random_seed', dest="random_seed",
                     help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
                     action='store_true', default=False)
 
-
 args = parser.parse_args()
 
 global_names.REF = args.ref
@@ -92,6 +91,7 @@ for l in coverage_stats_file:
     bamfile_pathname = str(cb.filename.decode())
     if ll[0] == os.path.abspath(bamfile_pathname):
         bamfile_filesize = os.path.getsize(bamfile_pathname)
+
         cstats = tuple(map(float, ll[1:]))
         if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]):  # 3 is default sdevs
             cstats = None
@@ -119,6 +119,7 @@ if cstats[0] <= final:
 ratio = float(final) / float(cstats[0])
 
 print("Downsampling:", args.bam[0], "Estimated original coverage:", float(cstats[0]), "Desired final coverage:", final, "DS ratio:", ratio)
+
 downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
     downsample_dir = args.downsample_dir
@@ -134,6 +135,7 @@ if global_names.SEED is not None:
 
 for a in bamFile.fetch():
     random.seed(a.query_name + seed_shift)
+
     ru = random.uniform(0, 1)
     if ru < ratio:
         b2.write(a)

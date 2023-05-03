@@ -47,6 +47,7 @@ import ref_util as hg
 from mycolors import *
 import global_names
 
+
 # use Arial font if you have it. will fall back to default if not available.
 matplotlib.rcParams['font.family'] = 'sans-serif'
 matplotlib.rcParams['font.sans-serif'] = ['Arial']
@@ -59,6 +60,7 @@ cycle_logger = logging.getLogger('cycle')
 # suppress some specific harmless numpy warnings during AA
 np.seterr(divide='ignore', invalid='ignore', )
 TSTART = global_names.TSTART
+
 
 class breakpoint_cluster:
     def __init__(self, edge, bamfile, max_insert):
@@ -1584,6 +1586,7 @@ class bam_to_breakpoint():
                                     msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0])
                             ebest = (ebest[1], ebest[0])
                             # msve = [ebest]
+
                             # print("finesearch discordant edge found", i.chrom, str(msr[msi]), str(msr[msi + 1]), str(ebest[0]), ebest[1])
                             if (ebest[0].v1.chrom, ebest[0].v1.pos, ebest[0].v1.strand, ebest[0].v2.chrom, ebest[0].v2.pos, ebest[0].v2.strand) not in eiSet:
                                 elist.append(ebest)
@@ -1601,6 +1604,7 @@ class bam_to_breakpoint():
                 #     # print("msv end not refined", str(msr[msi]), str(msr[msi + 1]))
                 #     msve = [e for e in elist if e[0].v1.strand * (msr[msi].info['cn'] - msr[msi + 1].info['cn']) > 0 and abs(
                 #         e[0].v1.pos - msr[msi].end) < self.max_insert + ms_window_size0]
+
 
         if amplicon_name is not None:
             edge_file = open("%s_edges_cnseg.txt" % amplicon_name, 'w')
@@ -2084,6 +2088,7 @@ class bam_to_breakpoint():
         C = self.median_coverage()[0] / 2
         print("C (haploid coverage) = ", C)
         # G = new_graph
+
         seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
         n = len(seqlist)
         l = [abs(e.v2.pos - e.v1.pos)+1 for e in seqlist]
@@ -2103,6 +2108,7 @@ class bam_to_breakpoint():
         print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
 
         # set up problem size and coefficients
+
         asub = []
         aval = []
         for i in range(n):
@@ -2141,6 +2147,7 @@ class bam_to_breakpoint():
         # Solve the optimization problem
         res = mosek_solver.call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)
                 
+
         wehc = {}
         for msv_ilist in zip(all_msv, ilist):
             slist = hg.interval_list([hg.interval('\t'.join(map(str, [sq[0].v1.chrom, sq[0].v1.pos, sq[0].v2.pos, sq[1]]))) for sq in zip(seqlist, res)])
@@ -2296,6 +2303,7 @@ class bam_to_breakpoint():
 
             else:
                 wc_i = [w for w in self.window_coverage(i, 150, exact=False)]
+
 
             cx += [((i.chrom, (c[0].start + c[0].end)/2), c[1]) for c in wc_i]
             wc += wc_i
