@@ -2,8 +2,8 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
 ![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r5/master)
 
-### AmpliconArchitect is best used through [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
-Installation instructions for AmpliconArchitect are provided here, but to prepare the inputs, invoke AA and classify the outputs, please do so by using [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline). 
+### AmpliconArchitect is best used through [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
+Installation instructions for AmpliconArchitect are provided here, but to prepare the inputs, invoke AA and classify the outputs, please do so by using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline). 
 
 ### Recent updates:
 
@@ -26,7 +26,7 @@ Focal oncogene amplification and rearrangements drive tumor growth and evolution
 Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. 
 Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into cancer biology. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
-Please check out the **detailed guide** on running AA [available here](https://github.com/jluebeck/PrepareAA/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
+Please check out the **detailed guide** on running AA [available here](https://github.com/AmpliconSuite/AmpliconSuite-pipeline/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
 
 **AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. You may cite the following if using AmpliconArchitect in your work:
 
@@ -40,15 +40,15 @@ Please check out the **detailed guide** on running AA [available here](https://g
 5. [File formats](#file-formats)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
-## Recommended way to run AA: [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
+## Recommended way to run AA: [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
 
 We provide an end-to-end wrapper, which supports entry from any intermediate step, so users may start with fastqs, or a bam file, and the wrapper enables generation of the 
  CNV calls and amplicon seed regions before running AA. After invoking AA, AmpliconSuite-pipeline calls AmpliconClassifier to enable predictions of ecDNA status, and other modes of focal amplification. AmpliconSuite-pipeline is available at
-https://github.com/jluebeck/AmpliconSuite-pipeline.
+https://github.com/AmpliconSuite/AmpliconSuite-pipeline.
 
 *Importantly, AmpliconSuite-pipeline uses all our recommended best practices*, and simplifies both upstream preparation and downstream interpretation of results. We *strongly* recommend AmpliconSuite-pipeline be used to invoke AmpliconArchitect.
 
-**Singularity and Docker images containing AmpliconArchitect can be found on the [AmpliconSuite-pipeline GitHub page](https://github.com/jluebeck/AmpliconSuite-pipeline)**
+**Singularity and Docker images containing AmpliconArchitect can be found on the [AmpliconSuite-pipeline GitHub page](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)**
 
 ### Installation-free ways to use AA (and AmpliconSuite):
 
@@ -198,7 +198,7 @@ Available data repo annotations:
 On the data repo download page, the suffix `indexed` indicates the BWA index is packaged as well, which is only needed if also using for alignment.
 
 ## Running standalone AmpliconArchitect
-Standalone usage of AA requires many more manual steps than using [AmpliconSuite-pipleine](https://github.com/jluebeck/AmpliconSuite-pipeline), and does not include best practices for seed region identification.
+Standalone usage of AA requires many more manual steps than using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline), and does not include best practices for seed region identification.
 ### Input data
 AA requires 2 input files:
 
@@ -208,7 +208,7 @@ AA requires 2 input files:
     * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample` (default is `--downsample 10`. 
     * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
 2. BED file with seed intervals:
-    * We recommend generating this using [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
+    * We recommend generating this using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
     * One or more intervals per amplicon in the sample
     * AA has been tested on seed intervals generated as follows:
         - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
@@ -280,7 +280,7 @@ The software generates 4 types of output files. 1 summary file and 3 files per a
 ### 4) Interpreting the output
 A common question after running AA is, **"How do I know if these reconstructions represent ecDNA?"**
 
-To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/jluebeck/AmpliconClassifier).
+To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/AmpliconSuite/AmpliconClassifier).
 
 ### 5) Visualizing reconstruction
 The outputs can be visualized in 3 different formats:
@@ -292,7 +292,7 @@ flask run --host=0.0.0.0 --port=8000
 ```
 This format of visualization makes it easy to discern the segments in the structure in the context of their genomic position and copy number segments as well as identify multiple copies of the segments within the same structure.
 
-- CYCLEVIZ: We developed a python program called [CycleViz](https://github.com/jluebeck/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
+- CYCLEVIZ: We developed a python program called [CycleViz](https://github.com/AmpliconSuite/CycleViz) to visualize elements of AA's decompositions in Circos-style plots.  
 
 ### Instructions for web interface
 - Choose and upload a cycles files generated by AA.
@@ -364,7 +364,7 @@ This file describes the amplicon structure predicted by AA in the form of simple
     * `{CHROM}`: Chromosome name
     * `{START}`: Coordinate of the first basepair
     * `{END}`: Coordinate of the last basepair
-3. Cycles section: List of predicted cycles. Semi-colon separated fields:
+3. Cycles section: List of predicted cycles. Semicolon separated fields:
     * `Cycle={CycleID}`: ID of the cycle, largest copy numbers first
     * `Copy_count={CopyCount}`: Copy count of the cycle
     * `Segments={Segment1}{Strand1},{Segment2}{Strand2},...`: List of segments and their orientation in the structure. The last segment loops back to connect to the first segment.
