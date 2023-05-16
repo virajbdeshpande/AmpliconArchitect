@@ -2,6 +2,9 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
 ![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r5/master)
 
+### AmpliconArchitect is best used through [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline)
+Installation instructions for AmpliconArchitect are provided here, but to prepare the inputs, invoke AA and classify the outputs, please do so by using [AmpliconSuite-pipeline](https://github.com/jluebeck/AmpliconSuite-pipeline). 
+
 ### Recent updates:
 
 ### March 2023 update:
@@ -160,8 +163,9 @@ Note that 0.15.2 is the last version of pysam which appears to support pip2 inst
 ```bash
 mkdir -p $HOME/mosek/
 # Then please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
-
 ```
+If you happen to be using the commerical version of the Mosek license (this is uncommon as Mosek is free for academic use), you will need the version which supports both PTON and PTS functions. 
+
 5. (Optional) Arial font for matplotlib:
 
 To get Microsoft fonts on Ubuntu:
