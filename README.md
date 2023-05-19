@@ -277,7 +277,7 @@ The software generates 4 types of output files. 1 summary file and 3 files per a
 | `{out}_amplicon{id}_cycle.txt` | A text file for each amplicon listing the simple cycles and their copy counts.|
 | `{out}_amplicon{id}.png/pdf` | A PNG/PDF image file displaying the SV view of AA.|
 
-### 4) Interpreting the output
+### 4) Interpreting the outputs
 A common question after running AA is, **"How do I know if these reconstructions represent ecDNA?"**
 
 To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/AmpliconSuite/AmpliconClassifier).
@@ -285,7 +285,7 @@ To aid in answering that question we have separately developed amplicon classifi
 ### 5) Visualizing reconstruction
 The outputs can be visualized in 3 different formats:
 - SVVIEW: This corresponds to the output file `{out}_amplicon{id}.png/pdf` and roughly shows, the discordant edges, copy number segments and genomic coverage.
-- CYCLEVIEW (deprecated): This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
+- CYCLEVIEW (DEPRECATED): This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
 ```bash
 export FLASK_APP=$AA_SRC/cycle_visualization/web_app.py
 flask run --host=0.0.0.0 --port=8000
@@ -371,6 +371,9 @@ This file describes the amplicon structure predicted by AA in the form of simple
 
 
 **NOTE:** Segment ID `0` is reserved for connections vertex. A cycle may contain segment ID either 0 or 2 times. A cycle containing the segment 0 indicates a linear contig where the end-points are connected either to undetermined positions or to positions outside the amplicon interval set.
+
+#### Interpreting the AA cycles files:
+Except in structurally simple cases, the decompositions reported by AA in the cycles file may represent computational substructures of a larger complete ecDNA of unknown structure. Because the signatures of ecDNA are still present in these substructures, for predictions on which entries are ecDNA-like, and for the predicted genome intervals captured on ecDNA please use [AmpliconClassifier](https://github.com/AmpliconSuite/AmpliconClassifier) (AC) on your AA outputs to predict ecDNA status. Annotated versions of these cycles files indicating which cycles appear ecDNA-like, bed files and additional summary tables are directly produced by AC, simplifying interpretation. Most importantly however, individual AA cycles should not be interpreted as complete ecDNA reconstructions without first ruling out that these are substructures of the amplified regions.
 
 ### 4. The SV view ({out}_amplicon{id}.png/pdf)
 The SV view file is a PNG/PDF file displaying the underlying sequence signatures of the amplicon. This image consists of:
