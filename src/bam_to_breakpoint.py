@@ -350,7 +350,7 @@ class bam_to_breakpoint():
             wc_ws_median = np.median(wc_ws)
             wc_ws_filter = [c for c in wc_ws if c < 5 * wc_ws_median and c > 0]
             if len(wc_ws_filter) == 0:
-                print(len(wc_ws_filter), len(wc_ws), len([c for c in wc_ws if c > 0]), wc_ws_median)
+                # print(len(wc_ws_filter), len(wc_ws), len([c for c in wc_ws if c > 0]), wc_ws_median)
                 wc_median.append(0)
                 wc_avg.append(0)
                 wc_std.append(0)
