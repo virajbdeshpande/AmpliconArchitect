@@ -23,21 +23,21 @@ This update also adds improvements to cached coverage stats lookup and more cont
 
 ## Introduction
 Focal oncogene amplification and rearrangements drive tumor growth and evolution in multiple cancer types. Proposed mechanisms for focal amplification include extrachromosomal DNA (ecDNA) formation, breakage-fusion-bridge (BFB) mechanism, tandem duplications, chromothripsis and others.
-Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor progression. 
+Focally amplified regions are often hotspots for genomic rearrangements. As a result, the focally amplified region may undergo rapid copy number changes and the structure of the focally amplified region may evolve over time contributing to tumor evolution. 
 Furthermore, ecDNA elements may reintegrate back into the genome to form HSRs. The inter-cell heterogeneity in copy number of ecDNA as well as the interchangeability between ecDNA and HSR may allow the tumor to adapt to changing environment, e.g. targetted drug application. As a result, understanding the architecture of the focal amplifications is important to gain insights into cancer biology. AmpliconArchitect (AA) is a tool which can reconstruct the structure of focally amplified regions in a cancer sample using whole genome sequence short paired-end data.
 
 Please check out the **detailed guide** on running AA [available here](https://github.com/AmpliconSuite/AmpliconSuite-pipeline/blob/master/GUIDE.md) to learn about best practices and see some FAQs.
 
-**AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following manuscript. You may cite the following if using AmpliconArchitect in your work:
+**AmpliconArchitect was originally developed by Viraj Deshpande**, and is maintained by Jens Luebeck, Viraj Deshpande, and others in Vineet Bafna's lab. A full description of the method can be found in the following publication:
 
 *Deshpande, V. et al., Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* PMID: 30674876. [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
 
 ## Table of contents:
-1. [AmpliconSuite-pipeline](#Recommended:-Using-AA-as-part-of-AmpliconSuite-pipeline)
+1. [AmpliconSuite-pipeline](#recommended-way-to-run-aa:-ampliconsuite-pipeline)
 2. [Installation](#installation)
 3. [Usage](#running-ampliconarchitect)
-4. [The AA Algorithm](#the-aa-algorithm)
-5. [File formats](#file-formats)
+4. [AA outputs and arguments](#ampliconarchitect-outputs-and-arguments)
+5. [The AA Algorithm](#the-aa-algorithm)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
 ## Recommended way to run AA: [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
@@ -50,7 +50,7 @@ https://github.com/AmpliconSuite/AmpliconSuite-pipeline.
 
 **Singularity and Docker images containing AmpliconArchitect can be found on the [AmpliconSuite-pipeline GitHub page](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)**
 
-### Installation-free ways to use AA (and AmpliconSuite):
+### Installation-free ways to use AA (via AmpliconSuite-pipeline):
 
 ### - GenePattern Web Interface
 In collaboration with the [GenePattern](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline 
@@ -60,170 +60,57 @@ After registering and signing-in, search for the "AmpliconSuite" module.
 ### - Nextflow
 AmpliconSuite can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
 
-## Quickstart for AA setup
-1. License for Mosek optimization tool (free for academic use):
-
-2. Download relevant AA data repositories:
-    * [Download data repos here](`https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/`)
-
 ## Installation
-AA can be installed in 2 ways:
-1. Containerized image: This will automatically pull the latest build including necessary dependencies.
-2. GitHub source code.
+AA can be installed in three ways:
+1. Conda installation of AmpliconSuite-pipeline (which includes AA and all recommended modules). 
+2. Obtain a containerized image of AmpliconSuite-pipeline (Docker or Singularity).
+3. Manual installation from GitHub source code and manual management of dependencies.
 
-### Option 1: Containerized image:
-1. Install container software
-    * Docker option:
-      * Install Docker: https://docs.docker.com/install/
-      * Add user to the Docker group:
-          * `sudo usermod -a -G docker $USER`
-          * To apply change, log out of session and log back in
-    * Singularity option:
-      * Install Singularity: https://docs.sylabs.io/guides/3.0/user-guide/installation.html
-      * Must have Singularity version 3.6 or higher.
-2. License for Mosek optimization tool (free for academic users):
-   * `mkdir $HOME/mosek`
-   * Download license file `mosek.lic` (`https://www.mosek.com/products/academic-licenses/` or `https://www.mosek.com/try/`) and place it in `$HOME/mosek/`.
-3. Download AA data repositories and set environment variable AA_DATA_REPO:
-    * [Downloads page here](https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/)
+### Option 1: Conda
+**[Follow the instructions here.](https://github.com/AmpliconSuite/AmpliconSuite-pipeline#option-b-install-with-conda)**
 
+### Option 2: Containerized images
+**[Follow the instructions here.](https://github.com/AmpliconSuite/AmpliconSuite-pipeline#option-d-singularity--docker-images)**
 
-    * Set enviroment variable AA_DATA_REPO to point to the data_repo directory:
-        ```bash
-        mkdir data_repo && cd data_repo
-        # copy or download files into data_repo directory
-        wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
-        tar -xzf [hg19/GRCh37/GRCh38/mm10].tar.gz
+### Option 3: Standalone installation
 
-        echo export AA_DATA_REPO=$PWD >> ~/.bashrc
-        touch coverage.stats && chmod a+r coverage.stats
-        source ~/.bashrc
-        ```
+AmpliconSuite-pipeline (including AmpliconArchitect and AmpliconClassifier modules) can be installed manually following the instructions [here](https://github.com/AmpliconSuite/AmpliconSuite-pipeline#option-c-standalone-installation-using-the-installer-script).
 
-### Using the Containerized images
-First see the [Installation](#Installation) section to configure system paths and the Mosek license location. Then proceed with with the Docker or Singularity options below.
-#### Docker
-Please first ensure that the output location `-o /path/to/generated/outputs/` exists and is globally read-writable (`chmod a+rw`) as it will be mounted in the docker image. Also ensure that the `--bam` and `--bed` file locations are globally readable.
-
-
->`docker pull jluebeck/prepareaa`
- 
->`wget https://raw.githubusercontent.com/jluebeck/AmpliconSuite-pipeline/master/docker/run_paa_docker.py`
- 
->`run_paa_docker.py --run_AA --run_AC --bam {input_bam} --bed {CNV_data.bed} -s {name_of_sample} -o {directory_of_output_files} -t {num_threads} <optional arguments>`
-
-#### Singularity
->`singularity pull library://jluebeck/ampliconsuite-pipeline/ampliconsuite-pipeline`
-
->`wget https://github.com/jluebeck/AmpliconSuite-pipeline/blob/master/singularity/run_paa_singularity.py`
-
->`run_paa_singularity.py --run_AA --run_AC --bam {input_bam} --bed {CNV_data.bed} -s {name_of_sample} -o {directory_of_output_files} -t {num_threads} <optional arguments>`
-
-
-
+AmpliconArchitect can be installed as a standalone module using the instructions [here](docs/standalone_usage.md). Note that this is not recommended, as it removes AA from the modules that prepare and filter the input bed file.
+Failure to properly filter inputs can lead to extreme runtimes and false-positive calls.
     
-### Option 2: Install from GitHub source code:
 
-If you are installing AmpliconSuite-pipeline locally, you will need to perform the following steps to install AA.
+### Setting up the AA data repo
+**This is required regardless of the installation option selected above**
 
-* `git clone https://github.com/jluebeck/AmpliconArchitect.git`
-
-* Set `AmpliconArchitect/src` as `$AA_SRC`:
-```bash
-    cd AmpliconArchitect
-    echo export AA_SRC=$PWD/src >> ~/.bashrc
-```
-
-#### Dependencies
-
-1. Python 2.6+ or 3.5+
-2. Ubuntu libraries and tools:
-```bash
-sudo apt-get install software-properties-common -y
-sudo add-apt-repository universe -y
-sudo apt-get update && sudo apt-get install -y
-sudo apt-get install build-essential python-dev gfortran zlib1g-dev samtools wget -y
-
-# Last three steps only required if using python2
-sudo apt-get install python2
-wget https://bootstrap.pypa.io/pip/2.7/get-pip.py
-sudo python2 get-pip.py
-```
-3. Python packages. Note that [pysam](https://github.com/pysam-developers/pysam) verion 0.9.0  or higher is required. Flask is optional.
-
-`sudo pip3 install pysam Cython numpy scipy matplotlib future mosek Flask`
-
- **... or for python 2:**
-
-`sudo pip2 install pysam==0.15.2 Cython numpy scipy matplotlib future mosek Flask` 
-
-Note that 0.15.2 is the last version of pysam which appears to support pip2 installation, however AA itself supports the more recent versions.
-
-4. Configure the Mosek optimization tool:
-```bash
-mkdir -p $HOME/mosek/
-# Then please obtain license from https://www.mosek.com/products/academic-licenses/ or https://www.mosek.com/try/ and place in $HOME/mosek/
-```
-If you happen to be using the commerical version of the Mosek license (this is uncommon as Mosek is free for academic use), you will need the version which supports both PTON and PTS functions. 
-
-5. (Optional) Arial font for matplotlib:
-
-To get Microsoft fonts on Ubuntu:
-```
-sudo apt-get install fontconfig ttf-mscorefonts-installer
-sudo fc-cache -f
-```
-
-#### Data repository
-Set annotations directory and environment variable AA_DATA_REPO:
+1. To set annotations directory and environment variable `AA_DATA_REPO`:
 ```bash
 mkdir -p data_repo
 echo export AA_DATA_REPO=$PWD/data_repo >> ~/.bashrc
 cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
-Download and uncompress AA data repo matching the version of the reference genome used to generate the input BAM file in the $AA_DATA_REPO directory. You may have multiple annotations in the same directory, where the name of the subdirectory matches the version of the reference indicated by `--ref` argument to AA. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect/.
+2. Download and uncompress AA data repo files matching the reference genome(s) needed. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect.
 ```bash
 cd $AA_DATA_REPO
 wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
-tar xzvf [hg19/GRCh37/GRCh38/mm10].tar.gz
+tar -xzf [hg19/GRCh37/GRCh38/mm10].tar.gz
 ```
 Available data repo annotations: 
 * hg19
 * GRCh37
 * GRCh38 (hg38)
 * GRCh38_viral (includes oncoviral sequences)
-* mm10
+* mm10 (GRCm38)
 
-On the data repo download page, the suffix `indexed` indicates the BWA index is packaged as well, which is only needed if also using for alignment.
+On the data repo download page, the suffix `indexed` indicates the BWA index is packaged as well, which is only needed if also using the packaged fasta for alignment.
 
-## Running standalone AmpliconArchitect
-Standalone usage of AA requires many more manual steps than using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline), and does not include best practices for seed region identification.
-### Input data
-AA requires 2 input files:
+## Running AmpliconArchitect
+**[Please see the example commands here.](https://github.com/AmpliconSuite/AmpliconSuite-pipeline#running-ampliconsuite-pipeline)**
 
-1. Coordinate-sorted, indexed BAM file:
-    * Align reads to a reference present in the `data_repo`.
-    * Recommended depth of coverage for WGS data is 5X-10X (higher is also fine but may run a bit more slowly).
-    * Bamfile may be downsampled using `$AA_SRC/downsample.py` or when running AA with the option `--downsample` (default is `--downsample 10`. 
-    * If sample has multiple reads groups with very different read lengths and fragment size distributions, then we recommend downsampling the bam file be selecting the read groups which have similar read lengths and fragment size distribution.
-2. BED file with seed intervals:
-    * We recommend generating this using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
-    * One or more intervals per amplicon in the sample
-    * AA has been tested on seed intervals generated as follows:
-        - CNVs from CNV caller ReadDepth (with parameter file `$AA_SRC/src/read_depth_params`), Canvas and CNVkit
-        - Select CNVs with copy number > 4.5x and size > 50kbp (default) and merge adjacent CNVs into a single interval using:
+## AmpliconArchitect outputs and arguments
 
-            `python2 $AA_SRC/amplified_intervals.py --bed {bed file of cnv calls} --out {outFileNamePrefix} --bam {BamFileName} --ref {ref}`
-        - **Note that this preprocessing step is critical to AA as it removes low-mappability and low-complexity regions. AmpliconSuite-pipeline provides additional filters for karyotypic abnormalities not provided by `amplified_intervals.py` alone**.
-        - Optional argument `--ref` should match the name of the folder in `data_repo` which corresponds to the version of human reference genome used in the BAM file.
-
-### Standalone usage of AA
->`AA=python AmpliconArchitect/src/AmpliconArchitect.py`
-
->`$AA --bam {input_bam} --bed {bed file} --out {prefix_of_output_files} <optional arguments>`
-
-#### Outputs
+### Outputs
 AA generates informative output at each step in the algorithm (details below):
 1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
 2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
@@ -233,7 +120,7 @@ AA generates informative output at each step in the algorithm (details below):
 
 The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
 
-#### Required Arguments
+### Required Arguments
 
 | Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ---- |----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -249,7 +136,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 
 **NOTE3:** The current docker script cannot accept paths with special characters including spaces. For paths with special characters, please install AA from the github source.
 
-#### Optional Arguments
+### Optional Arguments
 
 | Argument | Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ---------- | ---- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -267,7 +154,7 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | `--no_cstats`   |FLAG| Values: `--no_cstats`  Do not re-use coverage statistics from `$AA_DATA_REPO/coverage.stats` file. Set this if trying multiple different values of `--insert_sdevs` or `--pair_support_min`. (default not set)                                                                                                                                                                                                                                                                                                                                                                                             |
 
 
-### 3) Output description
+### Output description
 The software generates 4 types of output files. 1 summary file and 3 files per amplicon:
 
 | File name | Description |
@@ -277,12 +164,12 @@ The software generates 4 types of output files. 1 summary file and 3 files per a
 | `{out}_amplicon{id}_cycle.txt` | A text file for each amplicon listing the simple cycles and their copy counts.|
 | `{out}_amplicon{id}.png/pdf` | A PNG/PDF image file displaying the SV view of AA.|
 
-### 4) Interpreting the outputs
+### Interpreting the outputs
 A common question after running AA is, **"How do I know if these reconstructions represent ecDNA?"**
 
 To aid in answering that question we have separately developed amplicon classification methods which can be run on AA output to predict the type(s) of focal amplification present. Check out [AmpliconClassifier](https://github.com/AmpliconSuite/AmpliconClassifier).
 
-### 5) Visualizing reconstruction
+### Visualizing reconstruction
 The outputs can be visualized in 3 different formats:
 - SVVIEW: This corresponds to the output file `{out}_amplicon{id}.png/pdf` and roughly shows, the discordant edges, copy number segments and genomic coverage.
 - CYCLEVIEW (DEPRECATED): This is an interactive format to visualize the structure of the amplicon described by the file `{out}_amplicon{id}_cycle.txt`. The file {out}_amplicon{id}_cycle.txt and optionally {out}_amplicon{id}.png may be uploaded to `genomequery.ucsd.edu:8800` to visualize and interactively modify the cycle. Alternatively, the user may run the visualization tool locally on port 8000 using the following commands:
