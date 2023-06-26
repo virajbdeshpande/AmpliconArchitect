@@ -33,7 +33,7 @@ Please check out the **detailed guide** on running AA [available here](https://g
 *Deshpande, V. et al., Exploring the landscape of focal amplifications in cancer using AmpliconArchitect. Nat. Commun. 10, 392 (2019).* PMID: 30674876. [(Article)](https://www.nature.com/articles/s41467-018-08200-y)
 
 ## Table of contents:
-1. [AmpliconSuite-pipeline](#recommended-way-to-run-aa:-ampliconsuite-pipeline)
+1. [AmpliconSuite-pipeline](#recommended-way-to-run-aa-ampliconsuite-pipeline)
 2. [Installation](#installation)
 3. [Usage](#running-ampliconarchitect)
 4. [AA outputs and arguments](#ampliconarchitect-outputs-and-arguments)
