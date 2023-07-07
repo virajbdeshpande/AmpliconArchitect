@@ -1,5 +1,6 @@
 import logging
 import re
+import sys
 
 from breakpoint_graph import *
 
@@ -53,17 +54,19 @@ def vcf_var_to_bp_pair(chrom, pos, ref, alt):
 # determine the number of read pairs supporting an SV call
 # this does not cound split-reads (single-end), as that is not what AA uses.
 def get_sv_read_pair_support_from_vcf(fd, header_fields):
-    pass
     # check PE and SR (delly, lumpy)
+    info_dict = fd['INFO'].rsplit(";")
 
     # check RP or REF (gridss)
 
     # check format field for PR/SR (manta)
 
+    return 0
+
 
 # reads a .vcf (or .vcf.gz) and converts it to a list of dictionaries (keys are header values)
 # returns the dictionary and a list of the header fields
-def read_vcf(vcf_file):
+def read_vcf(vcf_file, filter_by_pass=True):
     dlist = []
     if vcf_file.endswith('.gz'):
         import gzip
@@ -79,15 +82,22 @@ def read_vcf(vcf_file):
 
             elif not line.startswith("#"):
                 fields = line.rstrip().rsplit()
-                # TODO: check that it's a single-sample VCF
                 fd = dict(zip(fields, header_fields))
-                dlist.append(fd)
+                # check that it's a single-sample VCF which should have 9 header field names and 1 sample name
+                # in the header.
+                if "FORMAT" in fd and len(header_fields) > 10:
+                    logging.error("VCF appears to contain multiple samples or non-standard fields. Please provide a"
+                                  " single-sample VCF with appropriate formatting\n")
+                    sys.exit(1)
+
+                if (not filter_by_pass) or (filter_by_pass and fd['FILTER'] == "PASS"):
+                    dlist.append(fd)
 
     return dlist, header_fields
 
 
-def sv_vcf_to_bplist(vcf_file):
-    dlist, hf = read_vcf(vcf_file)
+def sv_vcf_to_bplist(vcf_file, filter_by_pass=True):
+    dlist, hf = read_vcf(vcf_file, filter_by_pass)
     vcf_dnlist = []
     seen_bp_set = set()
     for fd in dlist:
@@ -96,19 +106,8 @@ def sv_vcf_to_bplist(vcf_file):
             if bp_pair not in seen_bp_set:
                 seen_bp_set.add(bp_pair)
                 seen_bp_set.add(bp_pair[::-1])
-                # get supports
                 support = get_sv_read_pair_support_from_vcf(fd, hf)
                 bref = breakpoint_edge(bp_pair[0], bp_pair[1], hom_seq=hom_seq, hom=len(hom_seq))
-
-
-
-    # bp1 and bp2 are breakpoint vertices
-    #                     brec_refine = self.refine_discordant_edge(breakpoint_edge(bp1c, bp2c))
-    #                     brec = brec_refine[0]
-    #
-    #                         if self.edge_passes_filters(vl, brec):
-    #                             dnlist0.append((brec, len([(v[1], v[0]) for v in vl])))
-
-    # init_dnlist =
+                vcf_dnlist.append((bref, support))
 
     return vcf_dnlist
