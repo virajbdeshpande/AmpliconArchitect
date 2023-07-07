@@ -19,8 +19,7 @@
 
 
 
-#Author: Viraj Deshpande
-#Contact: virajbdeshpande@gmail.com
+# Author: Viraj Deshpande, virajbdeshpande@gmail.com
 # Maintained by Jens Luebeck, jluebeck@ucsd.edu
 
 
@@ -45,7 +44,7 @@ else:
 
 import global_names
 
-__version__ = "1.3.r5"
+__version__ = "1.3.r6"
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -58,10 +57,10 @@ parser.add_argument('--bam', dest='bam',
 parser.add_argument('-o', '--out', dest='outName',
                     help="Prefix for output files", metavar='FILE',
                     action='store', type=str, nargs=1, required=True)
-parser.add_argument('--runmode', dest='runmode',
+parser.add_argument('--runmode', dest='runmode', choices=['FULL', 'BPGRAPH', 'CYCLES', 'SVVIEW'],
                     help="Values: [FULL/BPGRAPH/CYCLES/SVVIEW]. This option determines which stages of AA will be run. FULL: Run the full reconstruction including breakpoint graph, cycles as well as SV visualization. BPGRAPH: Only reconstruct the breakpoint graph and estimate copy counts, but do not reconstruct the amplicon cycles. CYCLES: Only reconstruct the breakpoint graph and cycles, but do not create the output for SV visualization. SVVIEW: Only create the SV visualization, but do not reconstruct the breakpoint graph or cycles", metavar='STR',
                     action='store', type=str, default='FULL')
-parser.add_argument('--extendmode', dest='extendmode',
+parser.add_argument('--extendmode', dest='extendmode', choices=['EXPLORE', 'CLUSTERED', 'UNCLUSTERED', 'VIRAL'],
                     help="Values: [EXPLORE/CLUSTERED/UNCLUSTERED/VIRAL]. This determines how the input intervals in bed file are treated. EXPLORE : Search for all connected intervals in genome that may be connected to input intervals. CLUSTERED : Input intervals are treated as part of a single connected amplicon and no new connected intervals are added. UNCLUSTERED : Each input interval is treated as a distinct single interval amplicon and no new intervals are added.", metavar='STR',
                     action='store', type=str, default='EXPLORE')
 parser.add_argument('--sensitivems', dest='sensitivems',
@@ -82,6 +81,8 @@ parser.add_argument('--cbam', dest='cbam',
 parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
+parser.add_argument('--sv_vcf', help='Provide a VCF file of externally-called SVs to augment SVs identified by AA internally.',
+                    metavar='FILE', action='store', type=str)
 parser.add_argument('--insert_sdevs', dest='insert_sdevs',
                     help="Number of standard deviations around the insert size. May need to increase for sequencing runs with high variance after insert size selection step. (default 3.0)", metavar='FLOAT',
                     action='store', type=float, default=3)
@@ -93,7 +94,12 @@ parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverag
 parser.add_argument('--random_seed', dest="random_seed",
                     help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
                     action='store_true', default=False)
-
+parser.add_argument('--max_seed_len', dest="max_seed_len", help="Maximum length (in bp) of seed regions to allow AA to"
+                    " take as input. Will print an error if in excess. This argument helps ensure users are giving seed"
+                    " regions to AA, not whole-genome CNV calls to AA.", type=int, default=500000000)
+parser.add_argument('--reuse_intermediate_files', dest="reuse_intermediate_files", help="Reuse and do not delete intermediate files of same name from previous runs in this directory of the same name."
+                    " Reusing intermediate files can cause crashes if the bam or bed inputs have changed. Set this flag"
+                    " if providing own _edges.txt or _cnseg.txt files.", action='store_true')
 parser.add_argument("-v", "--version", action='version', version='AmpliconArchitect version {version} \n'.format(version=__version__))
 
 args = parser.parse_args()
@@ -102,8 +108,8 @@ global_names.TSTART = TSTART
 if args.random_seed:
     global_names.SEED = None
 
-
-logging.basicConfig(filename=args.outName[0] + '.log',level=logging.DEBUG)
+outName = args.outName[0]
+logging.basicConfig(filename=outName + '.log',level=logging.DEBUG)
 logging.getLogger('fontTools.subset').level = logging.WARN
 
 # # output logs to stdout
@@ -116,7 +122,7 @@ ch.setFormatter(formatter)
 root.addHandler(ch)
 summary_logger = logging.getLogger('summary')
 summary_logger.propagate = False
-summary_logger.addHandler(logging.FileHandler(args.outName[0] + '_summary.txt', 'w'))
+summary_logger.addHandler(logging.FileHandler(outName + '_summary.txt', 'w'))
 graph_logger = logging.getLogger('graph')
 graph_logger.propagate = False
 cycle_logger = logging.getLogger('cycle')
@@ -136,7 +142,7 @@ for arg in sys.argv:
 
 logging.info(commandstring)
 
-logging.info("AmpliconArchitect version " + __version__ + "\n")
+logging.info("AmpliconArchitect version " + __version__)
 logging.info("Python version " + sys.version + "\n")
 rdAlts = args.rdAlts
 if not rdAlts.endswith("_AA_CNV_SEEDS.bed"):
@@ -149,7 +155,6 @@ if os.path.splitext(args.bam)[-1] == '.cram':
     bamFile = pysam.Samfile(args.bam, 'rc')
 else:
     bamFile = pysam.Samfile(args.bam, 'rb')
-outName = args.outName[0]
 cbam = None
 if args.cbam is not None:
     if os.path.splitext(args.cbam)[-1] == '.cram':
@@ -166,13 +171,38 @@ if DATA_REPO == '.' or DATA_REPO == '':
     logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "AA_DATA_REPO not set or empy. Setting to working directory")
     DATA_REPO = '.'
 
+# check if there are files from previous runs of the same name in the output directory. If so, print a warning.
+abs_out_dir = os.path.abspath(os.path.dirname(outName))
+curr_files = os.listdir(abs_out_dir)
+bname = os.path.basename(outName)
+holdovers = [abs_out_dir + "/" + f for f in curr_files if f.startswith(bname + "_") and (f.endswith("_edges.txt") or f.endswith("_cnseg.txt"))]
+if holdovers and not args.reuse_intermediate_files and not args.runmode == "SVVIEW":
+    logging.warning("#TIME " + '%.3f\t'%(time() - TSTART) + "Intermediate files from a previous run of same sample name"
+                    " in same output directory were detected. These will be removed unless '--reuse_intermediate_files'"
+                    " was set.\n")
+    for x in holdovers:
+        os.remove(x)
 
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Loading libraries and reference annotations for: " + args.ref)
 import ref_util as hg
 import bam_to_breakpoint as b2b
+import external_data_handler as exdh
 
 logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Initiating bam_to_breakpoint object for: " + args.bam)
 rdList0 = hg.interval_list(rdAlts, 'bed', exclude_info_string=True)
+
+# check the size of the seed intervals to ensure it is within what AA can analyze.
+sumlen = sum([abs(r.end - r.start) for r in rdList0])
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Total length of seed regions: " + str(sumlen) + "bp")
+if sumlen > args.max_seed_len:
+    logging.error("The total length of focal amp seed regions was in excess of maximum default length allowed by AA.\n"
+                  "Please ensure that the file specified by --bed is a valid AA_CNV_SEEDS.bed file, NOT whole genome CNV"
+                  " calls.\n For more information on producing seed regions for AA, please see AmpliconSuite-pipeline.\n"
+                  "https://github.com/jluebeck/AmpliconSuite-pipeline\n\n"
+                  "To bypass this error message (not recommended!), set a different value for --max_seed_len (default "
+                  "500000000).\n")
+    sys.exit(1)
+
 rdList = hg.interval_list([r for r in rdList0])
 cb = bamFile
 if cbam is not None:
@@ -206,24 +236,20 @@ else:
     logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "cstats not found, generating coverage statistics... ")
 
 
-coverage_windows=None
+coverage_windows = None
 if cbed is not None:
-    coverage_windows=hg.interval_list(cbed, 'bed')
+    coverage_windows = hg.interval_list(cbed, 'bed')
     coverage_windows.sort()
 if cstats is None and cbam is not None:
     cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = cbam2b.basic_stats
+
+if args.sv_vcf:
+    ext_dnlist = exdh.sv_vcf_to_bplist(args.sv_vcf)
+
 bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min, coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample, sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART)
 
-
-
 segments = []
-# segments=hg.interval_list(rdAlts.replace('.bed', '_segments.bed'), 'bed')
-
-# bandsfile="karyotype.HK359.EGFR.txt"
-# segments = [(l[2], hg.interval(l[1], int(l[4]), int(l[5])).intersection(i), l[6]) for l in [ll.strip().split() for ll in open(bandsfile) if 'band' in ll and ll.strip().split()[1][:3] == 'chr'] if hg.interval(l[1], int(l[4]), int(l[5])).intersects(i)]
-# segments = [('', hg.interval(l[1], int(l[4]), int(l[5])), l[6]) for l in [ll.strip().split() for ll in open(bandsfile) if 'band' in ll and ll.strip().split()[1][:3] == 'chr']]
-
 
 if args.extendmode == 'VIRAL':
     logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Finding integration sites: " + str(rdList[0]))
