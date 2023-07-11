@@ -54,14 +54,30 @@ def vcf_var_to_bp_pair(chrom, pos, ref, alt):
 # determine the number of read pairs supporting an SV call
 # this does not cound split-reads (single-end), as that is not what AA uses.
 def get_sv_read_pair_support_from_vcf(fd, header_fields):
-    # check PE and SR (delly, lumpy)
-    info_dict = fd['INFO'].rsplit(";")
+    ilist = fd['INFO'].rsplit(";")
+    info_dict = {ilist[i]: ilist[i + 1] for i in range(0, len(ilist), 2)}
+    pr_support = None
+    # check PE and SR (delly, lumpy) - SR is single-end version - not checking for now
+    if 'PE' in info_dict:
+        pr_support = int(info_dict['PE'])
 
-    # check RP or REF (gridss)
+    # check RP or REF (gridss) - REF is the single-end version - not checking for now
+    elif 'RP' in info_dict:
+        pr_support = int(info_dict['RP'])
 
-    # check format field for PR/SR (manta)
+    elif 'FORMAT' in header_fields:
+        sname = header_fields[-1]
+        slist = fd[sname].rsplit(";")
+        format_dict = {slist[i]: slist[i + 1] for i in range(0, len(slist), 2)}
+        # check format field for PR/SR (manta)
+        if 'PR' in format_dict:
+            pr_support = int(format_dict['PR'])
 
-    return 0
+    if pr_support is None:
+        logging.warning("Could not find paired-end read support count for SV ID: " + fd['ID'])
+        pr_support = 0
+
+    return pr_support
 
 
 # reads a .vcf (or .vcf.gz) and converts it to a list of dictionaries (keys are header values)

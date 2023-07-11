@@ -69,9 +69,8 @@ class breakpoint_cluster:
 
 class bam_to_breakpoint():
     def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300, num_sdevs=3,
-        window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1,
-        secondary_index=None, coverage_stats=None, coverage_windows=None,
-        sensitivems=False, span_coverage=True, tstart=0):
+        window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1, secondary_index=None,
+        coverage_stats=None, coverage_windows=None, sensitivems=False, span_coverage=True, tstart=0, ext_dnlist=[]):
         self.bamfile = bamfile
         self.sample_name = sample_name
         self.window_size = window_size
@@ -96,6 +95,7 @@ class bam_to_breakpoint():
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
         self.tstart = tstart if tstart != 0 else TSTART
+        self.ext_dnlist = ext_dnlist
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -1503,6 +1503,8 @@ class bam_to_breakpoint():
 
         # This is the location where additional SVs could be injected.
         # 1. Collect SVs from external callset overlapping the interval (at least one end)
+        if self.ext_dnlist:
+            pass
         # 2. Check if is not already in dnlist
         # 3. Add it to dnlist if not in there
 
