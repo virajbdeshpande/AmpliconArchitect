@@ -114,9 +114,11 @@ parser.add_argument('--cbed', dest='cbed',
                     action='store', type=str, default=None)
 parser.add_argument('--sv_vcf', help='Provide a VCF file of externally-called SVs to augment SVs identified by AA internally.',
                     metavar='FILE', action='store', type=str)
+parser.add_argument('--sv_vcf_no_filter', help='Use all external SV calls from the --sv_vcf arg, even those without "PASS"'
+                    ' in the FILTER column.', action='store_true', default=False)
 parser.add_argument('--insert_sdevs', dest='insert_sdevs',
                     help="Number of standard deviations around the insert size. May need to increase for sequencing runs"
-                         " with high variance after insert size selection step. (default 3.0)", metavar='FLOAT',
+                    " with high variance after insert size selection step. (default 3.0)", metavar='FLOAT',
                     action='store', type=float, default=3)
 parser.add_argument('--pair_support_min', dest='pair_support_min',
                     help="Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due"
@@ -281,7 +283,7 @@ if cstats is None and cbam is not None:
     cstats = cbam2b.basic_stats
 
 if args.sv_vcf:
-    ext_dnlist = exdh.sv_vcf_to_bplist(args.sv_vcf)
+    ext_dnlist = exdh.sv_vcf_to_bplist(args.sv_vcf, filter_by_pass=not args.sv_vcf_no_filter)
 else:
     ext_dnlist = []
 

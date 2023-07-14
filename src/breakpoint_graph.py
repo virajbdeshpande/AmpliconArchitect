@@ -102,7 +102,7 @@ class breakpoint_edge(abstract_edge):
         if edge_type == "concordant":
             if ((v1.strand == 1 and v1.pos + 1 != v2.pos) or
                 (v2.strand == 1 and v2.pos + 1 != v1.pos)):
-                raise Exception("Edge of type " + edge_type + " connects non-adjacent positions.")
+                raise Exception("Edge of edge_type " + edge_type + " connects non-adjacent positions: " + str(v1) + "->" + str(v2))
         if edge_type == "sequence":
             if v1.strand == -1 and v1.pos > v2.pos:
                 raise Exception("Start position for sequence edge greater than end position:" + str(v1) + '->' + str(v2))
@@ -173,7 +173,7 @@ class breakpoint_edge(abstract_edge):
         if self.v1.pos == -1 or self.v2.pos == -1:
             return "source"
         elif self.v1.chrom != self.v2.chrom:
-            return "interchromosomal"
+            return "discordant"
         elif self.v1.pos <= self.v2.pos:
             vmin = self.v1
             vmax = self.v2
@@ -188,7 +188,8 @@ class breakpoint_edge(abstract_edge):
             return "forward"
         if vmax.strand == -1 and vmin.strand == -1:
             return "reverse"
-        if vmax.pos - vmin.pos > max_insert or vmax.pos - vmin.pos < min_insert:
+        #if vmax.pos - vmin.pos > max_insert or vmax.pos - vmin.pos < min_insert:
+        if vmax.pos - vmin.pos != 1:
             return "discordant"
         return "concordant"
                

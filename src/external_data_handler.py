@@ -7,47 +7,43 @@ from breakpoint_graph import *
 def vcf_var_to_bp_pair(chrom, pos, ref, alt):
     rlen = len(ref)
     if alt.startswith("[") or alt.startswith("]"):
-        if alt.startswith("["):
-            v1s = 1
-        else:
-            v1s = -1
-
-        d = alt.rstrip("acgtACGTN")[-1]
-        if d == "[":
-            v2s = -1
-        elif d == "]":
-            v2s = 1
-        else:
-            logging.warning("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        da = alt[0]
+        db = alt.rstrip("acgtACGTN")[-1]
+        if not da == db and da == ']' or da == '[':
+            logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
             return None, None
 
         hom_seq = re.split(']|\[', alt)[-1][rlen:]
+        alt_end = re.split(']|\[', alt)[1]
+        chrom2, pos2 = alt_end.rsplit(":")
+        if da == ']':
+            v1 = breakpoint_vertex(chrom2, int(pos2), 1)
+        else:
+            v1 = breakpoint_vertex(chrom2, int(pos2), -1)
+
+        v2 = breakpoint_vertex(chrom, int(pos), 1)
 
     elif alt.endswith("[") or alt.endswith("]"):
-        if alt.endswith("["):
-            v2s = -1
-        else:
-            v2s = 1
-
-        d = alt.lstrip("acgtACGTN")[-1]
-        if d == "[":
-            v1s = 1
-        elif d == "]":
-            v1s = -1
-        else:
-            logging.warning("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        db = alt[-1]
+        da = alt.lstrip("acgtACGTN")[-1]
+        if not da == db and da == ']' or da == '[':
+            logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
             return None, None
 
         hom_seq = re.split(']|\[', alt)[0][rlen:]
+        alt_end = re.split(']|\[', alt)[1]
+        chrom2, pos2 = alt_end.rsplit(":")
+        if db == ']':
+            v2 = breakpoint_vertex(chrom2, int(pos2), -1)
+        else:
+            v2 = breakpoint_vertex(chrom2, int(pos2), 1)
+
+        v1 = breakpoint_vertex(chrom, int(pos), 1)
 
     else:
-        logging.warning("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
         return None, None
 
-    dest = re.split(']|\[', alt)[1]
-    chrom2, pos2 = dest.rsplit(":")
-    v1 = breakpoint_vertex(chrom, int(pos), v1s)
-    v2 = breakpoint_vertex(chrom2, int(pos2), v2s)
     return (v1, v2), hom_seq
 
 
@@ -55,7 +51,7 @@ def vcf_var_to_bp_pair(chrom, pos, ref, alt):
 # this does not cound split-reads (single-end), as that is not what AA uses.
 def get_sv_read_pair_support_from_vcf(fd, header_fields):
     ilist = fd['INFO'].rsplit(";")
-    info_dict = {ilist[i]: ilist[i + 1] for i in range(0, len(ilist), 2)}
+    info_dict = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in ilist if "=" in x}
     pr_support = None
     # check PE and SR (delly, lumpy) - SR is single-end version - not checking for now
     if 'PE' in info_dict:
@@ -68,7 +64,7 @@ def get_sv_read_pair_support_from_vcf(fd, header_fields):
     elif 'FORMAT' in header_fields:
         sname = header_fields[-1]
         slist = fd[sname].rsplit(";")
-        format_dict = {slist[i]: slist[i + 1] for i in range(0, len(slist), 2)}
+        format_dict = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in slist if "=" in x}
         # check format field for PR/SR (manta)
         if 'PR' in format_dict:
             pr_support = int(format_dict['PR'])
@@ -98,7 +94,7 @@ def read_vcf(vcf_file, filter_by_pass=True):
 
             elif not line.startswith("#"):
                 fields = line.rstrip().rsplit()
-                fd = dict(zip(fields, header_fields))
+                fd = dict(zip(header_fields, fields))
                 # check that it's a single-sample VCF which should have 9 header field names and 1 sample name
                 # in the header.
                 if "FORMAT" in fd and len(header_fields) > 10:
@@ -124,6 +120,11 @@ def sv_vcf_to_bplist(vcf_file, filter_by_pass=True):
                 seen_bp_set.add(bp_pair[::-1])
                 support = get_sv_read_pair_support_from_vcf(fd, hf)
                 bref = breakpoint_edge(bp_pair[0], bp_pair[1], hom_seq=hom_seq, hom=len(hom_seq))
+                bref.edge_type = bref.type()
+                if bref.edge_type != "concordant":
+                    bref.edge_type = "discordant"
+
                 vcf_dnlist.append((bref, support))
 
+    logging.info("Read " + str(len(vcf_dnlist)) + " SV calls from " + vcf_file)
     return vcf_dnlist

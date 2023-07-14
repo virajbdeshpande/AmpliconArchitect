@@ -7,8 +7,12 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
 
 ### Recent updates:
 
-### May 2023 updates
-- `1.3.r6` adds protections for improperly-formatted inputs and reduces bugs created when AA is rerun into the same directory with slightly different inputs. 
+### July 2023 updates
+- `1.3.r6` adds multiple new features:
+  - `--sv_vcf` argument which allows users to augment AA's SV detection with their own SV calls provided in a VCF format.
+  - Automated protection against improperly-formatted inputs
+  - Reduces bugs created when AA is rerun into the same directory with existing files having the same sample name but different input files.
+  - Bugfix for edge case where AA does not properly expand a newly discovered interval if a discovered SV lands exactly on the endpoint of the explored interval. 
 
 ### March 2023 updates:
 - `1.3.r5` provides better compatibility with the AmpliconSuite-pipeline Singularity image and versions of Mosek installed via pip/conda.
