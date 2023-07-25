@@ -69,9 +69,8 @@ class breakpoint_cluster:
 
 class bam_to_breakpoint():
     def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300, num_sdevs=3,
-        window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1,
-        secondary_index=None, coverage_stats=None, coverage_windows=None,
-        sensitivems=False, span_coverage=True, tstart=0):
+        window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1, secondary_index=None,
+        coverage_stats=None, coverage_windows=None, sensitivems=False, span_coverage=True, tstart=0, ext_dnlist=None):
         self.bamfile = bamfile
         self.sample_name = sample_name
         self.window_size = window_size
@@ -96,6 +95,7 @@ class bam_to_breakpoint():
         self.discordant_edge_calls = {}
         self.interval_coverage_calls = {}
         self.tstart = tstart if tstart != 0 else TSTART
+        self.ext_dnlist = ext_dnlist if ext_dnlist else []
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -278,7 +278,6 @@ class bam_to_breakpoint():
 
         if (refi != -1 or window_size != -1) and (chroffset, sumchrLen, window_size) in self.coverage_logs:
             return self.coverage_logs[(chroffset, sumchrLen, window_size)]
-        # logging.info("Calculating median arm coverage " + str(refi) + " " + str(window_size))
 
         if not self.basic_stats_set:
             read_length = []
@@ -744,8 +743,8 @@ class bam_to_breakpoint():
         else:
             matched_shifts.append(hg.interval(i.chrom, i.start, i.end, info={'cn':shifts0[0].info['cn'], 'start_refined': False, 'end_refined': False}))
 
-        for ii in matched_shifts:
-            logging.debug(str((ii.start, ii.end, ii.info["cn"])))
+        # for ii in matched_shifts:
+        #     logging.debug(str((ii.start, ii.end, ii.info["cn"])))
 
         return matched_shifts
 
@@ -1040,9 +1039,7 @@ class bam_to_breakpoint():
 
     def edge_passes_filters(self, read_list, e=None):
         logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " edge_breakpoint_filter: " + str(e))
-        if self.edge_has_high_mapq(read_list) and self.edge_has_high_entropy(read_list):
-            return True
-        return False
+        return self.edge_has_high_mapq(read_list) and self.edge_has_high_entropy(read_list)
 
     def sa_tag_overlaps_primary(self, a):
         if not a.has_tag('SA'):
@@ -1074,6 +1071,15 @@ class bam_to_breakpoint():
             sa_ref_len = sum([i[0] for i in zip(cigar_counts, cigar_op) if i[1] in 'MDNX'])
             if abs(int(t[1]) + sa_ref_len - bp.pos) > 10:
                 return True
+        return False
+
+    def edge_touches_interval(self, e, ival):
+        if e.v1.chrom == ival.chrom and ival.start <= e.v1.pos <= ival.end:
+            return True
+
+        elif e.v2.chrom == ival.chrom and ival.start <= e.v2.pos <= ival.end:
+            return True
+
         return False
 
     def interval_discordant_edges(self, interval, filter_repeats=True, pair_support=-1, ms=None, amplicon_name=None):
@@ -1109,15 +1115,8 @@ class bam_to_breakpoint():
                        and not (a.reference_name == a.next_reference_name
                                 and not a.mate_is_reverse
                                 and abs(a.reference_start - a.next_reference_start) < self.max_insert)] # this section catches everted sequencing artifacts
-        # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: fetch discordant " + str(interval) + " " + str(len(dflist)) + " " + str(len(drlist)))
-        # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
-        # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.template_length) < self.max_insert)]
 
-        # dflist = [a for a in dflist if not(a.reference_name == a.next_reference_name and a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
-        # drlist = [a for a in drlist if not(a.reference_name == a.next_reference_name and not a.mate_is_reverse and abs(a.reference_start - a.next_reference_start) < self.max_insert)]
-
-
-        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval) , len(dflist), len(drlist)))
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval), len(dflist), len(drlist)))
 
         # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
         vlist = []
@@ -1213,14 +1212,13 @@ class bam_to_breakpoint():
             else:
                 mcdflist.extend(hgl.merge_clusters(extend=self.max_insert - self.read_length))
 
-
-        # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
-
+        logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant clusters found: %s %d %d " % (str(interval), len(mcdflist), len(mcdrlist)))
         dnlist0 = []
         dnlist = []
         clist = hg.interval_list([c[0] for c in mcdflist + mcdrlist])
         clist.sort()
         ci = 0
+        # The following section would benefit greatly from speedups
         for c1 in mcdflist + mcdrlist:
             ci += 1
             neighbor_hglist = hg.interval_list([])
@@ -1250,6 +1248,8 @@ class bam_to_breakpoint():
                             vlSet.add((aq1.reference_start, aq1.reference_end, aq2.reference_start, aq2.reference_end))
                             vl1Set.add((aq1.reference_start, aq1.reference_end))
                             vl2Set.add((aq2.reference_start, aq2.reference_end))
+
+        # end code optimization section
                 if len(vl) == 0 or len([v for v in vl if v[1].reference_start*v[0].reference_start > 0]) == 0:
                     continue
                 if not vl[0][0].is_reverse:
@@ -1260,6 +1260,7 @@ class bam_to_breakpoint():
                     bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].reference_start > 0]), 1)
                 else:
                     bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
+
                 if ms is None:
                     ps = pair_support
                 else:
@@ -1364,7 +1365,6 @@ class bam_to_breakpoint():
                     if len(vl) < ps:
                         continue
 
-
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) < self.max_insert:
                     logging.debug("skipping everted edge " + str(bp1) + str(bp2))
                     continue
@@ -1378,6 +1378,9 @@ class bam_to_breakpoint():
                         if self.edge_passes_filters(vl, brec):
                             dnlist0.append((brec, len([(v[1], v[0]) for v in vl])))
 
+                    elif brec.type() != 'concordant' and brec.v1.pos == brec.v2.pos:
+                        logging.debug("Filtered special case v1.pos == v2.pos " + str(brec))
+
         # remove local edges with no complementary edges and add warning if any found
         for bb1 in dnlist0:
             for bb2 in dnlist0:
@@ -1389,6 +1392,7 @@ class bam_to_breakpoint():
                     (bre2.v1.chrom, bre2.v1.pos, bre2.v1.strand) == (bre1.v2.chrom, bre1.v2.pos, bre1.v2.strand)) and bb1 not in dnlist:
                     dnlist.append(bb1)
                     continue
+
         if len(dnlist) != len(dnlist0):
             logging.debug("dnlists do not match " + str(len(dnlist0)) + " " + str(len(dnlist)))
             for bb1 in dnlist0:
@@ -1505,14 +1509,63 @@ class bam_to_breakpoint():
                     if self.edge_passes_filters(vl, bre):
                         dnlist.append((bre, len(vl)))
         logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: external edges done " + str(interval) + " " + str(self.get_mates_time) + " " +  str(self.get_mates_num_calls))
-        dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
-        for e in dnlist:
-            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f" % (time() - TSTART, e[0], e[1], e[0].type(),
-            self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()))
-        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
-                                    filter_repeats, pair_support, not ms is None)] = dnlist
-        return dnlist
 
+        # This is the location where additional SVs could be injected.
+        # 1. Collect SVs from external callset overlapping the interval (at least one end)
+        rel_ext_dnlist = []
+        if self.ext_dnlist:
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " examining " + str(len(self.ext_dnlist)) + " externally-provided discordant edges for overlap with interval(s)")
+        for e in self.ext_dnlist:
+            for i in ilist:
+                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i) or hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos).intersects(i):
+                    rel_ext_dnlist.append(e)
+                    break
+
+        if self.ext_dnlist:
+            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " found " + str(len(rel_ext_dnlist)) + " externally-provided discordant edges overlapping interval(s)")
+
+        e_to_add = []
+        for e_a in rel_ext_dnlist:
+            found = False
+            for e_b in dnlist:
+                # 2. Check if is not already in dnlist
+                if e_a[0].d_similar(e_b[0]):
+                    # 3. Add it to dnlist if not in there
+                    logging.debug(str(e_a) + " already in the dnlist")
+                    found = True
+                    break
+
+            if not found:
+                resc_e_count = self.downsample_ratio * e_a[1]
+                if resc_e_count >= self.pair_support:
+                    e_a_new = (e_a[0], resc_e_count)
+                    logging.debug("#TIME " + '%.3f\t' % (time() - TSTART) + " adding edge " + str(e_a_new) + " from external callset")
+                    e_to_add.append(e_a_new)
+
+        if e_to_add:
+            logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " added " + str(len(e_to_add)) + " sufficiently supported externally-provided discordant edges in intervals " + str(ilist))
+
+        dnlist.extend(e_to_add)
+        final_dnlist = []
+        for e in dnlist:
+            # filter artifactual (or indistinguishable from artifact) discordant edges
+            if e[0].type() == 'everted' and abs(e[0].v1.pos - e[0].v2.pos) < self.max_insert:
+                continue
+            if e[0].type() == 'discordant' and e[0].v1.chrom == e[0].v2.chrom and abs(e[0].v1.pos - e[0].v2.pos) < self.max_insert:
+                continue
+
+            # logging.debug("final_dnlist: " + str(e) + " " + str(e[0].externally_called))
+            final_dnlist.append(e)
+
+        final_dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
+        for e in final_dnlist:
+            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f %s" % (time() - TSTART, e[0], e[1], e[0].type(),
+            self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos,
+            e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content(), e[0].externally_called))
+        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
+                                    filter_repeats, pair_support, not ms is None)] = final_dnlist
+
+        return final_dnlist
 
     def load_edges(self, edge_file):
         edge_lines = [line.strip().split() for line in open(edge_file)]
@@ -1532,20 +1585,27 @@ class bam_to_breakpoint():
         edges.sort(key=lambda x: hg.absPos(
                     x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
         return edges
-        
 
-    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
+    def get_sensitive_discordant_edges(self, ilist, msrlist, eilist=None, filter_repeats=True, pair_support=-1, ms_window_size0=10000,
+                                       ms_window_size1=300, adaptive_counts=True, gcc=False, amplicon_name=None):
+        logging.debug("Call to get_sensitive_discordant_edges")
         if amplicon_name is not None and os.path.exists("%s_edges_cnseg.txt" % amplicon_name):
+            logging.debug("Reading from cnseg file")
             return self.load_edges("%s_edges_cnseg.txt" % amplicon_name)
         if amplicon_name is not None and os.path.exists("%s_edges.txt" % amplicon_name):
             eilist = self.load_edges("%s_edges.txt" % amplicon_name)
+            logging.debug("Read %s edges from %s_edges.txt" % (str(len(eilist)), amplicon_name))
         else:
             if eilist is None:
+                logging.debug("eilist was None")
                 if adaptive_counts:
                     eilist = self.interval_discordant_edges(
                         ilist, ms=msrlist, pair_support=pair_support)
                 else:
                     eilist = self.interval_discordant_edges(ilist, pair_support=pair_support)
+            else:
+                logging.debug("eilist of len " + str(len(eilist)))
+
             eilist.sort(key=lambda x: hg.absPos(
                         x[0].v1.chrom, x[0].v1.pos) + 0.1 * x[0].v1.strand)
             if amplicon_name is not None:
@@ -1643,7 +1703,7 @@ class bam_to_breakpoint():
 
 
     # Methods to find all intervals in amplicon                 
-    def interval_neighbors(self, i, ilist=[], rdlist=[], t=0, gcc=False):
+    def interval_neighbors(self, i, ilist=[], rdlist=[], gcc=False):
         i2 = self.interval_extend(i)
         # i2 = i
         # i2 = self.interval_extend(i, ilist, rdlist)
@@ -1663,26 +1723,28 @@ class bam_to_breakpoint():
         while len(neighbors) < 10 and ei < len(edges):
             covered = False
             for i3 in ilist + neighbors:
-                if i3.chrom == edges[ei][0].v2.chrom and edges[ei][0].v2.pos >= i3.start and edges[ei][0].v2.pos <= i3.end:
+                covered_v2 = i3.chrom == edges[ei][0].v2.chrom and i3.start < edges[ei][0].v2.pos < i3.end
+                if covered_v2:
                     ei += 1
                     covered = True
                     break
+
             if covered:
                 continue
+
             found_neighbor = False
             for i3 in rdlist:
-                if i3.chrom == edges[ei][0].v2.chrom and edges[ei][0].v2.pos >= i3.start and edges[ei][0].v2.pos <= i3.end:
-                    # n = i3
+                if i3.chrom == edges[ei][0].v2.chrom and i3.start < edges[ei][0].v2.pos < i3.end:
                     n = hg.interval(i3.chrom, i3.start, i3.end)
                     found_neighbor = True
+
             if not found_neighbor:
-                if edges[ei][0].v2.strand < 0:
-                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, edges[ei][0].v2.pos, min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
-                else:
-                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), edges[ei][0].v2.pos))
+                n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
+
             if found_neighbor or n.size() > self.max_insert + 2:
                 n.info = edges[ei][1]
                 neighbors.append(n)
+
             ei += 1
         neighbors.sort()
         mc = neighbors.merge_clusters(extend=merge_thresh)  # previously ms_window_size0
@@ -1691,6 +1753,7 @@ class bam_to_breakpoint():
         nn = hg.interval_list([c[0] for c in mc])
         for e in nn:
             logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_neighbors: edges %s %s" % (str(i), str(e)))
+
         return nn
 
 
@@ -1718,7 +1781,7 @@ class bam_to_breakpoint():
             if explore == False and len(hg.interval_list([ic]).intersection(i2list)) == 0:
                 seen_list.append(ic)
                 continue
-            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
+            # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
             if len(hg.interval_list([ic]).intersection(i2list)) == 0 and len(hg.interval_list([ic]).intersection(rdlist)) > 0:
                 seen_list.append(ic)
                 continue
@@ -2003,7 +2066,7 @@ class bam_to_breakpoint():
                     logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: adding reverse edge = " + str(vc))
                     if ngvlist[nei].strand == 1 and not (ngvlist[nei].chrom == vc.chrom and ngvlist[nei].pos == vc.pos - 1):
                         nvc_prime = new_graph.new_vertex(ngvlist[nei].chrom, ngvlist[nei].pos+1, -1)
-                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
+                        # oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, nvc_prime.pos, nvc_prime.pos + self.max_insert, -1, ilist))
                         # if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, -1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
                         #     ne = new_graph.new_edge(s, nvc_prime)
                         #     koe[ne] = oecount
@@ -2014,7 +2077,7 @@ class bam_to_breakpoint():
                         nei += 1
                     if ngvlist[nei].strand == -1:
                         nvc_prime = new_graph.new_vertex(vc.chrom, vc.pos-1, 1)
-                        oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, max(0, nvc_prime.pos - self.max_insert), nvc_prime.pos, 1, ilist))
+                        # oecount = len(self.interval_crossing_arcs(nvc_prime.chrom, max(0, nvc_prime.pos - self.max_insert), nvc_prime.pos, 1, ilist))
                         # if oecount >= (self.pair_support if not adaptive_counts else self.pair_support_count(nvc_prime.chrom, nvc_prime.pos, 1, meanshift=zip(ilist, msrlist, cnlist), sensitivems=False)):
                         #     ne = new_graph.new_edge(s, nvc_prime)
                         #     koe[ne] = oecount
@@ -2059,23 +2122,53 @@ class bam_to_breakpoint():
                 nei += 1
             ngvlist_full = ngvlist_full + ngvlist
             elist_full = elist_full + elist
-            print("MSstats", len(ms_vlist), len(ms_addlist))
-            for msa in ms_vlist:
-                print("MSadd", str(msa), msv_diff[msa], self.foldup_count(msa.chrom, msa.pos, msa.strand), msa in ms_addlist)  #, self.pair_support_count(msa.chrom, msa.pos, msa.strand, ms, True)
+            # print("MSstats", len(ms_vlist), len(ms_addlist))
+            # for msa in ms_vlist:
+            #     print("MSadd", str(msa), msv_diff[msa], self.foldup_count(msa.chrom, msa.pos, msa.strand), msa in ms_addlist)  #, self.pair_support_count(msa.chrom, msa.pos, msa.strand, ms, True)
+
+        hit_edges = set()
         for e0 in elist_full:
             e = e0[0]
-            if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and e.v1.pos >= e.v2.pos:
+            # remove duplicate and complementary edges
+            if (e.v1, e.v2) in hit_edges:
+                logging.debug("Removing complementary edge " + str(e))
+                continue
+
+            # logging.info("Considering elist_full: " + str(e))
+            if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and len(ilist.intersection([hg.interval(e.v1.chrom, e.v1.pos, e.v1.pos)])) > 0:
+                if not new_graph.has_vertex(e.v1.chrom, e.v1.pos, e.v1.strand):
+                    new_graph.add_vertex(e.v1)
+
+                if not new_graph.has_vertex(e.v2.chrom, e.v2.pos, e.v2.strand):
+                    new_graph.add_vertex(e.v2)
+
+                # logging.info("Adding " + str(e) + " to graph...")
                 ne = new_graph.add_edge(e)
+                hit_edges.add((e.v1, e.v2))
+                hit_edges.add((e.v2, e.v1))
+                if ne is None:
+                    raise ValueError("ne is None:" + str(e) + " " + str(e0[1]) + '\n'+','.join(map(str, new_graph.vs.values())))
                 logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge e = " + str(e))
                 logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne = " + str(ne) + " " + ne.edge_type)
                 logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne, v1.elist = " + str(ne.v1) + " " + ','.join(map(str, ne.v1.elist)))
                 logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge ne, v2.elist = " + str(ne.v2) + " " + ','.join(map(str, ne.v2.elist)))
-                if ne is None:
-                    raise ValueError("ne is None:" + str(e) + " " + str(len(e0[1])) + '\n'+','.join(map(str, new_graph.vs.values())))
                 kbpe[ne] = e0[1]
+
             elif len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) == 0:
                 ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
+                hit_edges.add((breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
+                hit_edges.add((e.v1, breakpoint_vertex(s.chrom, s.pos, s.strand)))
                 koe[ne] = e0[1]
+
+            elif len(ilist.intersection([hg.interval(e.v1.chrom, e.v1.pos, e.v1.pos)])) == 0:
+                ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v2))
+                hit_edges.add((breakpoint_vertex(s.chrom, s.pos, s.strand), e.v2))
+                hit_edges.add((e.v2, breakpoint_vertex(s.chrom, s.pos, s.strand)))
+                koe[ne] = e0[1]
+
+            else:
+                logging.debug("UNADDED EDGE " + str(e))
+
         for nei in range(1,len(ngvlist_full)):
             if ngvlist_full[nei].strand == 1:
                 new_graph.new_edge(ngvlist_full[nei-1], ngvlist_full[nei], edge_type='sequence')
@@ -2102,7 +2195,7 @@ class bam_to_breakpoint():
         ke.update(koe)
         K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
         # edge read count kbpe defined above
-        bplist = [e for e in new_graph.es.values() if (e.edge_type == 'discordant' or e.edge_type == 'breakpoint')]
+        bplist = [e for e in new_graph.es.values() if (e.edge_type != 'sequence' and e.edge_type != 'concordant')]
         m = len(bplist)
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
         print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
@@ -2117,6 +2210,7 @@ class bam_to_breakpoint():
             for e in seqlist[i].v1.elist:
                 if e.edge_type == 'sequence':
                     continue
+
                 if n + bpdict[e] in subarr:
                     j = subarr.index(n + bpdict[e])
                     valarr[j] += -1.0
