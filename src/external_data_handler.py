@@ -4,13 +4,21 @@ import sys
 
 from breakpoint_graph import *
 
+complementary_nucleotide = {"A": "T", "C": "G", "G": "C", "T": "A", "N": "N", "a": "t", "c": "g", "g": "c", "t": "a"}
+
+def rev_complement(seq):
+    if seq:
+        return ''.join([complementary_nucleotide[a] for a in seq[::-1]])
+
+    return seq
+
 def vcf_var_to_bp_pair(chrom, pos, ref, alt):
     rlen = len(ref)
     if alt.startswith("[") or alt.startswith("]"):
         da = alt[0]
         db = alt.rstrip("acgtACGTN")[-1]
-        if not da == db and da == ']' or da == '[':
-            logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        if not da == db and (da == ']' or da == '['):
+            logging.debug("Alt allele in VCF was not a breakend SV alt allele: " + str((chrom, pos, ref, alt)))
             return None, None
 
         hom_seq = re.split(']|\[', alt)[-1][rlen:]
@@ -21,27 +29,27 @@ def vcf_var_to_bp_pair(chrom, pos, ref, alt):
         else:
             v1 = breakpoint_vertex(chrom2, int(pos2), -1)
 
-        v2 = breakpoint_vertex(chrom, int(pos), 1)
+        v2 = breakpoint_vertex(chrom, int(pos), -1)  # AA notation is -1 for v2 if it is forward
 
     elif alt.endswith("[") or alt.endswith("]"):
         db = alt[-1]
-        da = alt.lstrip("acgtACGTN")[-1]
-        if not da == db and da == ']' or da == '[':
-            logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        da = alt.lstrip("acgtACGTN")[0]
+        if not da == db and (da == ']' or da == '['):
+            logging.debug("Alt allele in VCF was not a breakend SV alt allele: " + str((chrom, pos, ref, alt)))
             return None, None
 
         hom_seq = re.split(']|\[', alt)[0][rlen:]
         alt_end = re.split(']|\[', alt)[1]
         chrom2, pos2 = alt_end.rsplit(":")
         if db == ']':
-            v2 = breakpoint_vertex(chrom2, int(pos2), -1)
+            v2 = breakpoint_vertex(chrom2, int(pos2), 1)  # AA notation is 1 for v2 if it is reverse
         else:
-            v2 = breakpoint_vertex(chrom2, int(pos2), 1)
+            v2 = breakpoint_vertex(chrom2, int(pos2), -1)  # AA notation is -1 for v2 if it is forward
 
         v1 = breakpoint_vertex(chrom, int(pos), 1)
 
     else:
-        logging.debug("Alt allele in VCF was not a valid SV alt allele: " + str((chrom, pos, ref, alt)))
+        logging.debug("Alt allele in VCF was not a breakend SV alt allele: " + str((chrom, pos, ref, alt)))
         return None, None
 
     return (v1, v2), hom_seq
@@ -119,12 +127,17 @@ def sv_vcf_to_bplist(vcf_file, filter_by_pass=True):
                 seen_bp_set.add(bp_pair)
                 seen_bp_set.add(bp_pair[::-1])
                 support = get_sv_read_pair_support_from_vcf(fd, hf)
-                bref = breakpoint_edge(bp_pair[0], bp_pair[1], hom_seq=hom_seq, hom=len(hom_seq))
+                if not hom_seq:
+                    hom_seq, hom_len = None, None
+                else:
+                    hom_len = len(hom_seq)
+                bref = breakpoint_edge(bp_pair[0], bp_pair[1], hom_seq=hom_seq, hom=hom_len, externally_called=True)
                 bref.edge_type = bref.type()
-                if bref.edge_type != "concordant":
-                    bref.edge_type = "discordant"
-
                 vcf_dnlist.append((bref, support))
+                bref_rev = breakpoint_edge(bp_pair[1], bp_pair[0], hom_seq=rev_complement(hom_seq), hom=hom_len, externally_called=True)
+                bref_rev.edge_type = bref.type()
+                vcf_dnlist.append((bref_rev, support))
+
 
     logging.info("Read " + str(len(vcf_dnlist)) + " SV calls from " + vcf_file)
     return vcf_dnlist

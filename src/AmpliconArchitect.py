@@ -148,6 +148,9 @@ if args.random_seed:
 outName = args.outName[0]
 logging.basicConfig(filename=outName + '.log',level=logging.DEBUG)
 logging.getLogger('fontTools.subset').level = logging.WARN
+logging.getLogger('fontTools.ttLib').level = logging.WARN
+logging.getLogger('matplotlib.backends').level = logging.WARN
+logging.getLogger('matplotlib.font_manager').level = logging.WARN
 
 # # output logs to stdout
 root = logging.getLogger()

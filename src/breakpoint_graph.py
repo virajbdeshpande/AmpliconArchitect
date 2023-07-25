@@ -66,6 +66,9 @@ class breakpoint_vertex(abstract_vertex):
         """Order vertices by absolute position (See hg19util.absPos) + strand"""
         return hg.absPos(self.chrom, self.pos) + 0.4 * self.strand > hg.absPos(y.chrom, y.pos) + 0.4 * y.strand
 
+    def __eq__(self, other):
+        return (self.chrom, self.pos, self.strand) == (other.chrom, other.pos, other.strand)
+
 
 class breakpoint_edge(abstract_edge):
     """Class representing breakpoint edge derived from abstract_graph.abstract_edge
@@ -76,7 +79,7 @@ class breakpoint_edge(abstract_edge):
     edge_type = "discordant"/"breakpoint" or "concordant" : genomic connectivity or source; "sequence": genomic interval
     eid = (optional) edge id
     graph = (optional) graph to which edge belongs"""
-    def __init__(self, v1, v2=None, eid=0, graph=None, update_vertices=True, edge_type="discordant", hom=None, hom_seq=None):
+    def __init__(self, v1, v2=None, eid=0, graph=None, update_vertices=True, edge_type="discordant", hom=None, hom_seq=None, externally_called=False):
         """2 ways to initialize:
         1) v1 = breakpoint_edge string in the format breakpoint_vertex1->breakpoint_vertex2
         2) v1,v2 = breakpoint_point_vertices
@@ -111,6 +114,7 @@ class breakpoint_edge(abstract_edge):
         self.edge_type = edge_type
         self.hom = hom
         self.hom_seq = hom_seq
+        self.externally_called=externally_called
 
     def sequence(self, flank_size=-1):
         if self.edge_type == 'sequence':
@@ -192,6 +196,16 @@ class breakpoint_edge(abstract_edge):
         if vmax.pos - vmin.pos != 1:
             return "discordant"
         return "concordant"
+
+    def d_similar(self, e2, dcutoff = 100):
+        sv1, sv2 = sorted((self.v1, self.v2))
+        ov1, ov2 = sorted((e2.v1, e2.v2))
+        strands_sim = sv1.strand * ov1.strand * sv2.strand * ov2.strand > 0
+        if sv1.chrom == ov1.chrom and sv2.chrom == ov2.chrom and strands_sim:
+            if abs(sv1.pos - ov1.pos) + abs(sv2.pos - ov2.pos) < dcutoff:
+                return True
+
+        return False
                
     def __repr__(self):
         """breakpoint_vertex1->breakpoint_vertex2"""

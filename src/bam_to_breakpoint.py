@@ -278,7 +278,6 @@ class bam_to_breakpoint():
 
         if (refi != -1 or window_size != -1) and (chroffset, sumchrLen, window_size) in self.coverage_logs:
             return self.coverage_logs[(chroffset, sumchrLen, window_size)]
-        # logging.info("Calculating median arm coverage " + str(refi) + " " + str(window_size))
 
         if not self.basic_stats_set:
             read_length = []
@@ -744,8 +743,8 @@ class bam_to_breakpoint():
         else:
             matched_shifts.append(hg.interval(i.chrom, i.start, i.end, info={'cn':shifts0[0].info['cn'], 'start_refined': False, 'end_refined': False}))
 
-        for ii in matched_shifts:
-            logging.debug(str((ii.start, ii.end, ii.info["cn"])))
+        # for ii in matched_shifts:
+        #     logging.debug(str((ii.start, ii.end, ii.info["cn"])))
 
         return matched_shifts
 
@@ -1261,6 +1260,7 @@ class bam_to_breakpoint():
                     bp2 = breakpoint_vertex(c2[0].chrom, max([v[1].reference_end - 1 for v in vl if v[1].reference_start > 0]), 1)
                 else:
                     bp2 = breakpoint_vertex(c2[0].chrom, min([v[1].reference_start for v in vl if v[1].reference_start > 0]), -1)
+
                 if ms is None:
                     ps = pair_support
                 else:
@@ -1517,7 +1517,7 @@ class bam_to_breakpoint():
             logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " examining " + str(len(self.ext_dnlist)) + " externally-provided discordant edges for overlap with interval(s)")
         for e in self.ext_dnlist:
             for i in ilist:
-                if self.edge_touches_interval(e[0], i):
+                if hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos).intersects(i) or hg.interval(e[0].v2.chrom, e[0].v2.pos, e[0].v2.pos).intersects(i):
                     rel_ext_dnlist.append(e)
                     break
 
@@ -1529,8 +1529,9 @@ class bam_to_breakpoint():
             found = False
             for e_b in dnlist:
                 # 2. Check if is not already in dnlist
-                if (e_a[0].v1 == e_b[0].v1 and e_a[0].v2 == e_b[0].v2) or (e_a[0].v2 == e_b[0].v1 and e_a[0].v1 == e_b[0].v2):
+                if e_a[0].d_similar(e_b[0]):
                     # 3. Add it to dnlist if not in there
+                    logging.debug(str(e_a) + " already in the dnlist")
                     found = True
                     break
 
@@ -1542,18 +1543,29 @@ class bam_to_breakpoint():
                     e_to_add.append(e_a_new)
 
         if e_to_add:
-            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " added " + str(len(e_to_add)) + " previously unseen, sufficiently supported externally-provided discordant edges")
+            logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " added " + str(len(e_to_add)) + " sufficiently supported externally-provided discordant edges in intervals " + str(ilist))
 
         dnlist.extend(e_to_add)
-
-        dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
+        final_dnlist = []
         for e in dnlist:
-            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f" % (time() - TSTART, e[0], e[1], e[0].type(),
-            self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos, e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content()))
-        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
-                                    filter_repeats, pair_support, not ms is None)] = dnlist
+            # filter artifactual (or indistinguishable from artifact) discordant edges
+            if e[0].type() == 'everted' and abs(e[0].v1.pos - e[0].v2.pos) < self.max_insert:
+                continue
+            if e[0].type() == 'discordant' and e[0].v1.chrom == e[0].v2.chrom and abs(e[0].v1.pos - e[0].v2.pos) < self.max_insert:
+                continue
 
-        return dnlist
+            # logging.debug("final_dnlist: " + str(e) + " " + str(e[0].externally_called))
+            final_dnlist.append(e)
+
+        final_dnlist.sort(key=lambda x: hg.absPos(x[0].v1.chrom, x[0].v1.pos) + 0.5 * x[0].v1.strand)
+        for e in final_dnlist:
+            logging.debug("#TIME %.3f\tdiscordant edges %s %s %s %s %d %f %s" % (time() - TSTART, e[0], e[1], e[0].type(),
+            self.concordant_edge(e[0].v1)[0], len(self.concordant_edge(e[0].v1)[1]), hg.interval(e[0].v1.chrom, e[0].v1.pos,
+            e[0].v1.pos - e[0].v1.strand * self.max_insert).rep_content(), e[0].externally_called))
+        self.discordant_edge_calls[(tuple([(i.chrom, i.start, i.end) for i in ilist]),
+                                    filter_repeats, pair_support, not ms is None)] = final_dnlist
+
+        return final_dnlist
 
     def load_edges(self, edge_file):
         edge_lines = [line.strip().split() for line in open(edge_file)]
@@ -1711,26 +1723,28 @@ class bam_to_breakpoint():
         while len(neighbors) < 10 and ei < len(edges):
             covered = False
             for i3 in ilist + neighbors:
-                if i3.chrom == edges[ei][0].v2.chrom and i3.start < edges[ei][0].v2.pos < i3.end:
+                covered_v2 = i3.chrom == edges[ei][0].v2.chrom and i3.start < edges[ei][0].v2.pos < i3.end
+                if covered_v2:
                     ei += 1
                     covered = True
                     break
+
             if covered:
                 continue
+
             found_neighbor = False
             for i3 in rdlist:
                 if i3.chrom == edges[ei][0].v2.chrom and i3.start < edges[ei][0].v2.pos < i3.end:
-                    # n = i3
                     n = hg.interval(i3.chrom, i3.start, i3.end)
                     found_neighbor = True
+
             if not found_neighbor:
-                if edges[ei][0].v2.strand < 0:
-                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, edges[ei][0].v2.pos, min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
-                else:
-                    n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), edges[ei][0].v2.pos))
+                n = self.interval_extend(hg.interval(edges[ei][0].v2.chrom, max(0, edges[ei][0].v2.pos - self.max_insert), min(hg.chrLen[hg.chrNum(edges[ei][0].v2.chrom)] - 1, edges[ei][0].v2.pos + self.max_insert)))
+
             if found_neighbor or n.size() > self.max_insert + 2:
                 n.info = edges[ei][1]
                 neighbors.append(n)
+
             ei += 1
         neighbors.sort()
         mc = neighbors.merge_clusters(extend=merge_thresh)  # previously ms_window_size0
@@ -1739,6 +1753,7 @@ class bam_to_breakpoint():
         nn = hg.interval_list([c[0] for c in mc])
         for e in nn:
             logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_neighbors: edges %s %s" % (str(i), str(e)))
+
         return nn
 
 
@@ -1766,7 +1781,7 @@ class bam_to_breakpoint():
             if explore == False and len(hg.interval_list([ic]).intersection(i2list)) == 0:
                 seen_list.append(ic)
                 continue
-            logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
+            # logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " interval_hops: check rd " + str(i) + " " + str(ic) + " " + str(len(hg.interval_list([ic]).intersection(rdlist))))
             if len(hg.interval_list([ic]).intersection(i2list)) == 0 and len(hg.interval_list([ic]).intersection(rdlist)) > 0:
                 seen_list.append(ic)
                 continue
@@ -2111,8 +2126,15 @@ class bam_to_breakpoint():
             # for msa in ms_vlist:
             #     print("MSadd", str(msa), msv_diff[msa], self.foldup_count(msa.chrom, msa.pos, msa.strand), msa in ms_addlist)  #, self.pair_support_count(msa.chrom, msa.pos, msa.strand, ms, True)
 
+        hit_edges = set()
         for e0 in elist_full:
             e = e0[0]
+            # remove duplicate and complementary edges
+            if (e.v1, e.v2) in hit_edges:
+                logging.debug("Removing complementary edge " + str(e))
+                continue
+
+            # logging.info("Considering elist_full: " + str(e))
             if len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) > 0 and len(ilist.intersection([hg.interval(e.v1.chrom, e.v1.pos, e.v1.pos)])) > 0:
                 if not new_graph.has_vertex(e.v1.chrom, e.v1.pos, e.v1.strand):
                     new_graph.add_vertex(e.v1)
@@ -2120,8 +2142,10 @@ class bam_to_breakpoint():
                 if not new_graph.has_vertex(e.v2.chrom, e.v2.pos, e.v2.strand):
                     new_graph.add_vertex(e.v2)
 
-                logging.info("Adding " + str(e) + " to graph...")
+                # logging.info("Adding " + str(e) + " to graph...")
                 ne = new_graph.add_edge(e)
+                hit_edges.add((e.v1, e.v2))
+                hit_edges.add((e.v2, e.v1))
                 if ne is None:
                     raise ValueError("ne is None:" + str(e) + " " + str(e0[1]) + '\n'+','.join(map(str, new_graph.vs.values())))
                 logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + "interval_filter vertices: added edge e = " + str(e))
@@ -2132,10 +2156,14 @@ class bam_to_breakpoint():
 
             elif len(ilist.intersection([hg.interval(e.v2.chrom, e.v2.pos, e.v2.pos)])) == 0:
                 ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
+                hit_edges.add((breakpoint_vertex(s.chrom, s.pos, s.strand), e.v1))
+                hit_edges.add((e.v1, breakpoint_vertex(s.chrom, s.pos, s.strand)))
                 koe[ne] = e0[1]
 
             elif len(ilist.intersection([hg.interval(e.v1.chrom, e.v1.pos, e.v1.pos)])) == 0:
                 ne = new_graph.add_edge(breakpoint_edge(breakpoint_vertex(s.chrom, s.pos, s.strand), e.v2))
+                hit_edges.add((breakpoint_vertex(s.chrom, s.pos, s.strand), e.v2))
+                hit_edges.add((e.v2, breakpoint_vertex(s.chrom, s.pos, s.strand)))
                 koe[ne] = e0[1]
 
             else:
@@ -2167,7 +2195,7 @@ class bam_to_breakpoint():
         ke.update(koe)
         K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
         # edge read count kbpe defined above
-        bplist = [e for e in new_graph.es.values() if (e.edge_type == 'discordant' or e.edge_type == 'breakpoint')]
+        bplist = [e for e in new_graph.es.values() if (e.edge_type != 'sequence' and e.edge_type != 'concordant')]
         m = len(bplist)
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
         print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
