@@ -62,7 +62,7 @@ https://github.com/AmpliconSuite/AmpliconSuite-pipeline.
 ### - GenePattern Web Interface
 In collaboration with the [GenePattern](https://genepattern-notebook.org/) team, AmpliconSuite-pipeline 
 can now be used from your web browser. No tool installation required. Visit https://genepattern.ucsd.edu/ to register. 
-After registering and signing-in, search for the "AmpliconSuite" module. 
+After registering and signing in, search for the "AmpliconSuite" module. 
 
 ### - Nextflow
 AmpliconSuite can also be run through Nextflow, using the [nf-core/circdna pipeline](https://nf-co.re/circdna) constructed by [Daniel Schreyer](https://github.com/DSchreyer).
