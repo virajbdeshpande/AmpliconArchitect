@@ -37,16 +37,20 @@
 
 from time import time
 TSTART = time()
+from datetime import datetime
+launch_datetime = datetime.now().strftime("%B %d, %Y %H:%M:%S")
+
+import argparse
+import copy
+from functools import reduce
+import logging
+import os
+import sys
+
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 import pysam
-import argparse
-import sys
-import os
-import matplotlib
-import copy
-matplotlib.use('Agg')
-import logging
-from functools import reduce
 
 
 if sys.version_info >= (3, 0):
@@ -165,8 +169,10 @@ summary_logger.propagate = False
 summary_logger.addHandler(logging.FileHandler(outName + '_summary.txt', 'w'))
 graph_logger = logging.getLogger('graph')
 graph_logger.propagate = False
+graph_logger.info("# AmpliconArchitect " + __version__ + " " + launch_datetime)
 cycle_logger = logging.getLogger('cycle')
 cycle_logger.propagate = False
+cycle_logger.info("# AmpliconArchitect " + __version__ + " " + launch_datetime)
 class PrefixAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         return '[%s] %s' % (self.extra['prefix'], msg), kwargs
@@ -399,6 +405,7 @@ for ig in irdgroups:
         bamFileb2b.interval_filter_vertices(ilist, amplicon_name=amplicon_name, runmode=args.runmode)
         graph_logger.removeHandler(graph_handler)
         cycle_logger.removeHandler(cycle_handler)
+
     if args.runmode in ['FULL', 'SVVIEW']:
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Plotting SV View for amplicon" + str(amplicon_id))
         bamFileb2b.plot_segmentation(
