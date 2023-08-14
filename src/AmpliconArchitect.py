@@ -333,6 +333,11 @@ if args.extendmode == 'EXPLORE' or args.extendmode == 'VIRAL':
         for i in ilist:
             irddict[i] = ird
 
+        # These files are for debugging purposes and can be used to store information in further development.
+        iout = open(outName + '.' + ird.chrom + "-" + str(ird.start) + '-' + str(ird.end) + '.out', 'w')
+        iout.write(mystdout.getvalue())
+        iout.close()
+
         sys.stdout = old_stdout
         all_ilist += ilist
         all_ilist.sort()
