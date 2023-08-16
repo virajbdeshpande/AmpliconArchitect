@@ -6,11 +6,13 @@ from breakpoint_graph import *
 
 complementary_nucleotide = {"A": "T", "C": "G", "G": "C", "T": "A", "N": "N", "a": "t", "c": "g", "g": "c", "t": "a"}
 
+
 def rev_complement(seq):
     if seq:
         return ''.join([complementary_nucleotide[a] for a in seq[::-1]])
 
     return seq
+
 
 def vcf_var_to_bp_pair(chrom, pos, ref, alt):
     rlen = len(ref)
@@ -76,6 +78,10 @@ def get_sv_read_pair_support_from_vcf(fd, header_fields):
         # check format field for PR/SR (manta)
         if 'PR' in format_dict:
             pr_support = int(format_dict['PR'])
+
+        # check format field for DR (svaba)
+        elif 'DR' in format_dict:
+            pr_support = int(format_dict['DR'])
 
     if pr_support is None:
         logging.warning("Could not find paired-end read support count for SV ID: " + fd['ID'])
