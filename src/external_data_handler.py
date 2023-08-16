@@ -107,6 +107,7 @@ def read_vcf(vcf_file, filter_by_pass=True):
     else:
         opener = open
 
+    field_warn = False
     with opener(vcf_file, 'rt') as infile:
         header_fields = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
         for line in infile:
@@ -125,12 +126,15 @@ def read_vcf(vcf_file, filter_by_pass=True):
 
                 # this is because SVABA does not obey VCF4.2 format :(
                 if len(fields) > len(header_fields):
-                    logging.warning("VCF file has more fields than specified by the header!")
+                    field_warn = True
                     fd[header_fields[-1]] = fields[-1]
 
                 if (not filter_by_pass) or (filter_by_pass and fd['FILTER'] == "PASS"):
                     dlist.append(fd)
 
+    if field_warn:
+        logging.warning("VCF file has more fields than specified by the header!")
+        
     return dlist, header_fields
 
 
