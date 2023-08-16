@@ -73,8 +73,15 @@ def get_sv_read_pair_support_from_vcf(fd, header_fields):
 
     elif 'FORMAT' in header_fields:
         sname = header_fields[-1]
-        slist = fd[sname].rsplit(";")
-        format_dict = {x.rsplit("=")[0]: x.rsplit("=")[1] for x in slist if "=" in x}
+        fkeys = fd['FORMAT'].rsplit(":")
+        slist = fd[sname].rsplit(":")
+        if len(fkeys) != len(slist):
+            logging.error("Format field defined a different number of fields than found in data! Skipping SV " + fd['ID'])
+            logging.error(str(fkeys))
+            logging.error(str(slist))
+            return 0
+
+        format_dict = dict(zip(fkeys, slist))
         # check format field for PR/SR (manta)
         if 'PR' in format_dict:
             pr_support = int(format_dict['PR'])
@@ -115,6 +122,11 @@ def read_vcf(vcf_file, filter_by_pass=True):
                     logging.error("VCF appears to contain multiple samples or non-standard fields. Please provide a"
                                   " single-sample VCF with appropriate formatting\n")
                     sys.exit(1)
+
+                # this is because SVABA does not obey VCF4.2 format :(
+                if len(fields) > len(header_fields):
+                    logging.warning("VCF file has more fields than specified by the header!")
+                    fd[header_fields[-1]] = fields[-1]
 
                 if (not filter_by_pass) or (filter_by_pass and fd['FILTER'] == "PASS"):
                     dlist.append(fd)
