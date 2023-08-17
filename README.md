@@ -1,6 +1,6 @@
 # AmpliconArchitect (AA)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/jluebeck/AmpliconArchitect)
-![GitHub commits since tagged version](https://img.shields.io/github/commits-since/jluebeck/AmpliconArchitect/v1.3.r5/master)
+![License](https://img.shields.io/badge/license-UCSD_software_license-blue)
 
 ### AmpliconArchitect is best used through [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline)
 Installation instructions for AmpliconArchitect are provided here, but to prepare the inputs, invoke AA and classify the outputs, please do so by using [AmpliconSuite-pipeline](https://github.com/AmpliconSuite/AmpliconSuite-pipeline). 
