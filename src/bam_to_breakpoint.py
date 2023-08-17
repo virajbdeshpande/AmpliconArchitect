@@ -1536,7 +1536,7 @@ class bam_to_breakpoint():
                     break
 
             if not found:
-                resc_e_count = self.downsample_ratio * e_a[1]
+                resc_e_count = int(round(self.downsample_ratio * e_a[1]))
                 if resc_e_count >= self.pair_support:
                     e_a_new = (e_a[0], resc_e_count)
                     logging.debug("#TIME " + '%.3f\t' % (time() - TSTART) + " adding edge " + str(e_a_new) + " from external callset")

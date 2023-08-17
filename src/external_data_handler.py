@@ -134,7 +134,7 @@ def read_vcf(vcf_file, filter_by_pass=True):
 
     if field_warn:
         logging.warning("VCF file has more fields than specified by the header!")
-        
+
     return dlist, header_fields
 
 
