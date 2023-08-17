@@ -129,7 +129,7 @@ def read_vcf(vcf_file, filter_by_pass=True):
                     field_warn = True
                     fd[header_fields[-1]] = fields[-1]
 
-                if (not filter_by_pass) or (filter_by_pass and fd['FILTER'] == "PASS"):
+                if (not filter_by_pass) or (filter_by_pass and fd['FILTER'] in ["PASS", "."]):
                     dlist.append(fd)
 
     if field_warn:
