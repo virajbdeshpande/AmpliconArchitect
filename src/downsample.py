@@ -19,24 +19,15 @@
 #Author: Viraj Deshpande
 #Contact: virajbdeshpande@gmail.com
 
-
+from time import time
+TSTART = time()
 import pysam
 import argparse
-import math
 from time import time
-from collections import defaultdict
-import sys
 import os
-import numpy as np
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-import logging
 import random
-import hashlib
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='serif')
 
 import global_names
 
@@ -58,15 +49,20 @@ parser.add_argument('--cbed', dest='cbed',
                     help="Optional bedfile defining 1000 10kbp genomic windows for coverage calcualtion", metavar='FILE',
                     action='store', type=str, default=None)
 parser.add_argument('--ref', dest='ref',
-                    help="Values: [hg19, GRCh37, GRCh38, mm10, None]. \"hg19\", \"mm10\", \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
+                    help="Values: [hg19, GRCh37, GRCh38, GRCh38_viral, mm10, None]. \"hg19\", \"mm10\", \"GRCh38\" : chr1, .. chrM etc / \"GRCh37\" : '1', '2', .. 'MT' etc/ \"None\" : Do not use any annotations. AA can tolerate additional chromosomes not stated but accuracy and annotations may be affected.", metavar='STR',
                     action='store', type=str, required=True)
+parser.add_argument('--cstats_only', help="Compute the coverage statistics for the BAM file and exit. Do not perform any downsampling.", action='store_true')
+parser.add_argument('--random_seed', dest="random_seed",
+                    help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will use seed=0",
+                    action='store_true', default=False)
 
 args = parser.parse_args()
 
 global_names.REF = args.ref
+global_names.TSTART = TSTART
+if args.random_seed:
+    global_names.SEED = None
 
-
-import ref_util as hg
 import bam_to_breakpoint as b2b
 from breakpoint_graph import *
 
@@ -93,8 +89,9 @@ if cbam is not None:
 for l in coverage_stats_file:
     ll = l.strip().split()
     bamfile_pathname = str(cb.filename.decode())
-    bamfile_filesize = os.path.getsize(bamfile_pathname)
     if ll[0] == os.path.abspath(bamfile_pathname):
+        bamfile_filesize = os.path.getsize(bamfile_pathname)
+
         cstats = tuple(map(float, ll[1:]))
         if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]):  # 3 is default sdevs
             cstats = None
@@ -111,12 +108,17 @@ elif cstats is None:
     bamFileb2b = b2b.bam_to_breakpoint(bamFile, coverage_stats=cstats, coverage_windows=coverage_windows)
     cstats = bamFileb2b.basic_stats
 
+print("Estimated bamfile coverage is ", str(cstats[0]))
+if args.cstats_only:
+    sys.exit(0)
 
 final = args.final
 
 if cstats[0] <= final:
     exit()    
 ratio = float(final) / float(cstats[0])
+
+print("Downsampling:", args.bam[0], "Estimated original coverage:", float(cstats[0]), "Desired final coverage:", final, "DS ratio:", ratio)
 
 downsample_dir = os.path.dirname(os.path.abspath(args.bam[0]))
 if args.downsample_dir != '':
@@ -125,16 +127,20 @@ if args.downsample_dir != '':
 i=0
 rulist = []
 t0 = time()
-b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template = bamFile)
+b2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam', 'wb', template=bamFile)
+
+seed_shift = str(t0)
+if global_names.SEED is not None:
+    seed_shift = str(global_names.SEED)
+
 for a in bamFile.fetch():
-    random.seed(a.query_name + str(t0))
-    random.uniform(0, 1)
+    random.seed(a.query_name + seed_shift)
+
     ru = random.uniform(0, 1)
     if ru < ratio:
         b2.write(a)
 b2.close()
 pysam.index(downsample_dir + '/' + os.path.basename(args.bam[0])[:-4] + '.DS.bam')
-print("Downsampling:", args.bam[0], float(cstats[0]), final, ratio)
 
 # if args.cbam is not None and not os.path.exists(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam'):
 #     c2 = pysam.Samfile(downsample_dir + '/' + os.path.basename(args.cbam)[:-4] + '.DS.bam', 'wb', template = cbam)

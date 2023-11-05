@@ -20,17 +20,17 @@
 # Contact: virajbdeshpande@gmail.com
 # Maintained by Jens Luebeck jluebeck@ucsd.edu
 
-import copy
-from collections import defaultdict
+import argparse
+import logging
+import os
 import sys
+
 import numpy as np
-import re
+import pysam
+
+import global_names
 
 sys.setrecursionlimit(10000)
-import argparse
-import os
-import pysam
-import global_names
 
 GAIN = 4.5
 CNSIZE_MIN = 50000
@@ -79,13 +79,14 @@ rdList0 = hg.interval_list(rdAlts, 'bed')
 if rdList0:
     try:
         if len(rdList0[0].info) == 0:
-            sys.stderr.write("ERROR: CNV estimate bed file had too few columns.\n"
+            logging.error("ERROR: CNV estimate bed file had too few columns.\n"
                              "Must contain: chr  pos1  pos2  cnv_estimate\n")
             sys.exit(1)
+
         _ = float(rdList0[0].info[-1])
 
     except ValueError:
-        sys.stderr.write("ERROR: CNV estimates must be in last column of bed file.\n")
+        logging.error("ERROR: CNV estimates must be in last column of bed file.\n")
         sys.exit(1)
 
 tempL = []
@@ -113,9 +114,12 @@ if args.bam != "":
         coverage_stats_file = open(os.path.join(hg.DATA_REPO, "coverage.stats"))
         for l in coverage_stats_file:
             ll = l.strip().split()
+            if not ll:
+                continue
             bamfile_pathname = str(cb.filename.decode())
-            bamfile_filesize = os.path.getsize(bamfile_pathname)
             if ll[0] == os.path.abspath(bamfile_pathname):
+                bamfile_filesize = os.path.getsize(bamfile_pathname)
+
                 cstats = tuple(map(float, ll[1:]))
                 if len(cstats) < 15 or cstats[13] != 3 or bamfile_filesize != int(cstats[14]) or any(np.isnan(cstats)):
                     cstats = None
@@ -138,7 +142,8 @@ if args.bam != "":
                 pre_int_list.append(r)
 
         except ZeroDivisionError:
-            print(r.chrom, args.ref, float(r.info[-1]))
+            logging.error("zero division error", r.chrom, args.ref, float(r.info[-1]))
+
             # if float(r.info[-1]) > 1 and args.ref == "GRCh38_viral" and not r.chrom.startswith("chr"):
             #     pre_int_list.append(r)
             #
