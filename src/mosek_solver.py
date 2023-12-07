@@ -145,6 +145,7 @@ def call_mosek_acc(n, m, asub, aval, coeff_c, coeff_f):
         
         task.putobjsense(mosek.objsense.minimize)
 
+        task.putdouparam(mosek.dparam.intpnt_co_tol_near_rel, 1e+5)
         task.optimize()
         task.solutionsummary(mosek.streamtype.log)
         
