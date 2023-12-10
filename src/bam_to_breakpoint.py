@@ -487,7 +487,13 @@ class bam_to_breakpoint():
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
         logging.debug("Computing meanshift segmentation on " + str(i))
         if window_size == -1:
-            window_size = 10000
+            if i.size() > 1000000:
+                window_size = 10000
+            elif i.size() > 100000:
+                window_size = 1000
+            else:
+                window_size = 300
+
         i = hg.interval(i.chrom, window_size * int(round(float(i.start) / window_size)), window_size * int(round(float(i.end) / window_size)))
         mc = self.median_coverage(window_size, gcc)
         rd_global = mc[0]
