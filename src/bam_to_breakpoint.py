@@ -2198,7 +2198,7 @@ class bam_to_breakpoint():
         #k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
         # kgcc = [self.interval_coverage(hg.interval(i.chrom, e.v1.pos, e.v2.pos), gcc=True) * (e.v2.pos - e.v1.pos) / self.read_length for e in seqlist]
         # adding mapq filter:
-        k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos) if not a.is_unmapped and a.reference_end - 1 <= e.v2.pos and a.mapping_quality > self.mapping_quality_cutoff]) for e in seqlist]
+        k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
         # if not a.is_unmapped and a.reference_end - 1 <= e2 and a.mapping_quality > self.mapping_quality_cutoff]
         # k = kgcc
         # kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
