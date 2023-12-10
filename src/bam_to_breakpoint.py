@@ -1713,7 +1713,14 @@ class bam_to_breakpoint():
         i2 = self.interval_extend(i)
         # i2 = i
         # i2 = self.interval_extend(i, ilist, rdlist)
-        ms_window_size0 = 10000
+        if i.size() > 1000000:
+            ms_window_size0 = 10000
+        elif i.size() > 100000:
+            ms_window_size0 = 1000
+        else:
+            ms_window_size0 = 300
+            
+        # ms_window_size0 = 10000
         ms_window_size1 = 300
         merge_thresh = 100000
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Calculating coverage meanshift segmentation")
