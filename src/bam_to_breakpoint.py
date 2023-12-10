@@ -2188,7 +2188,7 @@ class bam_to_breakpoint():
         # set up all constants
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Optimizing graph copy number flow")
         C = self.median_coverage()[0] / 2
-        print("C (haploid coverage) = ", C)
+        logging.debug("C (haploid coverage) = " +  str(C))
         # G = new_graph
 
         seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
@@ -2202,12 +2202,16 @@ class bam_to_breakpoint():
         ke.update(kbpe)
         ke.update(kce)
         ke.update(koe)
-        K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
+        # without GCC or mapq cutoff
+        #K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
+        # with mapq cutoff
+        K = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) for e in seqlist]
+
         # edge read count kbpe defined above
         bplist = [e for e in new_graph.es.values() if (e.edge_type != 'sequence' and e.edge_type != 'concordant')]
         m = len(bplist)
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
-        print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
+        logging.debug("len bplist: " + str(len(bplist)) + ";   ################ kbpe, kce, koe = " + str((len(kbpe), len(kce), len(koe))))
 
         # set up problem size and coefficients
 
@@ -2265,10 +2269,10 @@ class bam_to_breakpoint():
                     print('=============================')
                     for s in seqlist:
                         print(str(s))
-                    exit()
+                    exit(1)
                 elif sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) == 0:
                     print('MS0intersection', str(msi))
-                    exit()
+                    exit(1)
 
         edge_code = defaultdict(lambda:'discordant', {'concordant':'concordant', 'source':'source'})
 
