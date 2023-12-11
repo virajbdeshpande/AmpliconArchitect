@@ -186,7 +186,7 @@ def call_mosek_fusion(n, m, asub, aval, coeff_c, coeff_f):
         M.constraint(Expr.hstack(x, Expr.constTerm(n + m, 1.0), t), Domain.inPExpCone())
 
         M.objective(ObjectiveSense.Minimize, Expr.add(Expr.dot(coeff_c, x), Expr.dot(coeff_f, t)))
-        
+
         M.setSolverParam("intpntCoTolNearRel", 1e+5)
         M.solve()
 

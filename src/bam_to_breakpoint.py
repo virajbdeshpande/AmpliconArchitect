@@ -488,6 +488,7 @@ class bam_to_breakpoint():
         logging.debug("Computing meanshift segmentation on " + str(i))
         if window_size == -1:
             window_size = 10000
+
         i = hg.interval(i.chrom, window_size * int(round(float(i.start) / window_size)), window_size * int(round(float(i.end) / window_size)))
         mc = self.median_coverage(window_size, gcc)
         rd_global = mc[0]
@@ -1707,6 +1708,7 @@ class bam_to_breakpoint():
         i2 = self.interval_extend(i)
         # i2 = i
         # i2 = self.interval_extend(i, ilist, rdlist)
+
         ms_window_size0 = 10000
         ms_window_size1 = 300
         merge_thresh = 100000
@@ -2179,26 +2181,35 @@ class bam_to_breakpoint():
         # set up all constants
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Optimizing graph copy number flow")
         C = self.median_coverage()[0] / 2
-        print("C (haploid coverage) = ", C)
+        logging.debug("C (haploid coverage) = " +  str(C))
         # G = new_graph
 
         seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
         n = len(seqlist)
         l = [abs(e.v2.pos - e.v1.pos)+1 for e in seqlist]
-        k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
+        # original
+        #k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
         # kgcc = [self.interval_coverage(hg.interval(i.chrom, e.v1.pos, e.v2.pos), gcc=True) * (e.v2.pos - e.v1.pos) / self.read_length for e in seqlist]
+        # adding mapq filter:
+        k = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) for e in seqlist]
+        # if not a.is_unmapped and a.reference_end - 1 <= e2 and a.mapping_quality > self.mapping_quality_cutoff]
         # k = kgcc
         # kcc = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) * (e.v2.pos - e.v1.pos) for e in seqlist]
         ke = {}
         ke.update(kbpe)
         ke.update(kce)
         ke.update(koe)
-        K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
+        # without GCC or mapq cutoff
+        #K = [len([a for a in self.fetch(e.v1.chrom, e.v1.pos, e.v2.pos)]) * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for e in seqlist]
+        # with mapq cutoff
+        #K = [self.interval_coverage(hg.interval(e.v1.chrom, e.v1.pos, e.v2.pos)) for e in seqlist]
+        K = [x * self.read_length/(abs(e.v2.pos - e.v1.pos) + 1.0) for x, e in zip(k, seqlist)]
+
         # edge read count kbpe defined above
         bplist = [e for e in new_graph.es.values() if (e.edge_type != 'sequence' and e.edge_type != 'concordant')]
         m = len(bplist)
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
-        print("########## len bplist", len(bplist), ";   ################ kbpe, kce, koe = ", len(kbpe), len(kce), len(koe))
+        logging.debug("len bplist: " + str(len(bplist)) + ";   ################ kbpe, kce, koe = " + str((len(kbpe), len(kce), len(koe))))
 
         # set up problem size and coefficients
 
@@ -2256,10 +2267,10 @@ class bam_to_breakpoint():
                     print('=============================')
                     for s in seqlist:
                         print(str(s))
-                    exit()
+                    exit(1)
                 elif sum([ap[0].intersection(ap[1]).size() for ap in hg.interval_list([msi]).intersection(slist)]) == 0:
                     print('MS0intersection', str(msi))
-                    exit()
+                    exit(1)
 
         edge_code = defaultdict(lambda:'discordant', {'concordant':'concordant', 'source':'source'})
 
@@ -2369,8 +2380,17 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        # msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.get_meanshift(i, window_size0=300) for i in ilist]
+        msrlist = []
+        for i in ilist:
+            plot_ws0 = 10000
+            if 1000000 > i.size() > 50000:
+                plot_ws0 = 1000
+            elif i.size() <= 50000:
+                plot_ws0 = 300
+
+            msrlist.append(self.get_meanshift(i, window_size0=plot_ws0))
+
+        # msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.get_meanshift(i, window_size0=300) for i in ilist]
         sensitive_elist = self.get_sensitive_discordant_edges(
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
