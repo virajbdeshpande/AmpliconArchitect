@@ -487,10 +487,7 @@ class bam_to_breakpoint():
     def meanshift_segmentation(self, i, window_size=-1, gcc=False, pvalue=0.01):
         logging.debug("Computing meanshift segmentation on " + str(i))
         if window_size == -1:
-            if i.size() > 1000000:
-                window_size = 10000
-            else:
-                window_size = 1000
+            window_size = 10000
 
         i = hg.interval(i.chrom, window_size * int(round(float(i.start) / window_size)), window_size * int(round(float(i.end) / window_size)))
         mc = self.median_coverage(window_size, gcc)
@@ -1711,12 +1708,8 @@ class bam_to_breakpoint():
         i2 = self.interval_extend(i)
         # i2 = i
         # i2 = self.interval_extend(i, ilist, rdlist)
-        if i.size() > 1000000:
-            ms_window_size0 = 10000
-        else:
-            ms_window_size0 = 1000
 
-        # ms_window_size0 = 10000
+        ms_window_size0 = 10000
         ms_window_size1 = 300
         merge_thresh = 100000
         logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + " Calculating coverage meanshift segmentation")
@@ -2387,8 +2380,17 @@ class bam_to_breakpoint():
         max_edge = 4
         scale_max_cov = 0
         scale_max_ms = 0
-        # msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.meanshift_segmentation(i, window_size=300) for i in ilist]
-        msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.get_meanshift(i, window_size0=300) for i in ilist]
+        msrlist = []
+        for i in ilist:
+            plot_ws0 = 10000
+            if 1000000 > i.size() > 50000:
+                plot_ws0 = 1000
+            elif i.size() <= 50000:
+                plot_ws0 = 300
+
+            msrlist.append(self.get_meanshift(i, window_size0=plot_ws0))
+
+        # msrlist = [self.get_meanshift(i) if i.size() > 50000 else self.get_meanshift(i, window_size0=300) for i in ilist]
         sensitive_elist = self.get_sensitive_discordant_edges(
             ilist, msrlist, eilist, ms_window_size0=10000, ms_window_size1=300, adaptive_counts=True, amplicon_name=amplicon_name)
         eilist = sensitive_elist
