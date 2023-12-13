@@ -250,8 +250,8 @@ Thickness of the arc qualitatively depicts the amount of paired-end read support
 The SV view file may be uploaded to web interface for Cycle view to visualize the cycles in conjunction with the SV view.
 
 
-### 5. [Intermediate] Copy number segmentation file `{out}_{CHROM}_{START}_{END}_cnseg.txt`
-This files provides the segmentation of an interval based on coverage alone. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
+### 5. [Intermediate] Copy number segmentation file `{out}_{CHROM}_{START}_{END}_ws10000_cnseg.txt`
+This files provides the segmentation of an interval based on coverage alone. The value after `ws` indicates the window size used for the segmentation. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
 - `{CHROM}`: Chromosome name
 - `{START}`: Coordinate of the first basepair in the segment
 - `{END}`: Coordinate of the last basepair in the segment
