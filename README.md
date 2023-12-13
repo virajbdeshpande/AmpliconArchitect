@@ -43,7 +43,7 @@ Please check out the **detailed guide** on running AA [available here](https://g
 1. [AmpliconSuite-pipeline](#recommended-way-to-run-aa-ampliconsuite-pipeline)
 2. [Installation](#installation)
 3. [Usage](#running-ampliconarchitect)
-4. [AA outputs and arguments](#ampliconarchitect-outputs-and-arguments)
+4. [AA outputs and arguments](#ampliconarchitect-output-files-and-command-line-arguments)
 5. [The AA Algorithm](#the-aa-algorithm)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
