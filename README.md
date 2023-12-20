@@ -101,6 +101,11 @@ cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
 2. Download and uncompress AA data repo files matching the reference genome(s) needed. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect.
+
+If you have [AmpliconSuite-pipeine](https://github.com/AmpliconSuite/AmpliconSuite-pipeline) installed, you can simply do
+>`AmpliconSuite-pipeline.py --download_repo [ref names]`
+
+If not, you can download the data repo files by doing:
 ```bash
 cd $AA_DATA_REPO
 wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
