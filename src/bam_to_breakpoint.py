@@ -917,7 +917,7 @@ class bam_to_breakpoint():
 
         dpairs = defaultdict(lambda: [], {})
         for aa in rSet:
-            if aa.query_name in multi_r:
+            if aa in multi_r:
                 continue
             a1 = d1reads[aa]
             a2 = d2reads[aa]
