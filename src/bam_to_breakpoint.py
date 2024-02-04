@@ -2386,7 +2386,9 @@ class bam_to_breakpoint():
         msrlist = []
         for i in ilist:
             plot_ws0 = 10000
-            if 1000000 > i.size() > 50000:
+            if 1000000 > i.size() >= 500000:
+                plot_ws0 = 2500
+            elif 500000 > i.size() > 50000:
                 plot_ws0 = 1000
             elif i.size() <= 50000:
                 plot_ws0 = 300
