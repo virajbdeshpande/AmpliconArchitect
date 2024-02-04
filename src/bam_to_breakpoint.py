@@ -886,35 +886,38 @@ class bam_to_breakpoint():
         v2max = min(e.v2.pos + self.max_insert - self.read_length if e.v2.strand == -1 else e.v2.pos, hg.chrLen[hg.chrNum(e.v2.chrom)]) - 1
         d1list = [a for a in self.fetch(e.v1.chrom, v1min, v1max) if not a.is_unmapped]
         d2list = [a for a in self.fetch(e.v2.chrom, v2min, v2max) if not a.is_unmapped]
-        d1Set = set([(a.query_name, a.is_read1, a.is_reverse, a.is_secondary) for a in d1list])
+        d1Set = set([(a.query_name, a.is_read1, a.is_reverse, (a.is_secondary or a.is_supplementary)) for a in d1list])
         if e.v1.strand == e.v2.strand:
-            d2Set = set([(a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary) for a in d2list])
+            d2Set = set([(a.query_name, a.is_read1, not a.is_reverse, (not a.is_secondary and not a.is_supplementary)) for a in d2list])
         else:
-            d2Set = set([(a.query_name, a.is_read1, a.is_reverse, not a.is_secondary) for a in d2list])
-        rSet = d1Set.intersection(d2Set)        
+            d2Set = set([(a.query_name, a.is_read1, a.is_reverse, (not a.is_secondary and not a.is_supplementary)) for a in d2list])
+        rSet = d1Set.intersection(d2Set)
         if len(rSet) == 0:
             return (e, 0, [], None)
         multi_r = set()
         d1reads = {}
         d2reads = {}
         for a in d1list:
-            if (a.query_name, a.is_read1, a.is_reverse, a.is_secondary) in d1reads:
-                multi_r.add((a.query_name, a.is_read1, a.is_reverse, a.is_secondary))
-            d1reads[(a.query_name, a.is_read1, a.is_reverse, a.is_secondary)] = a
+            secondary = a.is_secondary or a.is_supplementary
+            if (a.query_name, a.is_read1, a.is_reverse, secondary) in d1reads:
+                multi_r.add((a.query_name, a.is_read1, a.is_reverse, secondary))
+            d1reads[(a.query_name, a.is_read1, a.is_reverse, secondary)] = a
         if e.v1.strand == e.v2.strand:
             for a in d2list:
-                if (a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary) in d2reads:
-                    multi_r.add((a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary))
-                d2reads[(a.query_name, a.is_read1, not a.is_reverse, not a.is_secondary)] = a
+                secondary = a.is_secondary or a.is_supplementary
+                if (a.query_name, a.is_read1, not a.is_reverse, not secondary) in d2reads:
+                    multi_r.add((a.query_name, a.is_read1, not a.is_reverse, not secondary))
+                d2reads[(a.query_name, a.is_read1, not a.is_reverse, not secondary)] = a
         else:
             for a in d2list:
-                if (a.query_name, a.is_read1, a.is_reverse, not a.is_secondary) in d2reads:
-                    multi_r.add((a.query_name, a.is_read1, a.is_reverse, not a.is_secondary))
-                d2reads[(a.query_name, a.is_read1, a.is_reverse, not a.is_secondary)] = a
+                secondary = a.is_secondary or a.is_supplementary
+                if (a.query_name, a.is_read1, a.is_reverse, not secondary) in d2reads:
+                    multi_r.add((a.query_name, a.is_read1, a.is_reverse, not secondary))
+                d2reads[(a.query_name, a.is_read1, a.is_reverse, not secondary)] = a
 
         dpairs = defaultdict(lambda: [], {})
         for aa in rSet:
-            if a.query_name in multi_r:
+            if aa in multi_r:
                 continue
             a1 = d1reads[aa]
             a2 = d2reads[aa]
@@ -988,7 +991,7 @@ class bam_to_breakpoint():
             return (e, 0, [], None)
         hom = max_p[0][0]
         hom_seq = ''
-        if dpairs[max_p[0]][0][0].is_secondary:
+        if dpairs[max_p[0]][0][0].is_secondary or dpairs[max_p[0]][0][0].is_supplementary:
             vstrand = e.v2.strand
             a = dpairs[max_p[0]][0][1]
         else:
@@ -1101,7 +1104,7 @@ class bam_to_breakpoint():
             dflist += [a for a in self.fetch(i.chrom, max(1, i.start), i.end)
                        if not a.is_unmapped and not a.is_reverse and a.is_paired
                        and not a.is_proper_pair
-                       and not a.mate_is_unmapped
+                       and not a.mate_is_unmapped and not a.is_supplementary
                        and not a.is_secondary and a.reference_end is not None
                        and a.mapping_quality > self.mapping_quality_cutoff
                        and not (a.reference_name == a.next_reference_name
@@ -1110,7 +1113,7 @@ class bam_to_breakpoint():
             drlist += [a for a in self.fetch(i.chrom, max(1, i.start), i.end)
                        if not a.is_unmapped and a.is_reverse and a.is_paired
                        and not a.is_proper_pair
-                       and not a.mate_is_unmapped
+                       and not a.mate_is_unmapped and not a.is_supplementary
                        and not a.is_secondary and a.reference_end is not None
                        and a.mapping_quality > self.mapping_quality_cutoff
                        and not (a.reference_name == a.next_reference_name
