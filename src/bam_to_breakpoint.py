@@ -401,6 +401,7 @@ class bam_to_breakpoint():
         else:
             self.downsample_stats = self.basic_stats
 
+        logging.info("Pair support requirement: " + str(self.pair_support))
         return rstats
 
     def gc_scaling(self):
