@@ -7,6 +7,9 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
 
 ### Recent updates:
 
+### March 2024 update
+- `1.3.r9`
+
 ### February 2024 update
 - `1.3.r8` adds breakpoint microhomology detection from alignments marked as supplementary (not just secondary). Also tweaks sashimi plot visualization of CN. 
 
