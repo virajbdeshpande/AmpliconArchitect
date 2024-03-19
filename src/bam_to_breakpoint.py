@@ -378,7 +378,6 @@ class bam_to_breakpoint():
             print("read length:", self.read_length, "insert size:", self.insert_size, "insert std dev:", self.insert_std,
                   "max_insert:", self.max_insert, "percent proper:", percent_proper, "num_sdevs", self.num_sdevs)
             print("coverage stats", self.basic_stats, len(wc_ws_filter))
-            print("pair support", self.pair_support)
             coverage_stats_file = open(hg.DATA_REPO + "/coverage.stats", 'a')
             coverage_stats_file.write(os.path.abspath(self.bamfile.filename.decode('utf-8')) + '\t' + '\t'.join(map(str, rstats)) + '\n')
             coverage_stats_file.close()
