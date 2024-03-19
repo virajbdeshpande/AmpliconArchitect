@@ -71,7 +71,7 @@ class bam_to_breakpoint():
     def __init__(self, bamfile, sample_name='', read_length=100, max_insert=400, insert_size=300, num_sdevs=3,
         window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1, secondary_index=None,
         coverage_stats=None, coverage_windows=None, sensitivems=False, span_coverage=True, tstart=0, ext_dnlist=None,
-        zero_len_fb_filt=False):
+        foldback_pair_support_min=2):
         self.bamfile = bamfile
         self.sample_name = sample_name
         self.window_size = window_size
@@ -97,7 +97,7 @@ class bam_to_breakpoint():
         self.interval_coverage_calls = {}
         self.tstart = tstart if tstart != 0 else TSTART
         self.ext_dnlist = ext_dnlist if ext_dnlist else []
-        self.zero_len_fb_filt = zero_len_fb_filt
+        self.foldback_pair_support_min = foldback_pair_support_min
         if coverage_stats is None:
             self.basic_stats_set = False
             self.median_coverage(window_list=coverage_windows)
@@ -476,8 +476,16 @@ class bam_to_breakpoint():
     def meanshift_pval(self, s1, s2):
         if len(s1) <= 1 and len(s2) <= 1:
            return 1.0
+
+        if len(set(s1)) == 1:
+            s1[0]+=0.0000001
+
+        if len(set(s2)) == 1:
+            s2[0]+=0.0000001
+
         if len(s1) > 1 and len(s2) > 1:
             return stats.ttest_ind(s1, s2, equal_var=False)[1]
+
         elif len(s1) == 1:
             zscore = abs(s1[0] - np.average(s1 + s2)) / np.std(s1 + s2)
             return stats.norm.sf(zscore)
@@ -1299,6 +1307,7 @@ class bam_to_breakpoint():
                 if bp1.chrom == bp2.chrom and bp1.strand == bp2.strand and abs(bp1.pos - bp2.pos) <= self.read_length:
                     non_inverted_reads = set()
                     multiple_non_inverted = False
+                    foldback_ps = max(self.foldback_pair_support_min, ps)
                     if bp1.strand == 1:
                         for v in vl:
                             if v[0].reference_start == v[1].reference_start:
@@ -1311,7 +1320,7 @@ class bam_to_breakpoint():
                                 vl2.append(v)
                                 if not multiple_non_inverted:
                                     non_inverted_reads.add(v[0].query_name)
-                                    if len(non_inverted_reads) >= ps:
+                                    if len(non_inverted_reads) >= foldback_ps:
                                         multiple_non_inverted = True
                     else:
                         for v in vl:
@@ -1325,12 +1334,12 @@ class bam_to_breakpoint():
                                 vl2.append(v)
                                 if not multiple_non_inverted:
                                     non_inverted_reads.add(v[0].query_name)
-                                    if len(non_inverted_reads) >= ps:
+                                    if len(non_inverted_reads) >= foldback_ps:
                                         multiple_non_inverted = True
 
-                    logging.debug("checking foldback2: " + str(bp1) + str(bp2) + " %s %s %d %d %d" % (bp1.strand, bp2.strand, len(vl), num_inverted, ps))
+                    logging.debug("checking foldback2: " + str(bp1) + str(bp2) + " %s %s %d %d %d" % (bp1.strand, bp2.strand, len(vl), num_inverted, foldback_ps))
 
-                    if len(vl2) < ps or (not multiple_non_inverted):
+                    if len(vl2) < foldback_ps or (not multiple_non_inverted):
                         # logging.debug("FOLDBACK: " + str(bp1) + str(bp2))
                         continue
                     vl = vl2
@@ -1358,7 +1367,7 @@ class bam_to_breakpoint():
                         vl = [v for v in vl if v[0].reference_end - 1 <= maxp and v[0].reference_end - 1 > maxp - self.max_insert + 2 * self.read_length and v[0].reference_start >= v[1].reference_start]
 
                         # logging.debug(str(maxp) + " " + str(maxn) + " " + str(len(vl)))
-                        if len(vl) < ps:
+                        if len(vl) < foldback_ps:
                             logging.debug("not enough support in filtered vl: " + str(len(vl)))
                             continue
                         # check if every read has same start end
@@ -1381,7 +1390,7 @@ class bam_to_breakpoint():
 
                         vl = [v for v in vl if v[0].reference_start >= maxp and v[0].reference_start < maxp +  self.max_insert - 2 * self.read_length and v[0].reference_start <= v[1].reference_start]
                         # logging.debug(str(maxp) + " " + str(maxn) + " " + str(len(vl)))
-                        if len(vl) < ps:
+                        if len(vl) < foldback_ps:
                             logging.debug("not enough support in filtered vl: " + str(len(vl)))
                             continue
 
@@ -1419,7 +1428,8 @@ class bam_to_breakpoint():
                             qname_exclude.add(v[0].query_name)
                             continue
                     vl = [v for v in vl if v[0].query_name not in qname_exclude]
-                    if len(vl) < ps:
+                    if len(vl) < foldback_ps:
+                        logging.debug("not enough support in filtered vl after refinement: " + str(len(vl)))
                         continue
 
                 if bre.type() == 'everted' and abs(bre.v1.pos - bre.v2.pos) < self.max_insert:
