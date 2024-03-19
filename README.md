@@ -8,7 +8,8 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
 ### Recent updates:
 
 ### March 2024 update
-- `1.3.r9`
+- `1.3.r9` reduces inverted sequence artifacts by about 50%, providing quality and runtime improvements to heavily artifacted samples. Improves numerical stability of meanshift p-value calculation. 
+Adds `--foldback_pair_support_min` argument to allow users to adjust read support requirement for foldback SV discovery. 
 
 ### February 2024 update
 - `1.3.r8` adds breakpoint microhomology detection from alignments marked as supplementary (not just secondary). Also tweaks sashimi plot visualization of CN. 
