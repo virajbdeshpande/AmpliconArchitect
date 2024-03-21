@@ -125,6 +125,8 @@ class bam_to_breakpoint():
                 self.downsample_stats = r
             else:
                 self.downsample_stats = self.basic_stats
+                self.pair_support = int(self.pair_support)
+
         self.coverage_logs = {}
 
         if pair_support != -1:
@@ -829,7 +831,7 @@ class bam_to_breakpoint():
         cd = max(1, cd)
         if self.sensitivems and sensitivems:
             cd = min(cd, 10)
-        pcount = max(mc[4] * cd /20.0  * ((self.insert_size - self.read_length) / 2.0 / self.read_length)*mc[12], 2)
+        pcount = max(mc[4] * cd / 20.0 * ((self.insert_size - self.read_length) / 2.0 / self.read_length)*mc[12], 2)
         pmincount = mc[11]
         if pcount < mc[11]:
             pcount = pmincount
