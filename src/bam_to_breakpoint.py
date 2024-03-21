@@ -105,6 +105,7 @@ class bam_to_breakpoint():
             (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length,
              self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support,
              self.percent_proper, _, _) = coverage_stats
+            logging.debug("reused cstats: " + str(coverage_stats))
             self.basic_stats = coverage_stats
             self.basic_stats_set = True
             r = coverage_stats
@@ -116,6 +117,7 @@ class bam_to_breakpoint():
             else:
                 self.downsample_ratio = float(self.downsample) / self.basic_stats[0] if self.basic_stats[0] > float(self.downsample) else 1
 
+            logging.debug("downsample ratio: " + str(self.downsample_ratio))
             if self.downsample_ratio != 1:
                 rr = self.downsample_ratio
                 rsq = math.sqrt(rr)
