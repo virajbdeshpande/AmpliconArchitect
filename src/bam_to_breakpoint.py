@@ -120,7 +120,7 @@ class bam_to_breakpoint():
                 rr = self.downsample_ratio
                 rsq = math.sqrt(rr)
                 r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1], r)]
-                r[11] = max((r[4] / 10.0) * ((r[7] - r[6]) / 2 / r[6])*r[12], 2)
+                r[11] = max(int(round((r[4] / 10.0) * ((r[7] - r[6]) / 2.0 / r[6])*r[12])), self.pair_support_min)
                 self.pair_support = r[11]
                 self.downsample_stats = r
             else:
@@ -131,7 +131,6 @@ class bam_to_breakpoint():
             self.pair_support = pair_support
 
     # Methods to find coverage and other statistics of bam file
-
     def fetch(self, c, s, e):
         if s > e:
             (s, e) = (e, s)
@@ -295,7 +294,7 @@ class bam_to_breakpoint():
                     window_list_index += 1
                     if cwindow.end - cwindow.start < 10000:
                         continue
-                    newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
+                    newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) // 2) - 5000)
                 if hg.chrPos(newpos) is None:
                     logging.debug("Unable to locate reference position: " + refi.chrom + " " + str(refi.start) + " "
                                  + str(refi.end) + " " + str(newpos) + " " + str(sumchrLen))
@@ -336,7 +335,7 @@ class bam_to_breakpoint():
                     window_list_index += 1
                     if cwindow.end - cwindow.start < 10000:
                         continue
-                    newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) / 2) - 5000)
+                    newpos = hg.absPos(cwindow.chrom, ((cwindow.end + cwindow.start) // 2) - 5000)
                 if hg.chrPos(newpos) is None:
                     logging.warning("Unable to locate reference position: " + refi.chrom + " " + str(refi.start) + " "
                                  + str(refi.end) + " " + str(newpos) + " " + str(sumchrLen))
@@ -368,7 +367,7 @@ class bam_to_breakpoint():
         (wc_300_median, wc_300_avg, wc_300_std) = (wc_median[1], wc_avg[1], wc_std[1])
         bamfile_pathname = str(self.bamfile.filename.decode())
         bamfile_filesize = os.path.getsize(bamfile_pathname)
-        self.pair_support = max(int(round((wc_300_avg / 10.0) * ((self.insert_size - self.read_length) / 2 / self.read_length)*self.percent_proper)), self.pair_support_min)
+        self.pair_support = max(int(round((wc_300_avg / 10.0) * ((self.insert_size - self.read_length) / 2.0 / self.read_length)*self.percent_proper)), self.pair_support_min)
         rstats = (wc_10000_median, wc_10000_avg, wc_10000_std, wc_300_median, wc_300_avg, wc_300_std, self.read_length,
                   self.insert_size, self.insert_std, self.min_insert, self.max_insert, self.pair_support,
                   self.percent_proper, self.num_sdevs, bamfile_filesize)
@@ -393,14 +392,13 @@ class bam_to_breakpoint():
             rr = self.downsample_ratio
             rsq = math.sqrt(rr)         
             r = [i[0] * i[1] for i in zip([rr, rr, rsq, rr, rr, rsq, 1, 1, 1, 1, 1, 1, 1, 1, 1], r)]
-            r[11] = max((r[4] / 10.0)  * ((r[7] - r[6]) / 2 / r[6])*r[12], 2)
+            r[11] = max(int(round((r[4] / 10.0) * ((r[7] - r[6]) / 2.0 / r[6])*r[12])), self.pair_support_min)
             self.pair_support = r[11]
             self.downsample_stats = r
 
         else:
             self.downsample_stats = self.basic_stats
 
-        logging.info("Pair support requirement: " + str(self.pair_support))
         return rstats
 
     def gc_scaling(self):
@@ -831,7 +829,7 @@ class bam_to_breakpoint():
         cd = max(1, cd)
         if self.sensitivems and sensitivems:
             cd = min(cd, 10)
-        pcount = max(mc[4] * cd /20.0  * ((self.insert_size - self.read_length) / 2 / self.read_length)*mc[12], 2)
+        pcount = max(mc[4] * cd /20.0  * ((self.insert_size - self.read_length) / 2.0 / self.read_length)*mc[12], 2)
         pmincount = mc[11]
         if pcount < mc[11]:
             pcount = pmincount
@@ -2311,9 +2309,9 @@ class bam_to_breakpoint():
             aval.append(valarr)
 
         coeff_f = [-1 * ki for ki in k] + [-1 * ke[e] for e in bplist]
-        coeff_g = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
+        coeff_g = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2.0 / self.read_length for e in bplist]
         const_h = [0.0001] * (n + m)
-        coeff_c = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2 / self.read_length for e in bplist]
+        coeff_c = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2.0 / self.read_length for e in bplist]
 
         # Solve the optimization problem
         res = mosek_solver.call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)
@@ -2549,7 +2547,7 @@ class bam_to_breakpoint():
                     ax2.axvline(ilist.xpos(e.v2.chrom, e.v2.pos), color=ecolor[e.type()], linewidth=4.0 * min(1, float(el[1])/max_edge), alpha=0.5, zorder=10)
                     ax2.plot((ilist.xpos(e.v2.chrom, e.v2.pos), ilist.xpos(e.v2.chrom, e.v2.pos) - 0.01 * e.v2.strand), (0, 0), linewidth=8.0*min(1, float(el[1])/max_edge), color=ecolor[e.type()])
                 else:
-                    xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2
+                    xmid = (ilist.xpos(e.v1.chrom, e.v1.pos) + ilist.xpos(e.v2.chrom, e.v2.pos)) / 2.0
                     xdia = abs(ilist.xpos(e.v2.chrom, e.v2.pos) - ilist.xpos(e.v1.chrom, e.v1.pos))
                     ydia = (1.0 + xdia) * 3 * ymax
                     pseudo_edge = breakpoint_edge(breakpoint_vertex(e.v1.chrom, hg.absPos(e.v1.chrom, e.v1.pos), e.v1.strand), breakpoint_vertex(e.v1.chrom, hg.absPos(e.v2.chrom, e.v2.pos), e.v2.strand))
