@@ -8,8 +8,13 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
 ### Recent updates:
 
 ### March 2024 update
-- `1.3.r9` reduces inverted sequence artifacts by about 50%, providing quality and runtime improvements to heavily artifacted samples. Improves numerical stability of meanshift p-value calculation. 
-Adds `--foldback_pair_support_min` argument to allow users to adjust read support requirement for foldback SV discovery. 
+- `1.4.r1` adds the following updates:
+  - Reduces inverted sequence artifacts by about 50%, providing quality improvements to heavily artifacted samples.
+  - Bugfix to counting of foldback support reads & boundaries of foldback SVs. 
+  - Adds `--foldback_pair_support_min` argument to allow users to adjust read support requirement for foldback SV discovery.
+  - Provides more unified behavior between python2 & 3 usage when computing read pair support requirements.
+  - Improves numerical stability of meanshift p-value calculation. 
+
 
 ### February 2024 update
 - `1.3.r8` adds breakpoint microhomology detection from alignments marked as supplementary (not just secondary). Also tweaks sashimi plot visualization of CN. 
