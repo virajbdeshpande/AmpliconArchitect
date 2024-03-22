@@ -302,7 +302,7 @@ bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.
                                    coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample,
                                    sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART,
                                    ext_dnlist=ext_dnlist, foldback_pair_support_min=args.foldback_pair_support_min)
-logging.info("Pair support requirement: " + str(bamFileb2b.pair_support))
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Pair support requirement: " + str(bamFileb2b.pair_support))
 segments = []
 
 if args.extendmode == 'VIRAL':

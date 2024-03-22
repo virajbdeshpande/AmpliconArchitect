@@ -535,43 +535,44 @@ class bam_to_breakpoint():
 
         for hb in hb_profile:
             cov2 = copy.copy(cov)
-            for ms_iterate in range(1):
-                fi = -1
-                if len(frozen) > 0:
-                    fi = 0
-                ms = [w for w in self.meanshift(i, window_size, hb, cov2, rd_global=rd_global, h0=h0, gcc=gcc, n=n)]
-                segs = []
-                new_seg = []
-                msi = 0
-                # print 'THIS0', len(frozen), fi #, frozen[0][0][0].start
-                # for ff in range(len(frozen)):
-                #     print "THIS", ff, frozen[ff][0][0][0].start
-                while msi < len(ms):
-                    if fi >= 0 and fi < len(frozen) and ms[msi][0].start == frozen[fi][0][0][0].start:
-                        if len(new_seg) > 0 and (frozen[fi][1] % 2 == 1 or (ms[msi][1] > 0 and ms[msi -1][1] <= 0)):
-                            segs.append(new_seg)
-                            new_seg = ms[msi: msi + len(frozen[fi][0])]
-                        else:
-                            new_seg += ms[msi: msi + len(frozen[fi][0])]
-                        # segs.append(ms[msi: msi + len(frozen[fi][0])])
-                        msi += len(frozen[fi][0])
-                        fi += 1
-                        continue
-                    elif ms[msi][1] > 0 and ms[msi - 1][1] <= 0 and len(new_seg) > 0:
+            # for ms_iterate in range(1):
+            fi = -1
+            if len(frozen) > 0:
+                fi = 0
+            ms = [w for w in self.meanshift(i, window_size, hb, cov2, rd_global=rd_global, h0=h0, gcc=gcc, n=n)]
+            segs = []
+            new_seg = []
+            msi = 0
+            # print 'THIS0', len(frozen), fi #, frozen[0][0][0].start
+            # for ff in range(len(frozen)):
+            #     print "THIS", ff, frozen[ff][0][0][0].start
+            while msi < len(ms):
+                if fi >= 0 and fi < len(frozen) and ms[msi][0].start == frozen[fi][0][0][0].start:
+                    if len(new_seg) > 0 and (frozen[fi][1] % 2 == 1 or (ms[msi][1] > 0 and ms[msi -1][1] <= 0)):
                         segs.append(new_seg)
-                        new_seg = []
-                    new_seg.append(ms[msi])
-                    msi += 1
-                if len(new_seg) > 0:
-                   segs.append(new_seg)
-                cov2 = copy.copy(cov[:n])
-                covi = n
-                for msi in range(len(segs)):
-                    s = segs[msi]
-                    c = np.average([cc[1] for cc in cov[covi: covi + len(s)]])
-                    cov2 += [(ss[0], c) for ss in segs[msi]]
-                    covi += len(segs[msi])
-                cov2 += cov[-n:]
+                        new_seg = ms[msi: msi + len(frozen[fi][0])]
+                    else:
+                        new_seg += ms[msi: msi + len(frozen[fi][0])]
+                    # segs.append(ms[msi: msi + len(frozen[fi][0])])
+                    msi += len(frozen[fi][0])
+                    fi += 1
+                    continue
+                elif ms[msi][1] > 0 and ms[msi - 1][1] <= 0 and len(new_seg) > 0:
+                    segs.append(new_seg)
+                    new_seg = []
+                new_seg.append(ms[msi])
+                msi += 1
+            if len(new_seg) > 0:
+               segs.append(new_seg)
+            cov2 = copy.copy(cov[:n])
+            covi = n
+            for msi in range(len(segs)):
+                s = segs[msi]
+                c = np.average([cc[1] for cc in cov[covi: covi + len(s)]])
+                cov2 += [(ss[0], c) for ss in segs[msi]]
+                covi += len(segs[msi])
+            cov2 += cov[-n:]
+
             ci = n
             frozen = []
             cpi = n
@@ -776,6 +777,7 @@ class bam_to_breakpoint():
                 msr.append(msi)
         else:
             msr = self.meanshift_refined(i, window_size0=window_size0, window_size1=window_size1, gcc=gcc)
+            logging.debug('\tWriting ' + file_name)
             msfile = open(file_name, 'w')
             msfile.write('#chrom\tstart\tend\tcn\tstart_refined\tend_refined\n')
             for ms in msr:
