@@ -188,6 +188,7 @@ def call_mosek_fusion(n, m, asub, aval, coeff_c, coeff_f):
         M.objective(ObjectiveSense.Minimize, Expr.add(Expr.dot(coeff_c, x), Expr.dot(coeff_f, t)))
 
         M.setSolverParam("intpntCoTolNearRel", 1e+5)
+
         M.solve()
 
         if M.getPrimalSolutionStatus() != SolutionStatus.Optimal:

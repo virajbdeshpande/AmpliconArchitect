@@ -101,11 +101,11 @@ cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
 2. Download and uncompress AA data repo files matching the reference genome(s) needed. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect.
-
 If you have [AmpliconSuite-pipeine](https://github.com/AmpliconSuite/AmpliconSuite-pipeline) installed, you can simply do
 >`AmpliconSuite-pipeline.py --download_repo [ref names]`
 
 If not, you can download the data repo files by doing:
+
 ```bash
 cd $AA_DATA_REPO
 wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
@@ -175,6 +175,7 @@ AA generates informative output at each step in the algorithm (details below):
 The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
 
 AA generates 4 types of output files. 1 summary file and 3 files per amplicon:
+
 
 | File name | Description |
 | --------- | ----------- |
@@ -262,6 +263,7 @@ The SV view file may be uploaded to web interface for Cycle view to visualize th
 
 ### 5. [Intermediate] Copy number segmentation file `{out}_{CHROM}_{START}_{END}_ws10000_cnseg.txt`
 This files provides the segmentation of an interval based on coverage alone. The value after `ws` indicates the window size used for the segmentation. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
+
 - `{CHROM}`: Chromosome name
 - `{START}`: Coordinate of the first basepair in the segment
 - `{END}`: Coordinate of the last basepair in the segment

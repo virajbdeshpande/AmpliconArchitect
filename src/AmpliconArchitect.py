@@ -62,6 +62,7 @@ import global_names
 
 __version__ = "1.4.r1"
 
+
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
 parser.add_argument('--bed', dest='rdAlts',
@@ -131,11 +132,13 @@ parser.add_argument('--foldback_pair_support_min', help="Number of read pairs fo
                     "(default 2 but typically becomes higher due to coverage-scaled cutoffs). Used value will be the maximum"
                     " of pair_support and this argument. Raising to 3 will help dramatically in heavily artifacted samples.",
                     metavar='INT', action='store', type=int, default=2)
+
 parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverage statistics from coverage.stats.",
                     action='store_true', default=False)
 parser.add_argument('--random_seed', dest="random_seed",
                     help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will"
                     " use seed=0", action='store_true', default=False)
+
 parser.add_argument('--max_seed_len', dest="max_seed_len", help="Maximum length (in bp) of seed regions to allow AA to"
                     " take as input. Will print an error if in excess. This argument helps ensure users are giving seed"
                     " regions to AA, not whole-genome CNV calls to AA.", type=int, default=500000000)
@@ -297,6 +300,7 @@ if args.sv_vcf:
     ext_dnlist = exdh.sv_vcf_to_bplist(args.sv_vcf, filter_by_pass=not args.sv_vcf_no_filter)
 else:
     ext_dnlist = []
+
 
 bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min,
                                    coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample,

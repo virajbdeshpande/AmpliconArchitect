@@ -72,6 +72,7 @@ class bam_to_breakpoint():
         window_size=10000, min_coverage=30, pair_support=-1, pair_support_min=2, downsample=-1, secondary_index=None,
         coverage_stats=None, coverage_windows=None, sensitivems=False, span_coverage=True, tstart=0, ext_dnlist=None,
         foldback_pair_support_min=2):
+
         self.bamfile = bamfile
         self.sample_name = sample_name
         self.window_size = window_size
@@ -1137,8 +1138,6 @@ class bam_to_breakpoint():
 
         logging.debug("#TIME " + '%.3f\t'%(time() - TSTART) + " discordant edges: discordant read pairs found: %s %s %s" % (str(interval), len(dflist), len(drlist)))
 
-
-
         # perform biclustering for readpairs using union-find algorithm to give sets of connected read-pairs clist
         vlist = []
         vcount = 0
@@ -1293,6 +1292,7 @@ class bam_to_breakpoint():
                 #         logging.debug(str(debug_a[0]) + " " + str(debug_a[1]))
                 #
                 #     logging.debug("")
+
 
                 if ms is None:
                     ps = pair_support
@@ -2252,6 +2252,7 @@ class bam_to_breakpoint():
         logging.info("#TIME " + '%.3f\t'%(time() - self.tstart) + " Optimizing graph copy number flow")
         C = self.median_coverage()[0] / 2
         logging.debug("C (haploid coverage) = " +  str(C))
+
         # G = new_graph
 
         seqlist = [e for e in new_graph.es.values() if e.edge_type == 'sequence']
@@ -2280,6 +2281,7 @@ class bam_to_breakpoint():
         m = len(bplist)
         bpdict = {bplist[bpi]: bpi for bpi in range(len(bplist))}
         logging.debug("len bplist: " + str(len(bplist)) + ";   ################ kbpe, kce, koe = " + str((len(kbpe), len(kce), len(koe))))
+
 
         # set up problem size and coefficients
 
@@ -2318,6 +2320,7 @@ class bam_to_breakpoint():
         coeff_g = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2.0 / self.read_length for e in bplist]
         const_h = [0.0001] * (n + m)
         coeff_c = [C * li / self.read_length for li in l] + [(self.max_insert) * C / 2.0 / self.read_length for e in bplist]
+
 
         # Solve the optimization problem
         res = mosek_solver.call_mosek(n, m, asub, aval, coeff_c, coeff_f, coeff_g, const_h)
