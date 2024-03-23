@@ -29,18 +29,6 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
   - Reduces bugs created when AA is rerun into the same directory with existing files having the same sample name but different input files.
   - Bugfix for edge case where AA does not properly expand a newly discovered interval if a discovered SV lands exactly on the endpoint of the explored interval. 
 
-### March 2023 updates:
-- `1.3.r5` provides better compatibility with the AmpliconSuite-pipeline Singularity image and versions of Mosek installed via pip/conda.
-
-- `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status, and better handling of the coverage stats lookup file.
-
-### January 2023 update:
-Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 
-will slightly change AA copy number estimates between versions (typical difference < 0.02 copies).
-`1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
-Now adjusting font type and size on AA output figures can be done with much more ease.
-This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually.
-
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
 
 ## Introduction
