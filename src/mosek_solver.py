@@ -145,6 +145,7 @@ def call_mosek_acc(n, m, asub, aval, coeff_c, coeff_f):
         
         task.putobjsense(mosek.objsense.minimize)
 
+        task.putdouparam(mosek.dparam.intpnt_co_tol_near_rel, 1e+5)
         task.optimize()
         task.solutionsummary(mosek.streamtype.log)
         
@@ -185,6 +186,8 @@ def call_mosek_fusion(n, m, asub, aval, coeff_c, coeff_f):
         M.constraint(Expr.hstack(x, Expr.constTerm(n + m, 1.0), t), Domain.inPExpCone())
 
         M.objective(ObjectiveSense.Minimize, Expr.add(Expr.dot(coeff_c, x), Expr.dot(coeff_f, t)))
+
+        M.setSolverParam("intpntCoTolNearRel", 1e+5)
 
         M.solve()
 

@@ -7,24 +7,27 @@ Installation instructions for AmpliconArchitect are provided here, but to prepar
 
 ### Recent updates:
 
-### July 2023 updates
+### March 2024 update
+- `1.4.r1` adds the following updates:
+  - Reduces inverted sequence artifacts by about 50%, providing quality improvements to heavily artifacted samples.
+  - Bugfix to counting of foldback support reads & boundaries of foldback SVs. 
+  - Adds `--foldback_pair_support_min` argument to allow users to adjust read support requirement for foldback SV discovery.
+  - Provides more unified behavior between python2 & 3 usage when computing read pair support requirements.
+  - Improves numerical stability of meanshift p-value calculation. 
+
+
+### February 2024 update
+- `1.3.r8` adds breakpoint microhomology detection from alignments marked as supplementary (not just secondary). Also tweaks sashimi plot visualization of CN. 
+
+### December 2023 update
+- `1.3.r7` refines the CN segmentation shown in the visualizations to prevent mismatches between displayed CN and coverage. Also allows SV VCF to use "." in the FILTER field instead of only "PASS". MOSEK convergence criteria relaxed slightly to prevent rare termination issues. 
+
+### July 2023 update
 - `1.3.r6` adds multiple new features:
   - `--sv_vcf` argument which allows users to augment AA's SV detection with their own SV calls provided in a VCF format.
   - Automated protection against improperly-formatted inputs
   - Reduces bugs created when AA is rerun into the same directory with existing files having the same sample name but different input files.
   - Bugfix for edge case where AA does not properly expand a newly discovered interval if a discovered SV lands exactly on the endpoint of the explored interval. 
-
-### March 2023 updates:
-- `1.3.r5` provides better compatibility with the AmpliconSuite-pipeline Singularity image and versions of Mosek installed via pip/conda.
-
-- `1.3.r4` adds a bugfix to coverage plotting, some code reorganization to provide a modest speedup (approx 20% in the average case), automatic testing of the MOSEK license status, and better handling of the coverage stats lookup file.
-
-### January 2023 update:
-Version `1.3.r3` adds support for Mosek versions 9 and 10. Many thanks to the Mosek team for adding these changes (especially Michal Adamaszek). Our testing revealed that usage of different Mosek versions 
-will slightly change AA copy number estimates between versions (typical difference < 0.02 copies).
-`1.3.r3` makes text objects in the PDF amplicon plots editable - as a text object instead of text outline (thank you to Kaiyuan Zhu for proposing this improvement).
-Now adjusting font type and size on AA output figures can be done with much more ease.
-This update also adds improvements to cached coverage stats lookup and more control when using `downsample.py` manually.
 
 **[Older update descriptions are available here.](https://docs.google.com/document/d/1jqnCs46hrpYGBGrZQFop31ezskyludxNJEQdZONwFdc/edit?usp=sharing)**
 
@@ -43,7 +46,7 @@ Please check out the **detailed guide** on running AA [available here](https://g
 1. [AmpliconSuite-pipeline](#recommended-way-to-run-aa-ampliconsuite-pipeline)
 2. [Installation](#installation)
 3. [Usage](#running-ampliconarchitect)
-4. [AA outputs and arguments](#ampliconarchitect-outputs-and-arguments)
+4. [AA outputs and arguments](#ampliconarchitect-command-line-arguments-and-output-files)
 5. [The AA Algorithm](#the-aa-algorithm)
 6. [Checkpointing and modular integration with other tools](#checkpointing-and-modular-integration-with-other-tools)
 
@@ -98,6 +101,11 @@ cd $AA_DATA_REPO && touch coverage.stats && chmod a+r coverage.stats
 source ~/.bashrc
 ```
 2. Download and uncompress AA data repo files matching the reference genome(s) needed. Data repo files are available here: https://datasets.genepattern.org/?prefix=data/module_support_files/AmpliconArchitect.
+If you have [AmpliconSuite-pipeine](https://github.com/AmpliconSuite/AmpliconSuite-pipeline) installed, you can simply do
+>`AmpliconSuite-pipeline.py --download_repo [ref names]`
+
+If not, you can download the data repo files by doing:
+
 ```bash
 cd $AA_DATA_REPO
 wget [url for data repo [hg19/GRCh37/GRCh38/mm10].tar.gz]
@@ -115,17 +123,7 @@ On the data repo download page, the suffix `indexed` indicates the BWA index is 
 ## Running AmpliconArchitect
 **[Please see the example commands here.](https://github.com/AmpliconSuite/AmpliconSuite-pipeline#running-ampliconsuite-pipeline)**
 
-## AmpliconArchitect output files and command-line arguments
-
-### Outputs
-AA generates informative output at each step in the algorithm (details below):
-1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
-2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
-3. Graph file: For each amplicon, a text file describing the graph and predicted copy count.
-4. Cycles file: For each amplicon: a text file describing the list of simple cycles predicted.
-5. Cycle view: A web interface with operations for visualizing and modifying the simple cycles.
-
-The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
+## AmpliconArchitect command-line arguments and output files
 
 ### Required Arguments
 
@@ -163,8 +161,21 @@ The user may provide intermediate files as a way to either kickstart AA from an 
 | `--sv_vcf_no_filter` | FLAG | Use all external SV calls from the --sv_vcf arg, even those without "PASS" in the FILTER column.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 
 
 
-### Output description
-The software generates 4 types of output files. 1 summary file and 3 files per amplicon:
+## Output description
+
+This section describes output files generated by AA. A description of the AmpliconClassifier files also generated by AmpliconSuite-pipeline is available [here](https://github.com/AmpliconSuite/AmpliconClassifier?tab=readme-ov-file#3-outputs).
+
+AA generates informative output at each step in the algorithm (details below):
+1. Summary file: List of amplicons and corresponding intervals are listed in a summary file.
+2. SV view: A PNG/PDF image for each amplicon displaying all rearrangement signatures. Underlying data is provided in text format as intermediate files.
+3. Graph file: For each amplicon, a text file describing the graph and predicted copy count.
+4. Cycles file: For each amplicon: a text file describing the list of simple cycles predicted.
+5. Cycle view: A web interface with operations for visualizing and modifying the simple cycles.
+
+The user may provide intermediate files as a way to either kickstart AA from an intermediate step or to use alternative intermediate data (e.g. from external tools) for reconstruction.
+
+AA generates 4 types of output files. 1 summary file and 3 files per amplicon:
+
 
 | File name | Description |
 | --------- | ----------- |
@@ -250,8 +261,9 @@ Thickness of the arc qualitatively depicts the amount of paired-end read support
 The SV view file may be uploaded to web interface for Cycle view to visualize the cycles in conjunction with the SV view.
 
 
-### 5. [Intermediate] Copy number segmentation file `{out}_{CHROM}_{START}_{END}_cnseg.txt`
-This files provides the segmentation of an interval based on coverage alone. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
+### 5. [Intermediate] Copy number segmentation file `{out}_{CHROM}_{START}_{END}_ws10000_cnseg.txt`
+This files provides the segmentation of an interval based on coverage alone. The value after `ws` indicates the window size used for the segmentation. Here `{CHROM}_{START}_{END}` represent the coordinates of the interval. First line represents the header. Tab-separated fields:
+
 - `{CHROM}`: Chromosome name
 - `{START}`: Coordinate of the first basepair in the segment
 - `{END}`: Coordinate of the last basepair in the segment

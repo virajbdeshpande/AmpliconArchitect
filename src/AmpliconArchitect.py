@@ -60,7 +60,8 @@ else:
 
 import global_names
 
-__version__ = "1.3.r6"
+__version__ = "1.4.r1"
+
 
 parser = argparse.\
 ArgumentParser(description="Reconstruct Amplicons connected to listed intervals.")
@@ -126,14 +127,18 @@ parser.add_argument('--insert_sdevs', dest='insert_sdevs',
                     action='store', type=float, default=3)
 parser.add_argument('--pair_support_min', dest='pair_support_min',
                     help="Number of read pairs for minimum breakpoint support (default 2 but typically becomes higher due"
-                         " to coverage-scaled cutoffs)", metavar='INT',
-                    action='store', type=int, default=2)
+                    " to coverage-scaled cutoffs)", metavar='INT', action='store', type=int, default=2)
+parser.add_argument('--foldback_pair_support_min', help="Number of read pairs for minimum foldback SV support "
+                    "(default 2 but typically becomes higher due to coverage-scaled cutoffs). Used value will be the maximum"
+                    " of pair_support and this argument. Raising to 3 will help dramatically in heavily artifacted samples.",
+                    metavar='INT', action='store', type=int, default=2)
+
 parser.add_argument('--no_cstats', dest='no_cstats', help="Do not re-use coverage statistics from coverage.stats.",
                     action='store_true', default=False)
 parser.add_argument('--random_seed', dest="random_seed",
                     help="Set flag to use the numpy default random seed (sets np.random.seed(seed=None)), otherwise will"
-                         " use seed=0",
-                    action='store_true', default=False)
+                    " use seed=0", action='store_true', default=False)
+
 parser.add_argument('--max_seed_len', dest="max_seed_len", help="Maximum length (in bp) of seed regions to allow AA to"
                     " take as input. Will print an error if in excess. This argument helps ensure users are giving seed"
                     " regions to AA, not whole-genome CNV calls to AA.", type=int, default=500000000)
@@ -288,7 +293,7 @@ if cbed is not None:
     coverage_windows.sort()
 if cstats is None and cbam is not None:
     cbam2b = b2b.bam_to_breakpoint(cbam, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min,
-                                   coverage_stats=cstats, coverage_windows=coverage_windows)
+                                   coverage_stats=cstats, coverage_windows=coverage_windows, foldback_pair_support_min=args.foldback_pair_support_min)
     cstats = cbam2b.basic_stats
 
 if args.sv_vcf:
@@ -296,11 +301,12 @@ if args.sv_vcf:
 else:
     ext_dnlist = []
 
+
 bamFileb2b = b2b.bam_to_breakpoint(bamFile, sample_name=outName, num_sdevs=args.insert_sdevs, pair_support_min=args.pair_support_min,
                                    coverage_stats=cstats, coverage_windows=coverage_windows, downsample=args.downsample,
                                    sensitivems=(args.sensitivems == 'True'), span_coverage=(args.cbam is None), tstart=TSTART,
-                                   ext_dnlist=ext_dnlist)
-
+                                   ext_dnlist=ext_dnlist, foldback_pair_support_min=args.foldback_pair_support_min)
+logging.info("#TIME " + '%.3f\t'%(time() - TSTART) + "Pair support requirement: " + str(bamFileb2b.pair_support))
 segments = []
 
 if args.extendmode == 'VIRAL':
